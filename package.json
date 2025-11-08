@@ -15,7 +15,7 @@
     "db:seed": "npm run prisma:generate && npm run db:push && npm run prisma:seed",
     "reset-admin": "tsx prisma/reset-admin.ts",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && prisma db push --skip-generate && next build"
+    "vercel-build": "node vercel-build.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
