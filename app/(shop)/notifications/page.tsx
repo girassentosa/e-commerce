@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
  * Halaman untuk menampilkan notifikasi pengguna
  */
 
-import { ShoppingCart, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
 export default function NotificationsPage() {
   return (
@@ -22,7 +22,6 @@ export default function NotificationsPage() {
               <h1 className="text-2xl font-bold text-gray-900">Notifikasi</h1>
             </div>
             <div className="flex-1 flex items-center justify-end gap-4">
-              <ShoppingCart className="w-6 h-6 text-gray-700" />
               <MessageCircle className="w-6 h-6 text-gray-700" />
             </div>
           </div>

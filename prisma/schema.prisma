@@ -35,6 +35,7 @@ model User {
   wishlists     Wishlist[]
   addresses     ShippingAddress[]
   notifications Notification[]
+  productViews  ProductView[]
 
   @@map("users")
 }
@@ -91,13 +92,14 @@ model Product {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   // Relations
-  category   Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  images     ProductImage[]
-  variants   ProductVariant[]
-  cartItems  CartItem[]
-  orderItems OrderItem[]
-  reviews    Review[]
-  wishlists  Wishlist[]
+  category     Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  images       ProductImage[]
+  variants     ProductVariant[]
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+  reviews      Review[]
+  wishlists    Wishlist[]
+  productViews ProductView[]
 
   @@index([categoryId])
   @@index([slug])
@@ -309,6 +311,26 @@ model Wishlist {
   @@unique([userId, productId])
   @@index([userId])
   @@map("wishlists")
+}
+
+// ===================================
+// PRODUCT VIEW TRACKING
+// ===================================
+
+model ProductView {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([productId])
+  @@index([viewedAt])
+  @@map("product_views")
 }
 
 // ===================================

@@ -10,19 +10,16 @@ import { useState, useEffect } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { 
   ShoppingCart, 
-  Heart, 
   Search, 
   SlidersHorizontal,
   X,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { useCart } from '@/contexts/CartContext';
-import { useWishlist } from '@/contexts/WishlistContext';
 import { ProductFilters } from '@/components/products/ProductFilters';
 
 export default function Header() {
   const { itemCount } = useCart();
-  const { count: wishlistCount } = useWishlist();
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const pathname = usePathname();
@@ -117,19 +114,6 @@ export default function Header() {
                 )}
               </button>
             )}
-
-            {/* Wishlist Icon */}
-            <Link
-              href="/wishlist"
-              className="relative p-2 text-gray-700 hover:text-indigo-600 transition-colors"
-            >
-              <Heart className="h-6 w-6" />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
 
             {/* Cart Icon */}
             <Link

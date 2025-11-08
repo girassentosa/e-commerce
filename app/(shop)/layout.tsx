@@ -18,9 +18,9 @@ function ShopLayoutContent({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const hideFooter = pathname === '/' || pathname === '/dashboard' || pathname === '/orders' || pathname === '/products' || pathname === '/notifications' || pathname?.startsWith('/orders/');
-  const hideHeader = pathname === '/dashboard' || pathname === '/orders' || pathname === '/products' || pathname === '/notifications' || pathname?.startsWith('/orders/');
-  const hideBottomNav = pathname === '/orders' || pathname?.startsWith('/orders/');
+  const hideFooter = pathname === '/' || pathname === '/dashboard' || pathname === '/orders' || pathname === '/products' || pathname === '/notifications' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/');
+  const hideHeader = pathname === '/dashboard' || pathname === '/orders' || pathname === '/products' || pathname === '/notifications' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/');
+  const hideBottomNav = pathname === '/orders' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/');
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -48,10 +48,10 @@ function ShopLayoutContent({
                 className="flex flex-col items-center hover:opacity-70 transition-opacity group py-2"
               >
                 <TrendingUp className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
-                  pathname?.startsWith('/products') ? 'text-red-600' : 'text-gray-600 group-hover:text-indigo-600'
+                  (pathname === '/products' || (pathname?.startsWith('/products?') && !pathname?.includes('/products/'))) ? 'text-red-600' : 'text-gray-600 group-hover:text-indigo-600'
                 }`} />
                 <span className={`text-xs sm:text-sm font-medium mt-1 text-center ${
-                  pathname?.startsWith('/products') ? 'text-red-600' : 'text-gray-700'
+                  (pathname === '/products' || (pathname?.startsWith('/products?') && !pathname?.includes('/products/'))) ? 'text-red-600' : 'text-gray-700'
                 }`}>Trending</span>
               </Link>
               <Link 

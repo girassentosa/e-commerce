@@ -15,7 +15,7 @@ import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
 import { Badge } from '@/components/ui/Badge';
-import { Heart, ShoppingCart, Trash2, ArrowLeft } from 'lucide-react';
+import { Heart, ShoppingCart, Trash2, ArrowLeft, Search } from 'lucide-react';
 
 export default function WishlistPage() {
   const router = useRouter();
@@ -82,19 +82,26 @@ export default function WishlistPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <Link 
-          href="/products" 
-          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Continue Shopping
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold">My Wishlist</h1>
-          <p className="text-gray-600 mt-1">
-            {count} {count === 1 ? 'item' : 'items'} in your wishlist
-          </p>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => router.push('/dashboard')}
+            className="p-1 hover:opacity-70 transition-opacity"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <h1 className="text-lg font-bold text-gray-900">Favorite Saya</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="p-2 hover:opacity-70 transition-opacity">
+            <Search className="w-5 h-5 text-gray-600" />
+          </button>
+          <Link href="/cart" className="p-2 hover:opacity-70 transition-opacity">
+            <ShoppingCart className="w-5 h-5 text-gray-600" />
+          </Link>
+          <button className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors">
+            Ubah
+          </button>
         </div>
       </div>
 

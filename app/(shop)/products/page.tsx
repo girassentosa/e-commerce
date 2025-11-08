@@ -10,11 +10,13 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { TrendingUp, Check, Search, ShoppingCart } from 'lucide-react';
+import Link from 'next/link';
+import { TrendingUp, Check, Search, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { ProductGrid } from '@/components/products/ProductGrid';
 import { ProductGridSkeleton } from '@/components/products/ProductSkeleton';
 import { Pagination } from '@/components/ui/Pagination';
 import { Loader } from '@/components/ui/Loader';
+import { useCart } from '@/contexts/CartContext';
 import toast from 'react-hot-toast';
 
 interface Product {
@@ -48,6 +50,7 @@ interface PaginationMeta {
 function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { itemCount } = useCart();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>({
@@ -56,7 +59,9 @@ function ProductsPageContent() {
     total: 0,
     totalPages: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Get filters from URL params (memoized to prevent infinite loops)
   const currentFilters = useMemo(() => ({
@@ -114,7 +119,7 @@ function ProductsPageContent() {
       }
     });
 
-    router.push(`/products?${params.toString()}`, { scroll: false });
+    router.replace(`/products?${params.toString()}`, { scroll: false });
   };
 
   // Handle page change
@@ -123,21 +128,83 @@ function ProductsPageContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Filter products based on search query
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products;
+    const query = searchQuery.toLowerCase();
+    return products.filter((product) =>
+      product.name.toLowerCase().includes(query) ||
+      product.category?.name.toLowerCase().includes(query) ||
+      product.brand?.toLowerCase().includes(query)
+    );
+  }, [products, searchQuery]);
+
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="w-8 h-8 text-indigo-600" />
-              <h1 className="text-3xl font-bold text-gray-900">Trending</h1>
+          <div className="flex items-center justify-between relative">
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {!isSearchOpen && (
+                <>
+                  <TrendingUp className="w-8 h-8 text-indigo-600" />
+                  <h1 className="text-3xl font-bold text-gray-900">Trending</h1>
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-4">
-              <Search className="w-6 h-6 text-gray-700" />
-              <ShoppingCart className="w-6 h-6 text-gray-700" />
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {!isSearchOpen && (
+                <>
+                  <button
+                    onClick={() => setIsSearchOpen(true)}
+                    className="p-2 hover:opacity-70 transition-opacity"
+                  >
+                    <Search className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <Link href="/cart" className="relative p-2 hover:opacity-70 transition-opacity">
+                    <ShoppingCart className="w-5 h-5 text-gray-600" />
+                    {itemCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {itemCount > 99 ? '99+' : itemCount}
+                      </span>
+                    )}
+                  </Link>
+                </>
+              )}
             </div>
+            {/* Search Input - Full Width when open */}
+            {isSearchOpen && (
+              <div className="absolute inset-0 flex items-center gap-3 z-10">
+                <button 
+                  onClick={() => router.push('/dashboard')}
+                  className="p-1 hover:opacity-70 transition-opacity flex-shrink-0"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
+                  <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cari produk..."
+                    className="bg-transparent border-none outline-none text-sm text-gray-900 flex-1"
+                    autoFocus
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    setIsSearchOpen(false);
+                    setSearchQuery('');
+                  }}
+                  className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors flex-shrink-0"
+                >
+                  Batalkan
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -165,24 +232,62 @@ function ProductsPageContent() {
         <div className="grid grid-cols-1 gap-8">
           {/* Products Grid */}
           <main className="w-full">
-            {loading ? (
+            {loading && products.length === 0 ? (
               <ProductGridSkeleton count={12} />
             ) : (
               <>
-                <ProductGrid
-                  products={products}
-                  columns={3}
-                />
-
-                {/* Pagination */}
-                {pagination.totalPages > 1 && (
-                  <div className="mt-8">
-                    <Pagination
-                      currentPage={pagination.page}
-                      totalPages={pagination.totalPages}
-                      onPageChange={handlePageChange}
-                    />
+                {/* Search Results Info */}
+                {searchQuery && filteredProducts.length > 0 && (
+                  <div className="mb-4 text-sm text-gray-600">
+                    Menampilkan {filteredProducts.length} dari {products.length} produk
                   </div>
+                )}
+
+                {/* No search results */}
+                {searchQuery && filteredProducts.length === 0 && products.length > 0 && (
+                  <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+                    <Search className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Tidak ada hasil</h2>
+                    <p className="text-gray-600 mb-6">
+                      Tidak ada produk yang cocok dengan "{searchQuery}"
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setIsSearchOpen(false);
+                      }}
+                      className="text-indigo-600 hover:text-indigo-700 font-medium"
+                    >
+                      Hapus pencarian
+                    </button>
+                  </div>
+                )}
+
+                {/* Products */}
+                {filteredProducts.length > 0 ? (
+                  <>
+                    <ProductGrid
+                      products={filteredProducts}
+                      columns={3}
+                    />
+
+                    {/* Pagination - only show when not searching */}
+                    {!searchQuery && pagination.totalPages > 1 && (
+                      <div className="mt-8">
+                        <Pagination
+                          currentPage={pagination.page}
+                          totalPages={pagination.totalPages}
+                          onPageChange={handlePageChange}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  !loading && !searchQuery && (
+                    <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                      <p className="text-gray-600">No products available</p>
+                    </div>
+                  )
                 )}
               </>
             )}
@@ -195,13 +300,7 @@ function ProductsPageContent() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center min-h-[400px]">
-          <Loader size="lg" />
-        </div>
-      </div>
-    }>
+    <Suspense fallback={null}>
       <ProductsPageContent />
     </Suspense>
   );

@@ -41,7 +41,7 @@ function HomePageContent() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Get filters from URL params
   const currentFilters = useMemo(() => ({
@@ -51,12 +51,9 @@ function HomePageContent() {
     sort: searchParams.get('sort') || 'newest',
   }), [searchParams]);
 
-  useEffect(() => {
-    fetchAllProducts();
-  }, [currentFilters]);
-
   const fetchAllProducts = async () => {
     try {
+      setLoadingProducts(true);
       const params = new URLSearchParams();
       
       // Add filters to API request
@@ -77,6 +74,10 @@ function HomePageContent() {
       setLoadingProducts(false);
     }
   };
+
+  useEffect(() => {
+    fetchAllProducts();
+  }, [currentFilters]);
 
   // If user is logged in, show customer-focused homepage
   if (session) {
@@ -101,14 +102,16 @@ function HomePageContent() {
               </h2>
             </div>
             
-            {loadingProducts ? (
+            {loadingProducts && products.length === 0 ? (
               <ProductGridSkeleton count={12} />
             ) : products.length > 0 ? (
               <ProductGrid products={products} columns={4} />
             ) : (
-              <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-                <p className="text-gray-600">No products available</p>
-              </div>
+              !loadingProducts && (
+                <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                  <p className="text-gray-600">No products available</p>
+                </div>
+              )
             )}
           </div>
         </div>
@@ -140,14 +143,16 @@ function HomePageContent() {
             </h2>
           </div>
           
-          {loadingProducts ? (
+          {loadingProducts && products.length === 0 ? (
             <ProductGridSkeleton count={12} />
           ) : products.length > 0 ? (
             <ProductGrid products={products} columns={4} />
           ) : (
-            <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <p className="text-gray-600">No products available</p>
-            </div>
+            !loadingProducts && (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <p className="text-gray-600">No products available</p>
+              </div>
+            )
           )}
         </div>
 
@@ -329,11 +334,7 @@ const techStack = [
 
 export default function HomePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader size="lg" />
-      </div>
-    }>
+    <Suspense fallback={null}>
       <HomePageContent />
     </Suspense>
   );
