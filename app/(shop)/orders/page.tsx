@@ -16,6 +16,8 @@ function OrdersPageContent() {
   const searchParams = useSearchParams();
   const { status } = useSession();
   const { orders, loading, pagination, fetchOrders } = useOrder();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   
   // Get initial filter from URL params
   const urlStatus = searchParams.get('status');
@@ -84,6 +86,18 @@ function OrdersPageContent() {
     );
   }
 
+  // Filter orders based on search query
+  const filteredOrders = orders.filter((order) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      order.orderNumber.toLowerCase().includes(query) ||
+      order.items.some((item) => 
+        item.productName.toLowerCase().includes(query)
+      )
+    );
+  });
+
   // Determine active filter
   const isAllActive = !statusFilter && !paymentStatusFilter;
   const isBelumBayarActive = paymentStatusFilter === 'PENDING';
@@ -95,24 +109,77 @@ function OrdersPageContent() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => router.push('/dashboard')}
-            className="p-1 hover:opacity-70 transition-opacity"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <h1 className="text-lg font-bold text-gray-900">Pesanan Saya</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="p-2 hover:opacity-70 transition-opacity">
-            <Search className="w-5 h-5 text-gray-600" />
-          </button>
-          <button className="p-2 hover:opacity-70 transition-opacity">
-            <MessageCircle className="w-5 h-5 text-gray-600" />
-          </button>
+      {/* Header - Fixed height container to prevent layout shift */}
+      <div className="mb-4">
+        <div className="flex items-center min-h-[48px] gap-3">
+          {/* Left Section */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!isSearchOpen ? (
+              <>
+                <button 
+                  onClick={() => router.push('/dashboard')}
+                  className="p-1 hover:opacity-70 transition-opacity"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <h1 className="text-lg font-bold text-gray-900">Pesanan Saya</h1>
+              </>
+            ) : (
+              <button 
+                onClick={() => {
+                  setIsSearchOpen(false);
+                  setSearchQuery('');
+                }}
+                className="p-1 hover:opacity-70 transition-opacity"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+            )}
+          </div>
+
+          {/* Middle Section - Search Input (only when search is open) */}
+          {isSearchOpen && (
+            <div className="flex items-center flex-1">
+              <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
+                <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari pesanan atau produk..."
+                  className="bg-transparent border-none outline-none text-sm text-gray-900 flex-1"
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Right Section */}
+          <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+            {!isSearchOpen ? (
+              <>
+                <button
+                  onClick={() => setIsSearchOpen(true)}
+                  className="p-2 hover:opacity-70 transition-opacity"
+                >
+                  <Search className="w-5 h-5 text-gray-600" />
+                </button>
+                <button className="p-2 hover:opacity-70 transition-opacity">
+                  <MessageCircle className="w-5 h-5 text-gray-600" />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  setIsSearchOpen(false);
+                  setSearchQuery('');
+                }}
+                className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors"
+              >
+                Batalkan
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -192,7 +259,35 @@ function OrdersPageContent() {
         </div>
       </div>
 
-      {orders.length === 0 ? (
+      {/* Search Results Info */}
+      {searchQuery && filteredOrders.length > 0 && (
+        <div className="mb-4 text-sm text-gray-600">
+          Menampilkan {filteredOrders.length} dari {orders.length} pesanan
+        </div>
+      )}
+
+      {/* No search results */}
+      {searchQuery && filteredOrders.length === 0 && orders.length > 0 && (
+        <div className="text-center py-16">
+          <Search className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Tidak ada hasil</h2>
+          <p className="text-gray-600 mb-6">
+            Tidak ada pesanan yang cocok dengan "{searchQuery}"
+          </p>
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setIsSearchOpen(false);
+            }}
+            className="text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            Hapus pencarian
+          </button>
+        </div>
+      )}
+
+      {/* Empty state - no orders */}
+      {filteredOrders.length === 0 && !searchQuery && (
         <div className="text-center py-16">
           <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <p className="text-gray-600 mb-4">No orders found</p>
@@ -200,9 +295,12 @@ function OrdersPageContent() {
             <Button>Start Shopping</Button>
           </Link>
         </div>
-      ) : (
+      )}
+
+      {/* Orders list */}
+      {filteredOrders.length > 0 && (
         <div className="space-y-4">
-          {orders.map((order) => (
+          {filteredOrders.map((order) => (
             <Link key={order.id} href={`/orders/${order.orderNumber}`}>
               <div className="border rounded-lg p-4 hover:shadow-lg transition cursor-pointer">
                 <div className="flex items-start justify-between mb-3">

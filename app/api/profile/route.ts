@@ -27,6 +27,8 @@ export async function GET() {
         lastName: true,
         phone: true,
         avatarUrl: true,
+        gender: true,
+        dateOfBirth: true,
         role: true,
         emailVerified: true,
         createdAt: true,
@@ -70,7 +72,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, firstName, lastName, phone } = body;
+    const { email, firstName, lastName, phone, gender, dateOfBirth } = body;
 
     // Check email uniqueness if changed
     if (email && email !== session.user.email) {
@@ -99,6 +101,10 @@ export async function PUT(request: NextRequest) {
         ...(firstName !== undefined && { firstName }),
         ...(lastName !== undefined && { lastName }),
         ...(phone !== undefined && { phone }),
+        ...(gender !== undefined && { gender }),
+        ...(dateOfBirth !== undefined && { 
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null 
+        }),
       },
       select: {
         id: true,
@@ -107,6 +113,8 @@ export async function PUT(request: NextRequest) {
         lastName: true,
         phone: true,
         avatarUrl: true,
+        gender: true,
+        dateOfBirth: true,
         role: true,
       },
     });

@@ -22,6 +22,8 @@ model User {
   lastName      String?   @map("last_name")
   phone         String?
   avatarUrl     String?   @map("avatar_url")
+  gender        String?
+  dateOfBirth   DateTime? @map("date_of_birth")
   role          Role      @default(CUSTOMER)
   emailVerified Boolean   @default(false) @map("email_verified")
   isActive      Boolean   @default(true) @map("is_active")

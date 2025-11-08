@@ -72,7 +72,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [subtotal, setSubtotal] = useState('0.00');
   const [loading, setLoading] = useState(false);
 
-  // Fetch cart
+  // Fetch cart count only (lightweight, fast)
+  const fetchCartCount = useCallback(async () => {
+    if (status !== 'authenticated') {
+      setItemCount(0);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/cart/count');
+      const data = await response.json();
+
+      if (data.success) {
+        setItemCount(data.data.itemCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching cart count:', error);
+    }
+  }, [status]);
+
+  // Fetch full cart data (items, subtotal, etc.)
   const fetchCart = useCallback(async () => {
     if (status !== 'authenticated') {
       setItems([]);
@@ -116,6 +135,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (data.success) {
         toast.success(data.message || 'Item added to cart');
+        // Update count immediately, then fetch full cart
+        await fetchCartCount();
         await fetchCart();
       } else {
         toast.error(data.error || 'Failed to add item to cart');
@@ -124,7 +145,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.error('Error adding to cart:', error);
       toast.error('Failed to add item to cart');
     }
-  }, [status, fetchCart]);
+  }, [status, fetchCartCount, fetchCart]);
 
   // Update item quantity
   const updateQuantity = useCallback(async (itemId: string, quantity: number) => {
@@ -139,6 +160,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (data.success) {
         toast.success('Cart updated');
+        // Update count immediately, then fetch full cart
+        await fetchCartCount();
         await fetchCart();
       } else {
         toast.error(data.error || 'Failed to update cart');
@@ -147,7 +170,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.error('Error updating cart:', error);
       toast.error('Failed to update cart');
     }
-  }, [fetchCart]);
+  }, [fetchCartCount, fetchCart]);
 
   // Remove item from cart
   const removeItem = useCallback(async (itemId: string) => {
@@ -160,6 +183,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (data.success) {
         toast.success('Item removed from cart');
+        // Update count immediately, then fetch full cart
+        await fetchCartCount();
         await fetchCart();
       } else {
         toast.error(data.error || 'Failed to remove item');
@@ -168,7 +193,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.error('Error removing item:', error);
       toast.error('Failed to remove item');
     }
-  }, [fetchCart]);
+  }, [fetchCartCount, fetchCart]);
 
   // Clear entire cart
   const clearCart = useCallback(async () => {
@@ -181,6 +206,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (data.success) {
         toast.success('Cart cleared');
+        // Update count immediately, then fetch full cart
+        await fetchCartCount();
         await fetchCart();
       } else {
         toast.error(data.error || 'Failed to clear cart');
@@ -189,17 +216,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.error('Error clearing cart:', error);
       toast.error('Failed to clear cart');
     }
-  }, [fetchCart]);
+  }, [fetchCartCount, fetchCart]);
 
   // Refresh cart
   const refreshCart = useCallback(async () => {
+    // Update count first (fast), then full cart data
+    await fetchCartCount();
     await fetchCart();
-  }, [fetchCart]);
+  }, [fetchCartCount, fetchCart]);
 
-  // Auto-fetch cart on mount and auth change
+  // Auto-fetch full cart data on mount and auth change
+  // Note: Cart count is fetched separately by pages that need instant display (e.g., dashboard)
+  // This prevents race conditions and ensures instant badge display
   useEffect(() => {
     if (status === 'authenticated') {
+      // Fetch full cart data (items, subtotal, and itemCount)
+      // This will update itemCount from the full cart response
+      // Pages that need instant display (like dashboard) fetch cart count separately
       fetchCart();
+    } else {
+      // Reset when not authenticated
+      setItems([]);
+      setItemCount(0);
+      setSubtotal('0.00');
     }
   }, [status, fetchCart]);
 

@@ -30,28 +30,49 @@ interface DashboardStats {
   beriPenilaian: number;
 }
 
+interface DashboardData {
+  stats: DashboardStats;
+  itemCount: number;
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { count: wishlistCount } = useWishlist();
-  const { itemCount } = useCart();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalOrders: 0,
-    belumBayar: 0,
-    dikemas: 0,
-    dikirim: 0,
-    beriPenilaian: 0,
+  const { itemCount: contextItemCount } = useCart(); // Fallback from context
+  
+  // Single state object for all dashboard data - ensures all updates happen together
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    stats: {
+      totalOrders: 0,
+      belumBayar: 0,
+      dikemas: 0,
+      dikirim: 0,
+      beriPenilaian: 0,
+    },
+    itemCount: 0,
   });
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      // Fetch dashboard stats from optimized endpoint
-      const response = await fetch('/api/dashboard/stats');
-      const data = await response.json();
+      // Fetch dashboard stats and cart count in parallel
+      const [statsResponse, cartCountResponse] = await Promise.all([
+        fetch('/api/dashboard/stats'),
+        fetch('/api/cart/count'),
+      ]);
 
-      if (data.success) {
-        setStats(data.data);
-      }
+      const [statsData, cartCountData] = await Promise.all([
+        statsResponse.json(),
+        cartCountResponse.json(),
+      ]);
+
+      // Update ALL state in a SINGLE update to ensure everything appears together
+      // Using single state object ensures all elements update simultaneously
+      // Using functional update to avoid stale closure issues
+      setDashboardData((prev) => ({
+        stats: statsData.success ? statsData.data : prev.stats,
+        itemCount: cartCountData.success ? (cartCountData.data.itemCount || 0) : prev.itemCount,
+      }));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     }
@@ -60,11 +81,35 @@ export default function DashboardPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login?callbackUrl=/dashboard');
+      setDashboardData({
+        stats: {
+          totalOrders: 0,
+          belumBayar: 0,
+          dikemas: 0,
+          dikirim: 0,
+          beriPenilaian: 0,
+        },
+        itemCount: 0,
+      });
     } else if (status === 'authenticated') {
-      // Fetch immediately when authenticated
+      // Fetch immediately when authenticated - parallel fetch for instant display
       fetchDashboardData();
     }
   }, [status, router, fetchDashboardData]);
+
+  // Sync with context only if local state is still 0 (fallback if parallel fetch fails)
+  // This prevents overwriting the instant display value from parallel fetch
+  useEffect(() => {
+    // Only use context value if local fetch hasn't completed yet (itemCount still 0)
+    // Once local fetch completes, we don't sync to prevent overwriting instant display
+    if (dashboardData.itemCount === 0 && contextItemCount > 0) {
+      setDashboardData(prev => ({
+        ...prev,
+        itemCount: contextItemCount,
+      }));
+    }
+  }, [contextItemCount, dashboardData.itemCount]);
+
 
   const displayName = session?.user?.firstName 
     ? `${session.user.firstName} ${session.user.lastName || ''}`.trim()
@@ -104,14 +149,14 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-start gap-3 flex-shrink-0 -mt-16">
-            <button className="p-2 hover:opacity-70 transition-opacity">
+            <Link href="/settings" className="p-2 hover:opacity-70 transition-opacity">
               <Settings className="w-5 h-5 text-gray-600" />
-            </button>
+            </Link>
             <Link href="/cart" className="relative p-2 hover:opacity-70 transition-opacity">
               <ShoppingCart className="w-5 h-5 text-gray-600" />
-              {itemCount > 0 && (
+              {dashboardData.itemCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {itemCount > 99 ? '99+' : itemCount}
+                  {dashboardData.itemCount > 99 ? '99+' : dashboardData.itemCount}
                 </span>
               )}
             </Link>
@@ -142,9 +187,9 @@ export default function DashboardPage() {
                 <Link href="/orders" className="flex flex-col items-center hover:opacity-70 transition-opacity group">
                   <div className="relative mb-2 pt-1 overflow-visible">
                     <Package className="w-6 h-6 text-gray-600 group-hover:text-indigo-600 transition-colors" />
-                    {stats.totalOrders > 0 && (
+                    {dashboardData.stats.totalOrders > 0 && (
                       <span className="absolute top-0 -right-1 bg-blue-600 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 z-10">
-                        {stats.totalOrders > 99 ? '99+' : stats.totalOrders}
+                        {dashboardData.stats.totalOrders > 99 ? '99+' : dashboardData.stats.totalOrders}
                       </span>
                     )}
                   </div>
@@ -154,9 +199,9 @@ export default function DashboardPage() {
                 <Link href="/orders?status=PENDING&paymentStatus=PENDING" className="flex flex-col items-center hover:opacity-70 transition-opacity group">
                   <div className="relative mb-2 pt-1 overflow-visible">
                     <CreditCard className="w-6 h-6 text-gray-600 group-hover:text-indigo-600 transition-colors" />
-                    {stats.belumBayar > 0 && (
+                    {dashboardData.stats.belumBayar > 0 && (
                       <span className="absolute top-0 -right-1 bg-yellow-600 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 z-10">
-                        {stats.belumBayar > 99 ? '99+' : stats.belumBayar}
+                        {dashboardData.stats.belumBayar > 99 ? '99+' : dashboardData.stats.belumBayar}
                       </span>
                     )}
                   </div>
@@ -166,9 +211,9 @@ export default function DashboardPage() {
                 <Link href="/orders?status=PROCESSING" className="flex flex-col items-center hover:opacity-70 transition-opacity group">
                   <div className="relative mb-2 pt-1 overflow-visible">
                     <Box className="w-6 h-6 text-gray-600 group-hover:text-indigo-600 transition-colors" />
-                    {stats.dikemas > 0 && (
+                    {dashboardData.stats.dikemas > 0 && (
                       <span className="absolute top-0 -right-1 bg-orange-600 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 z-10">
-                        {stats.dikemas > 99 ? '99+' : stats.dikemas}
+                        {dashboardData.stats.dikemas > 99 ? '99+' : dashboardData.stats.dikemas}
                       </span>
                     )}
                   </div>
@@ -178,9 +223,9 @@ export default function DashboardPage() {
                 <Link href="/orders?status=SHIPPED" className="flex flex-col items-center hover:opacity-70 transition-opacity group">
                   <div className="relative mb-2 pt-1 overflow-visible">
                     <Truck className="w-6 h-6 text-gray-600 group-hover:text-indigo-600 transition-colors" />
-                    {stats.dikirim > 0 && (
+                    {dashboardData.stats.dikirim > 0 && (
                       <span className="absolute top-0 -right-1 bg-purple-600 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 z-10">
-                        {stats.dikirim > 99 ? '99+' : stats.dikirim}
+                        {dashboardData.stats.dikirim > 99 ? '99+' : dashboardData.stats.dikirim}
                       </span>
                     )}
                   </div>
@@ -190,9 +235,9 @@ export default function DashboardPage() {
                 <Link href="/reviews/my" className="flex flex-col items-center hover:opacity-70 transition-opacity group">
                   <div className="relative mb-2 pt-1 overflow-visible">
                     <Star className="w-6 h-6 text-gray-600 group-hover:text-indigo-600 transition-colors" />
-                    {stats.beriPenilaian > 0 && (
+                    {dashboardData.stats.beriPenilaian > 0 && (
                       <span className="absolute top-0 -right-1 bg-yellow-600 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 z-10">
-                        {stats.beriPenilaian > 99 ? '99+' : stats.beriPenilaian}
+                        {dashboardData.stats.beriPenilaian > 99 ? '99+' : dashboardData.stats.beriPenilaian}
                       </span>
                     )}
                   </div>

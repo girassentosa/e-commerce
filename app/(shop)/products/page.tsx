@@ -47,17 +47,25 @@ interface PaginationMeta {
   totalPages: number;
 }
 
+interface ProductsData {
+  products: Product[];
+  pagination: PaginationMeta;
+}
+
 function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { itemCount } = useCart();
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [pagination, setPagination] = useState<PaginationMeta>({
-    page: 1,
-    limit: 12,
-    total: 0,
-    totalPages: 0,
+  // Single state object for products and pagination - ensures all updates happen together
+  const [productsData, setProductsData] = useState<ProductsData>({
+    products: [],
+    pagination: {
+      page: 1,
+      limit: 12,
+      total: 0,
+      totalPages: 0,
+    },
   });
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,8 +97,17 @@ function ProductsPageContent() {
       const data = await response.json();
 
       if (data.success) {
-        setProducts(data.data);
-        setPagination(data.pagination);
+        // Update ALL state in a SINGLE update to ensure everything appears together
+        // Using single state object ensures all elements update simultaneously
+        setProductsData({
+          products: data.data || [],
+          pagination: data.pagination || {
+            page: 1,
+            limit: 12,
+            total: 0,
+            totalPages: 0,
+          },
+        });
       } else {
         toast.error('Failed to load products');
       }
@@ -130,32 +147,62 @@ function ProductsPageContent() {
 
   // Filter products based on search query
   const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return products;
+    if (!searchQuery.trim()) return productsData.products;
     const query = searchQuery.toLowerCase();
-    return products.filter((product) =>
+    return productsData.products.filter((product) =>
       product.name.toLowerCase().includes(query) ||
       product.category?.name.toLowerCase().includes(query) ||
       product.brand?.toLowerCase().includes(query)
     );
-  }, [products, searchQuery]);
+  }, [productsData.products, searchQuery]);
 
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Header - Fixed height container to prevent layout shift */}
         <div className="mb-2">
-          <div className="flex items-center justify-between relative">
+          <div className="flex items-center min-h-[56px] gap-3">
+            {/* Left Section */}
             <div className="flex items-center gap-3 flex-shrink-0">
-              {!isSearchOpen && (
+              {!isSearchOpen ? (
                 <>
                   <TrendingUp className="w-8 h-8 text-indigo-600" />
                   <h1 className="text-3xl font-bold text-gray-900">Trending</h1>
                 </>
+              ) : (
+                <button 
+                  onClick={() => {
+                    setIsSearchOpen(false);
+                    setSearchQuery('');
+                  }}
+                  className="p-1 hover:opacity-70 transition-opacity"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </button>
               )}
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              {!isSearchOpen && (
+
+            {/* Middle Section - Search Input (only when search is open) */}
+            {isSearchOpen && (
+              <div className="flex items-center flex-1">
+                <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
+                  <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cari produk..."
+                    className="bg-transparent border-none outline-none text-sm text-gray-900 flex-1"
+                    autoFocus
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Right Section */}
+            <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+              {!isSearchOpen ? (
                 <>
                   <button
                     onClick={() => setIsSearchOpen(true)}
@@ -172,39 +219,18 @@ function ProductsPageContent() {
                     )}
                   </Link>
                 </>
-              )}
-            </div>
-            {/* Search Input - Full Width when open */}
-            {isSearchOpen && (
-              <div className="absolute inset-0 flex items-center gap-3 z-10">
-                <button 
-                  onClick={() => router.push('/dashboard')}
-                  className="p-1 hover:opacity-70 transition-opacity flex-shrink-0"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
-                  <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Cari produk..."
-                    className="bg-transparent border-none outline-none text-sm text-gray-900 flex-1"
-                    autoFocus
-                  />
-                </div>
+              ) : (
                 <button
                   onClick={() => {
                     setIsSearchOpen(false);
                     setSearchQuery('');
                   }}
-                  className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors flex-shrink-0"
+                  className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors"
                 >
                   Batalkan
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
@@ -232,19 +258,19 @@ function ProductsPageContent() {
         <div className="grid grid-cols-1 gap-8">
           {/* Products Grid */}
           <main className="w-full">
-            {loading && products.length === 0 ? (
+            {loading && productsData.products.length === 0 ? (
               <ProductGridSkeleton count={12} />
             ) : (
               <>
                 {/* Search Results Info */}
                 {searchQuery && filteredProducts.length > 0 && (
                   <div className="mb-4 text-sm text-gray-600">
-                    Menampilkan {filteredProducts.length} dari {products.length} produk
+                    Menampilkan {filteredProducts.length} dari {productsData.products.length} produk
                   </div>
                 )}
 
                 {/* No search results */}
-                {searchQuery && filteredProducts.length === 0 && products.length > 0 && (
+                {searchQuery && filteredProducts.length === 0 && productsData.products.length > 0 && (
                   <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
                     <Search className="w-16 h-16 mx-auto text-gray-300 mb-4" />
                     <h2 className="text-xl font-semibold text-gray-900 mb-2">Tidak ada hasil</h2>
@@ -272,11 +298,11 @@ function ProductsPageContent() {
                     />
 
                     {/* Pagination - only show when not searching */}
-                    {!searchQuery && pagination.totalPages > 1 && (
+                    {!searchQuery && productsData.pagination.totalPages > 1 && (
                       <div className="mt-8">
                         <Pagination
-                          currentPage={pagination.page}
-                          totalPages={pagination.totalPages}
+                          currentPage={productsData.pagination.page}
+                          totalPages={productsData.pagination.totalPages}
                           onPageChange={handlePageChange}
                         />
                       </div>

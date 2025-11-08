@@ -60,75 +60,83 @@ function LastViewedPageContent() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 relative">
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {!isSearchOpen && (
-            <>
+      {/* Header - Fixed height container to prevent layout shift */}
+      <div className="mb-4">
+        <div className="flex items-center min-h-[48px] gap-3">
+          {/* Left Section */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!isSearchOpen ? (
+              <>
+                <button 
+                  onClick={handleBack}
+                  className="p-1 hover:opacity-70 transition-opacity"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <h1 className="text-lg font-bold text-gray-900">Terakhir Dilihat</h1>
+              </>
+            ) : (
               <button 
-                onClick={handleBack}
+                onClick={() => {
+                  setIsSearchOpen(false);
+                  setSearchQuery('');
+                }}
                 className="p-1 hover:opacity-70 transition-opacity"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
-              <h1 className="text-lg font-bold text-gray-900">Terakhir Dilihat</h1>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {!isSearchOpen && (
-            <>
-              <button
-                onClick={() => setIsSearchOpen(true)}
-                className="p-2 hover:opacity-70 transition-opacity"
-              >
-                <Search className="w-5 h-5 text-gray-600" />
-              </button>
-              <Link href="/cart" className="relative p-2 hover:opacity-70 transition-opacity">
-                <ShoppingCart className="w-5 h-5 text-gray-600" />
-                {itemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {itemCount > 99 ? '99+' : itemCount}
-                  </span>
-                )}
-              </Link>
-            </>
-          )}
-        </div>
-        {/* Search Input - Full Width when open */}
-        {isSearchOpen && (
-          <div className="absolute inset-0 flex items-center gap-3 z-10">
-            <button 
-              onClick={() => {
-                setIsSearchOpen(false);
-                setSearchQuery('');
-              }}
-              className="p-1 hover:opacity-70 transition-opacity flex-shrink-0"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
-              <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari produk yang dilihat..."
-                className="bg-transparent border-none outline-none text-sm text-gray-900 flex-1"
-                autoFocus
-              />
-            </div>
-            <button
-              onClick={() => {
-                setIsSearchOpen(false);
-                setSearchQuery('');
-              }}
-              className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors flex-shrink-0"
-            >
-              Batalkan
-            </button>
+            )}
           </div>
-        )}
+
+          {/* Middle Section - Search Input (only when search is open) */}
+          {isSearchOpen && (
+            <div className="flex items-center flex-1">
+              <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
+                <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari produk yang dilihat..."
+                  className="bg-transparent border-none outline-none text-sm text-gray-900 flex-1"
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Right Section */}
+          <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+            {!isSearchOpen ? (
+              <>
+                <button
+                  onClick={() => setIsSearchOpen(true)}
+                  className="p-2 hover:opacity-70 transition-opacity"
+                >
+                  <Search className="w-5 h-5 text-gray-600" />
+                </button>
+                <Link href="/cart" className="relative p-2 hover:opacity-70 transition-opacity">
+                  <ShoppingCart className="w-5 h-5 text-gray-600" />
+                  {itemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {itemCount > 99 ? '99+' : itemCount}
+                    </span>
+                  )}
+                </Link>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  setIsSearchOpen(false);
+                  setSearchQuery('');
+                }}
+                className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors"
+              >
+                Batalkan
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Search Results Info */}
