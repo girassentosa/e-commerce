@@ -33,7 +33,7 @@ export default function AdminLayout({
   // Show loading while checking session
   if (status === 'loading') {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+      <div className="flex justify-center items-center min-h-screen bg-white">
         <Loader size="lg" />
       </div>
     );
@@ -45,7 +45,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-white">
       {/* Sidebar */}
       <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -58,12 +58,12 @@ export default function AdminLayout({
       )}
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-64 w-full">
+      <div className="flex-1 lg:ml-64 w-full bg-white">
         {/* Header */}
         <AdminHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
         {/* Page Content */}
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="p-4 sm:p-6 lg:p-8 bg-white">{children}</main>
       </div>
     </div>
   );

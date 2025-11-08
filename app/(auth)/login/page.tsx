@@ -36,21 +36,6 @@ export default function LoginPage() {
         <div className="bg-white py-8 px-4 shadow-xl shadow-indigo-100/50 sm:rounded-2xl sm:px-10 border border-gray-100">
           <LoginForm />
         </div>
-
-        {/* Demo Credentials */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm font-medium text-blue-900 mb-2">
-            🔐 Demo Credentials:
-          </p>
-          <div className="space-y-1 text-xs text-blue-800">
-            <p>
-              <strong>Customer:</strong> customer@example.com / password123
-            </p>
-            <p>
-              <strong>Admin:</strong> admin@ecommerce.com / password123
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
