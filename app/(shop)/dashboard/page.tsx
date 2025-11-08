@@ -118,7 +118,7 @@ export default function DashboardPage() {
   const avatarInitial = session?.user?.firstName?.[0] || session?.user?.email?.[0] || 'U';
 
   return (
-    <div className="w-full">
+    <div className="w-full bg-white min-h-full">
       {/* User Profile Header - Full Width */}
       <div className="mb-6 pb-6 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50 py-4 w-screen -ml-[calc((100vw-100%)/2)]">
         <div className="max-w-7xl mx-auto pl-4 pr-2">

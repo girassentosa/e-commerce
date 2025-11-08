@@ -5,15 +5,32 @@
  * Form to add/edit shipping address
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { MapPin, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+interface Address {
+  id: string;
+  fullName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
+}
+
 interface AddressFormProps {
+  addressId?: string;
+  initialData?: Address | null;
   onSuccess: () => void;
   onCancel: () => void;
+  onSaveButtonRef?: (props: { disabled: boolean; onClick: () => void; loading: boolean }) => void;
+  showSaveButton?: boolean;
 }
 
 interface GeocodeResult {
@@ -31,9 +48,12 @@ interface GeocodeResult {
   };
 }
 
-export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
+export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSaveButtonRef, showSaveButton = true }: AddressFormProps) {
   const [loading, setLoading] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const isEditMode = !!addressId && !!initialData;
+  const formRef = useRef<HTMLFormElement>(null);
+  
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -45,6 +65,70 @@ export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
     country: 'United States',
     isDefault: false,
   });
+
+  const [originalData, setOriginalData] = useState(formData);
+
+  // Initialize form data with initialData if in edit mode
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      const initialFormData = {
+        fullName: initialData.fullName || '',
+        phone: initialData.phone || '',
+        addressLine1: initialData.addressLine1 || '',
+        addressLine2: initialData.addressLine2 || '',
+        city: initialData.city || '',
+        state: initialData.state || '',
+        postalCode: initialData.postalCode || '',
+        country: initialData.country || 'United States',
+        isDefault: initialData.isDefault || false,
+      };
+      setFormData(initialFormData);
+      setOriginalData(JSON.parse(JSON.stringify(initialFormData)));
+    }
+  }, [isEditMode, initialData]);
+
+  // Check if there are changes
+  const hasChanges = () => {
+    if (!isEditMode) return true; // Always allow saving for new address
+    return (
+      formData.fullName !== originalData.fullName ||
+      formData.phone !== originalData.phone ||
+      formData.addressLine1 !== originalData.addressLine1 ||
+      formData.addressLine2 !== originalData.addressLine2 ||
+      formData.city !== originalData.city ||
+      formData.state !== originalData.state ||
+      formData.postalCode !== originalData.postalCode ||
+      formData.country !== originalData.country ||
+      formData.isDefault !== originalData.isDefault
+    );
+  };
+
+  // Expose save button props to parent if onSaveButtonRef is provided
+  useEffect(() => {
+    if (onSaveButtonRef) {
+      const hasChangesValue = isEditMode ? (
+        formData.fullName !== originalData.fullName ||
+        formData.phone !== originalData.phone ||
+        formData.addressLine1 !== originalData.addressLine1 ||
+        formData.addressLine2 !== originalData.addressLine2 ||
+        formData.city !== originalData.city ||
+        formData.state !== originalData.state ||
+        formData.postalCode !== originalData.postalCode ||
+        formData.country !== originalData.country ||
+        formData.isDefault !== originalData.isDefault
+      ) : true;
+      
+      onSaveButtonRef({
+        disabled: loading || (isEditMode && !hasChangesValue),
+        onClick: () => {
+          if (formRef.current) {
+            formRef.current.requestSubmit();
+          }
+        },
+        loading,
+      });
+    }
+  }, [loading, isEditMode, formData, originalData, onSaveButtonRef]);
 
   /**
    * Reverse geocoding: Convert lat/lng to address
@@ -79,7 +163,7 @@ export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
   const handleUseCurrentLocation = async () => {
     // Check if geolocation is supported
     if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser');
+      toast.error('Geolokasi tidak didukung oleh browser Anda');
       return;
     }
 
@@ -102,13 +186,13 @@ export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
       const { latitude, longitude } = position.coords;
 
       // Show loading message
-      toast.loading('Getting your location...', { id: 'location' });
+      toast.loading('Mendapatkan lokasi Anda...', { id: 'location' });
 
       // Reverse geocode to get address
       const geocodeResult = await reverseGeocode(latitude, longitude);
 
       if (!geocodeResult || !geocodeResult.address) {
-        toast.error('Could not determine your address. Please enter manually.', { id: 'location' });
+        toast.error('Tidak dapat menentukan alamat Anda. Silakan masukkan secara manual.', { id: 'location' });
         setLoadingLocation(false);
         return;
       }
@@ -143,18 +227,18 @@ export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
         country: country || prev.country,
       }));
 
-      toast.success('Address filled automatically! Please review and complete the form.', { id: 'location' });
+      toast.success('Alamat terisi otomatis! Silakan periksa dan lengkapi formulir.', { id: 'location' });
     } catch (error: any) {
       console.error('Error getting location:', error);
       
-      let errorMessage = 'Failed to get your location. Please enter address manually.';
+      let errorMessage = 'Gagal mendapatkan lokasi Anda. Silakan masukkan alamat secara manual.';
       
       if (error.code === 1) {
-        errorMessage = 'Location access denied. Please enable location permissions or enter address manually.';
+        errorMessage = 'Akses lokasi ditolak. Silakan aktifkan izin lokasi atau masukkan alamat secara manual.';
       } else if (error.code === 2) {
-        errorMessage = 'Location unavailable. Please enter address manually.';
+        errorMessage = 'Lokasi tidak tersedia. Silakan masukkan alamat secara manual.';
       } else if (error.code === 3) {
-        errorMessage = 'Location request timeout. Please try again or enter address manually.';
+        errorMessage = 'Permintaan lokasi timeout. Silakan coba lagi atau masukkan alamat secara manual.';
       }
 
       toast.error(errorMessage, { id: 'location' });
@@ -195,11 +279,20 @@ export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Don't submit if no changes in edit mode
+    if (isEditMode && !hasChanges()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch('/api/addresses', {
-        method: 'POST',
+      const url = isEditMode ? `/api/addresses/${addressId}` : '/api/addresses';
+      const method = isEditMode ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
@@ -207,21 +300,26 @@ export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Address added successfully');
+        if (isEditMode) {
+          toast.success('Alamat berhasil diubah');
+          setOriginalData(JSON.parse(JSON.stringify(formData)));
+        } else {
+          toast.success('Alamat berhasil ditambahkan');
+        }
         onSuccess();
       } else {
-        toast.error(data.error || 'Failed to add address');
+        toast.error(data.error || (isEditMode ? 'Gagal mengubah alamat' : 'Gagal menambahkan alamat'));
       }
     } catch (error) {
-      console.error('Error adding address:', error);
-      toast.error('Failed to add address');
+      console.error(`Error ${isEditMode ? 'updating' : 'adding'} address:`, error);
+      toast.error(isEditMode ? 'Gagal mengubah alamat' : 'Gagal menambahkan alamat');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
       {/* Use Current Location Button */}
       <div className="mb-4">
         <Button
@@ -250,13 +348,13 @@ export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
-          label="Full Name"
+          label="Nama Lengkap"
           value={formData.fullName}
           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
           required
         />
         <Input
-          label="Phone"
+          label="No HP"
           type="tel"
           value={formData.phone}
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -265,33 +363,33 @@ export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
       </div>
 
       <Input
-        label="Address Line 1"
+        label="Alamat Baris 1"
         value={formData.addressLine1}
         onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
         required
       />
 
       <Input
-        label="Address Line 2 (Optional)"
+        label="Alamat Baris 2 (Opsional)"
         value={formData.addressLine2}
         onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Input
-          label="City"
+          label="Kota"
           value={formData.city}
           onChange={(e) => setFormData({ ...formData, city: e.target.value })}
           required
         />
         <Input
-          label="State/Province"
+          label="Provinsi"
           value={formData.state}
           onChange={(e) => setFormData({ ...formData, state: e.target.value })}
           required
         />
         <Input
-          label="Postal Code"
+          label="Kode Pos"
           value={formData.postalCode}
           onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
           required
@@ -299,7 +397,7 @@ export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
       </div>
 
       <Input
-        label="Country"
+        label="Negara"
         value={formData.country}
         onChange={(e) => setFormData({ ...formData, country: e.target.value })}
         required
@@ -314,17 +412,25 @@ export function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
           className="w-4 h-4 text-blue-600 rounded"
         />
         <label htmlFor="isDefault" className="ml-2 text-sm text-gray-700">
-          Set as default address
+          Set sebagai alamat default
         </label>
       </div>
 
       <div className="flex gap-3 pt-4">
-        <Button type="submit" disabled={loading} className="flex-1">
-          {loading ? 'Saving...' : 'Save Address'}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
+        {showSaveButton && (
+          <Button 
+            type="submit" 
+            disabled={loading || (isEditMode && !hasChanges())} 
+            className="flex-1"
+          >
+            {loading ? 'Menyimpan...' : isEditMode ? 'Simpan' : 'Simpan Alamat'}
+          </Button>
+        )}
+        {!isEditMode && (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Batal
+          </Button>
+        )}
       </div>
     </form>
   );

@@ -9,21 +9,29 @@ import Link from 'next/link';
 import { CheckCircle, Package, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useCheckout } from '@/contexts/CheckoutContext';
+import { useCart } from '@/contexts/CartContext';
 import { Loader } from '@/components/ui/Loader';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { reset } = useCheckout();
+  const { refreshCart } = useCart();
   const orderNumber = searchParams?.get('order');
 
   useEffect(() => {
     if (!orderNumber) {
       router.push('/');
+      return;
     }
     // Reset checkout state
     reset();
-  }, [orderNumber, router, reset]);
+    // Refresh cart to ensure it's empty (cart items are deleted on server after order creation)
+    const syncCart = async () => {
+      await refreshCart();
+    };
+    syncCart();
+  }, [orderNumber, router, reset, refreshCart]);
 
   if (!orderNumber) return null;
 

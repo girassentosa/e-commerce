@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Dynamic viewport height for iOS */
+  --vh: 1vh;
 }
 
 @theme inline {
@@ -19,8 +21,193 @@
   }
 }
 
+/* Base styles */
+html {
+  height: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force white background for shop pages even in dark mode */
+/* This ensures consistent appearance across all devices including iOS */
+@media (prefers-color-scheme: dark) {
+  /* Override dark mode for shop layout - force light mode */
+  body {
+    background: #ffffff;
+    color: #171717;
+  }
+}
+
+/* Fix transparent text in iOS Safari inputs */
+input,
+textarea,
+select {
+  -webkit-text-fill-color: inherit;
+  color: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Fix autofill styling for iOS */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active {
+  -webkit-text-fill-color: inherit !important;
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  box-shadow: 0 0 0px 1000px white inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+  color: inherit !important;
+}
+
+/* Dark mode autofill fix */
+@media (prefers-color-scheme: dark) {
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  textarea:-webkit-autofill:active,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus,
+  select:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0px 1000px #0a0a0a inset !important;
+    box-shadow: 0 0 0px 1000px #0a0a0a inset !important;
+  }
+}
+
+/* Fix date input width and styling for iOS */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"] {
+  width: 100%;
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+}
+
+/* Fix date input calendar picker for iOS */
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-inner-spin-button,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-inner-spin-button,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: transparent;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
+  color: transparent;
+  cursor: pointer;
+  height: auto;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: auto;
+}
+
+/* Prevent layout shift on iOS when keyboard appears */
+@supports (-webkit-touch-callout: none) {
+  /* iOS specific styles - gentle approach */
+  html {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  body {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    /* Prevent body from expanding when keyboard appears - use fill-available as fallback */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+
+  /* Improve scrolling in main content areas */
+  main,
+  [role="main"],
+  .main-content {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* Fix for pages using min-h-screen to prevent layout shift */
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Fix for pages using min-h-[100vh] and min-h-[100dvh] */
+  [class*="min-h-\[100vh\]"],
+  [class*="min-h-\[100dvh\]"] {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Prevent zoom on input focus for iOS (optional, can be removed if zoom is desired) */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth scrolling */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent text selection on mobile (optional, remove if not needed) */
+input,
+textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
 }

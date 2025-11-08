@@ -18,14 +18,14 @@ function ShopLayoutContent({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const hideFooter = pathname === '/' || pathname === '/dashboard' || pathname === '/orders' || pathname === '/products' || pathname === '/notifications' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/');
+  const hideFooter = pathname === '/' || pathname === '/dashboard' || pathname === '/orders' || pathname === '/products' || pathname === '/notifications' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname === '/cart' || pathname === '/checkout' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/') || pathname?.startsWith('/checkout/');
   const hideHeader = pathname === '/dashboard' || pathname === '/orders' || pathname === '/products' || pathname === '/notifications' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/');
   const hideBottomNav = pathname === '/orders' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/');
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-white">
       {!hideHeader && <Header />}
-      <main className="flex-grow pb-20">{children}</main>
+      <main className={`flex-grow bg-white ${!hideBottomNav ? 'pb-20' : ''}`}>{children}</main>
       {!hideFooter && <Footer />}
       {/* Bottom Navigation - Sticky Footer */}
       {!hideBottomNav && (
@@ -91,8 +91,8 @@ export default function ShopLayout({
 }) {
   return (
     <Suspense fallback={
-      <div className="flex flex-col min-h-screen">
-        <main className="flex-grow pb-20">{children}</main>
+      <div className="flex flex-col min-h-screen bg-white">
+        <main className="flex-grow bg-white">{children}</main>
       </div>
     }>
       <ShopLayoutContent>{children}</ShopLayoutContent>

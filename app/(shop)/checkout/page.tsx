@@ -23,7 +23,7 @@ const steps = [
 export default function CheckoutPage() {
   const router = useRouter();
   const { status } = useSession();
-  const { items, itemCount } = useCart();
+  const { items, itemCount, refreshCart } = useCart();
   const {
     step,
     addressId,
@@ -74,6 +74,8 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     const orderNumber = await createOrder();
     if (orderNumber) {
+      // Refresh cart to sync with database (cart items are deleted on server after order creation)
+      await refreshCart();
       router.push(`/checkout/success?order=${orderNumber}`);
     }
   };

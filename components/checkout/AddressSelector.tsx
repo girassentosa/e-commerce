@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Check } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { AddressForm } from './AddressForm';
+import { Check } from 'lucide-react';
 import { Loader } from '@/components/ui/Loader';
 
 interface Address {
@@ -27,7 +25,6 @@ interface AddressSelectorProps {
 export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
 
   const fetchAddresses = async () => {
     try {
@@ -54,15 +51,12 @@ export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) 
 
   if (loading) return <Loader />;
 
-  if (showForm) {
+  // Show message if no addresses
+  if (addresses.length === 0) {
     return (
-      <AddressForm
-        onSuccess={() => {
-          setShowForm(false);
-          fetchAddresses();
-        }}
-        onCancel={() => setShowForm(false)}
-      />
+      <div className="border rounded-lg p-4 text-center text-gray-500">
+        <p>Tidak ada alamat ditemukan. Silakan tambah alamat di Pengaturan.</p>
+      </div>
     );
   }
 
@@ -104,15 +98,6 @@ export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) 
           </div>
         </div>
       ))}
-
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={() => setShowForm(true)}
-      >
-        <Plus className="w-4 h-4 mr-2" />
-        Add New Address
-      </Button>
     </div>
   );
 }
