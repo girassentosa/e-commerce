@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { uploadToCloudinary, uploadFromUrlToCloudinary, isCloudinaryConfigured } from '@/lib/cloudinary';
 
 /**
  * Helper function to download image from URL
@@ -134,26 +135,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create upload directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'images', 'products');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
+    // Check if Cloudinary is configured
+    if (isCloudinaryConfigured()) {
+      // Use Cloudinary for production
+      try {
+        let uploadResult;
+        
+        if (imageUrl) {
+          // Upload from URL to Cloudinary
+          uploadResult = await uploadFromUrlToCloudinary(imageUrl, 'products');
+        } else {
+          // Upload file buffer to Cloudinary
+          uploadResult = await uploadToCloudinary(buffer, 'products');
+        }
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            url: uploadResult.secure_url,
+            filename: uploadResult.public_id,
+          },
+        });
+      } catch (error: any) {
+        console.error('Cloudinary upload error:', error);
+        return NextResponse.json(
+          { success: false, error: error.message || 'Failed to upload to Cloudinary' },
+          { status: 500 }
+        );
+      }
+    } else {
+      // Fallback to local storage (for development)
+      // Create upload directory if it doesn't exist
+      const uploadDir = join(process.cwd(), 'public', 'images', 'products');
+      if (!existsSync(uploadDir)) {
+        await mkdir(uploadDir, { recursive: true });
+      }
+
+      // Save file
+      const filepath = join(uploadDir, filename);
+      await writeFile(filepath, buffer);
+
+      // Return public URL
+      const publicUrl = `/images/products/${filename}`;
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          url: publicUrl,
+          filename,
+        },
+      });
     }
-
-    // Save file
-    const filepath = join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-
-    // Return public URL
-    const publicUrl = `/images/products/${filename}`;
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        url: publicUrl,
-        filename,
-      },
-    });
   } catch (error: any) {
     console.error('Error uploading file:', error);
     return NextResponse.json(
@@ -183,37 +215,29 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json();
     imageUrl = body.imageUrl;
 
-    if (!imageUrl || !imageUrl.startsWith('/images/')) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid image URL' },
-        { status: 400 }
-      );
+    // Note: We don't delete images to keep old photos accessible
+    // This is intentional - old photos should remain in storage
+    
+    // If using local storage, we can optionally delete local files
+    // But for Cloudinary, we keep all photos (don't delete)
+    if (imageUrl && imageUrl.startsWith('/images/')) {
+      // Only delete local files if not using Cloudinary
+      if (!isCloudinaryConfigured()) {
+        const normalizedPath = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+        const filepath = join(process.cwd(), 'public', normalizedPath);
+        
+        if (existsSync(filepath)) {
+          await unlink(filepath);
+          console.log('✅ [DELETE UPLOAD] Deleted local image file:', imageUrl);
+        }
+      }
     }
 
-    // Normalize path - remove leading slash if present
-    const normalizedPath = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
-    const filepath = join(process.cwd(), 'public', normalizedPath);
-    
-    console.log('🗑️  [DELETE UPLOAD] Deleting image:', imageUrl);
-    console.log('🗑️  [DELETE UPLOAD] Normalized path:', normalizedPath);
-    console.log('🗑️  [DELETE UPLOAD] Full path:', filepath);
-    
-    if (existsSync(filepath)) {
-      await unlink(filepath);
-      console.log('✅ [DELETE UPLOAD] Deleted image file:', imageUrl);
-      return NextResponse.json({
-        success: true,
-        message: 'Image deleted successfully',
-      });
-    } else {
-      // File doesn't exist, but return success anyway
-      console.log('⚠️  [DELETE UPLOAD] File not found (already deleted?):', imageUrl);
-      console.log('⚠️  [DELETE UPLOAD] Expected path:', filepath);
-      return NextResponse.json({
-        success: true,
-        message: 'Image already deleted or not found',
-      });
-    }
+    // Always return success - we keep old photos in Cloudinary
+    return NextResponse.json({
+      success: true,
+      message: 'Image deletion handled (old photos are kept for history)',
+    });
   } catch (error: any) {
     console.error('❌ [DELETE UPLOAD] Error deleting file:', imageUrl || 'unknown');
     console.error('❌ [DELETE UPLOAD] Error details:', error.message);

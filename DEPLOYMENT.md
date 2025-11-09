@@ -53,7 +53,31 @@ openssl rand -base64 32
 - Development: `http://localhost:3000`
 - Production: `https://your-domain.com` (ganti dengan domain Anda)
 
-### 3. Optional (jika diperlukan)
+### 3. Cloudinary (Recommended untuk Production - Image Storage)
+```env
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-api-key"
+CLOUDINARY_API_SECRET="your-api-secret"
+```
+
+**Cara mendapatkan:**
+1. Buka https://cloudinary.com
+2. Sign up / Login (gratis untuk tier free)
+3. Dashboard → Settings → Upload
+4. Copy:
+   - **Cloud Name** → `CLOUDINARY_CLOUD_NAME`
+   - **API Key** → `CLOUDINARY_API_KEY`
+   - **API Secret** → `CLOUDINARY_API_SECRET`
+
+**Note:**
+- **Development:** Jika tidak di-set, aplikasi akan menggunakan local storage (`public/images/`)
+- **Production:** Sangat direkomendasikan untuk menggunakan Cloudinary karena:
+  - ✅ Foto lama tetap tersimpan dan bisa diakses (tidak hilang)
+  - ✅ CDN global untuk loading cepat
+  - ✅ Auto optimization (resize, compress)
+  - ✅ Reliable storage (tidak terbatas server storage)
+
+### 4. Optional (jika diperlukan)
 ```env
 NODE_ENV="production"
 ```
@@ -108,6 +132,9 @@ File `.env` sudah di-ignore oleh `.gitignore`, jadi aman. Tapi pastikan:
      - `DATABASE_URL`
      - `NEXTAUTH_SECRET`
      - `NEXTAUTH_URL` (akan auto-set oleh Vercel, tapi bisa override)
+     - `CLOUDINARY_CLOUD_NAME` (recommended untuk production)
+     - `CLOUDINARY_API_KEY` (recommended untuk production)
+     - `CLOUDINARY_API_SECRET` (recommended untuk production)
 
 4. **Deploy Database**
    - Jika belum punya database, gunakan Neon (gratis):

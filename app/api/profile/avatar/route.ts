@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { uploadToCloudinary, uploadFromUrlToCloudinary, isCloudinaryConfigured } from '@/lib/cloudinary';
 
 /**
  * Helper function to download image from URL
@@ -132,24 +133,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get old avatar URL before updating (for cleanup)
+    // Get old avatar URL before updating (we keep it for history)
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { avatarUrl: true },
     });
 
-    // Create upload directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'images', 'avatars');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
+    let publicUrl: string;
+    let finalFilename: string;
+
+    // Check if Cloudinary is configured
+    if (isCloudinaryConfigured()) {
+      // Use Cloudinary for production
+      try {
+        let uploadResult;
+        
+        if (imageUrl) {
+          // Upload from URL to Cloudinary
+          uploadResult = await uploadFromUrlToCloudinary(imageUrl, 'avatars');
+        } else {
+          // Upload file buffer to Cloudinary
+          uploadResult = await uploadToCloudinary(buffer, 'avatars');
+        }
+
+        publicUrl = uploadResult.secure_url;
+        finalFilename = uploadResult.public_id;
+      } catch (error: any) {
+        console.error('Cloudinary upload error:', error);
+        return NextResponse.json(
+          { success: false, error: error.message || 'Failed to upload to Cloudinary' },
+          { status: 500 }
+        );
+      }
+    } else {
+      // Fallback to local storage (for development)
+      // Create upload directory if it doesn't exist
+      const uploadDir = join(process.cwd(), 'public', 'images', 'avatars');
+      if (!existsSync(uploadDir)) {
+        await mkdir(uploadDir, { recursive: true });
+      }
+
+      // Save new file
+      const filepath = join(uploadDir, filename);
+      await writeFile(filepath, buffer);
+
+      // Return public URL
+      publicUrl = `/images/avatars/${filename}`;
+      finalFilename = filename;
+
+      // Note: We don't delete old avatar files in local storage either
+      // to keep history. Old photos remain accessible.
     }
-
-    // Save new file
-    const filepath = join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-
-    // Return public URL
-    const publicUrl = `/images/avatars/${filename}`;
 
     // Update user avatar URL in database
     await prisma.user.update({
@@ -159,25 +193,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Delete old avatar file from disk (cleanup orphaned file)
-    if (currentUser?.avatarUrl) {
-      try {
-        const oldFilepath = join(process.cwd(), 'public', currentUser.avatarUrl);
-        if (existsSync(oldFilepath)) {
-          await unlink(oldFilepath);
-          console.log('✅ Deleted old avatar:', currentUser.avatarUrl);
-        }
-      } catch (error) {
-        // Log but don't fail the request if old file deletion fails
-        console.error('⚠️ Failed to delete old avatar file:', currentUser.avatarUrl, error);
-      }
-    }
+    // Note: We intentionally DON'T delete old avatar files
+    // This ensures old photos remain accessible for history
+    // Old photos are kept in Cloudinary/local storage
 
     return NextResponse.json({
       success: true,
       data: {
         url: publicUrl,
-        filename,
+        filename: finalFilename,
       },
       message: 'Avatar uploaded successfully',
     });
