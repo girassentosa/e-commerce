@@ -166,23 +166,52 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      // Fallback to local storage (for development)
-      // Create upload directory if it doesn't exist
-      const uploadDir = join(process.cwd(), 'public', 'images', 'avatars');
-      if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true });
+      // Fallback to local storage (for development only)
+      // ⚠️ WARNING: This will NOT work in production (Vercel, Netlify, etc.)
+      // Production platforms have read-only file system
+      
+      // Check if we're in production
+      const isProduction = process.env.NODE_ENV === 'production';
+      
+      if (isProduction) {
+        // In production, Cloudinary is REQUIRED
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Cloudinary is required in production. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.' 
+          },
+          { status: 500 }
+        );
       }
 
-      // Save new file
-      const filepath = join(uploadDir, filename);
-      await writeFile(filepath, buffer);
+      // Only allow local storage in development
+      try {
+        // Create upload directory if it doesn't exist
+        const uploadDir = join(process.cwd(), 'public', 'images', 'avatars');
+        if (!existsSync(uploadDir)) {
+          await mkdir(uploadDir, { recursive: true });
+        }
 
-      // Return public URL
-      publicUrl = `/images/avatars/${filename}`;
-      finalFilename = filename;
+        // Save new file
+        const filepath = join(uploadDir, filename);
+        await writeFile(filepath, buffer);
 
-      // Note: We don't delete old avatar files in local storage either
-      // to keep history. Old photos remain accessible.
+        // Return public URL
+        publicUrl = `/images/avatars/${filename}`;
+        finalFilename = filename;
+
+        // Note: We don't delete old avatar files in local storage either
+        // to keep history. Old photos remain accessible.
+      } catch (error: any) {
+        console.error('❌ Local storage upload error:', error);
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Failed to save file to local storage. In production, Cloudinary is required. Please set Cloudinary environment variables.' 
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // Update user avatar URL in database

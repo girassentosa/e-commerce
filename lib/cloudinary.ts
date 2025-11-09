@@ -14,21 +14,30 @@ if (cloudName && apiKey && apiSecret) {
   });
   
   // Log configuration (without sensitive data)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ Cloudinary configured:', {
-      cloud_name: cloudName,
-      api_key: apiKey ? `${apiKey.substring(0, 4)}...` : 'missing',
-      api_secret: apiSecret ? '***' : 'missing',
-    });
-  }
+  // Log in both development and production for debugging
+  console.log('✅ Cloudinary configured:', {
+    cloud_name: cloudName,
+    api_key: apiKey ? `${apiKey.substring(0, 4)}...` : 'missing',
+    api_secret: apiSecret ? '***' : 'missing',
+    environment: process.env.NODE_ENV || 'unknown',
+  });
 } else {
-  if (process.env.NODE_ENV === 'development') {
-    console.warn('⚠️ Cloudinary not configured - will use local storage');
-    console.warn('Missing:', {
-      cloud_name: !cloudName,
-      api_key: !apiKey,
-      api_secret: !apiSecret,
-    });
+  // Warn in both environments, but especially important in production
+  const isProduction = process.env.NODE_ENV === 'production';
+  const warningMessage = isProduction 
+    ? '⚠️ CRITICAL: Cloudinary not configured in PRODUCTION - uploads will FAIL!'
+    : '⚠️ Cloudinary not configured - will use local storage (development only)';
+  
+  console.warn(warningMessage);
+  console.warn('Missing:', {
+    cloud_name: !cloudName,
+    api_key: !apiKey,
+    api_secret: !apiSecret,
+    environment: process.env.NODE_ENV || 'unknown',
+  });
+  
+  if (isProduction) {
+    console.error('❌ PRODUCTION ERROR: Cloudinary is REQUIRED in production. Local storage will NOT work.');
   }
 }
 

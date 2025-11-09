@@ -69,13 +69,16 @@ CLOUDINARY_API_SECRET="your-api-secret"
    - **API Key** → `CLOUDINARY_API_KEY`
    - **API Secret** → `CLOUDINARY_API_SECRET`
 
-**Note:**
+**⚠️ PENTING:**
 - **Development:** Jika tidak di-set, aplikasi akan menggunakan local storage (`public/images/`)
-- **Production:** Sangat direkomendasikan untuk menggunakan Cloudinary karena:
-  - ✅ Foto lama tetap tersimpan dan bisa diakses (tidak hilang)
-  - ✅ CDN global untuk loading cepat
-  - ✅ Auto optimization (resize, compress)
-  - ✅ Reliable storage (tidak terbatas server storage)
+- **Production:** Cloudinary **WAJIB** di-set! 
+  - ❌ Local storage **TIDAK BISA** digunakan di production (Vercel, Netlify, dll memiliki read-only file system)
+  - ✅ Upload akan **GAGAL** jika Cloudinary tidak dikonfigurasi di production
+  - ✅ Keuntungan Cloudinary:
+    - Foto lama tetap tersimpan dan bisa diakses (tidak hilang)
+    - CDN global untuk loading cepat
+    - Auto optimization (resize, compress)
+    - Reliable storage (tidak terbatas server storage)
 
 ### 4. Optional (jika diperlukan)
 ```env
