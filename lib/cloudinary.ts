@@ -1,11 +1,36 @@
 import { v2 as cloudinary } from 'cloudinary';
 
+// Get and validate Cloudinary credentials
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
+
 // Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+if (cloudName && apiKey && apiSecret) {
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+  });
+  
+  // Log configuration (without sensitive data)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Cloudinary configured:', {
+      cloud_name: cloudName,
+      api_key: apiKey ? `${apiKey.substring(0, 4)}...` : 'missing',
+      api_secret: apiSecret ? '***' : 'missing',
+    });
+  }
+} else {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('⚠️ Cloudinary not configured - will use local storage');
+    console.warn('Missing:', {
+      cloud_name: !cloudName,
+      api_key: !apiKey,
+      api_secret: !apiSecret,
+    });
+  }
+}
 
 export interface UploadResult {
   url: string;
@@ -26,6 +51,17 @@ export async function uploadToCloudinary(
   publicId?: string
 ): Promise<UploadResult> {
   try {
+    // Validate Cloudinary is configured
+    if (!isCloudinaryConfigured()) {
+      throw new Error('Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET');
+    }
+
+    // Get current config for debugging
+    const config = cloudinary.config();
+    if (!config.cloud_name || !config.api_key || !config.api_secret) {
+      throw new Error('Cloudinary configuration is incomplete. Please check your environment variables.');
+    }
+
     // Convert buffer to base64 if needed
     const uploadOptions: any = {
       folder,
@@ -43,8 +79,9 @@ export async function uploadToCloudinary(
     let uploadResult;
     if (Buffer.isBuffer(file)) {
       // Convert buffer to base64 data URI for Cloudinary
+      // Use 'image/auto' to let Cloudinary auto-detect the image format
       const base64String = file.toString('base64');
-      const dataUri = `data:image/jpeg;base64,${base64String}`;
+      const dataUri = `data:image/auto;base64,${base64String}`;
       uploadResult = await cloudinary.uploader.upload(dataUri, uploadOptions);
     } else {
       // Upload from base64 string or URL
@@ -57,7 +94,19 @@ export async function uploadToCloudinary(
       secure_url: uploadResult.secure_url,
     };
   } catch (error: any) {
-    console.error('Cloudinary upload error:', error);
+    console.error('❌ Cloudinary upload error:', error);
+    
+    // Provide more detailed error information
+    if (error.http_code === 401) {
+      const config = getCloudinaryConfigStatus();
+      console.error('🔍 Cloudinary Config Status:', config);
+      throw new Error(
+        `Cloudinary authentication failed (401). ` +
+        `Please verify your Cloudinary credentials are correct. ` +
+        `Cloud name: "${config.cloud_name || 'NOT SET'}"`
+      );
+    }
+    
     throw new Error(`Failed to upload to Cloudinary: ${error.message}`);
   }
 }
@@ -87,7 +136,19 @@ export async function uploadFromUrlToCloudinary(
       secure_url: uploadResult.secure_url,
     };
   } catch (error: any) {
-    console.error('Cloudinary upload from URL error:', error);
+    console.error('❌ Cloudinary upload from URL error:', error);
+    
+    // Provide more detailed error information
+    if (error.http_code === 401) {
+      const config = getCloudinaryConfigStatus();
+      console.error('🔍 Cloudinary Config Status:', config);
+      throw new Error(
+        `Cloudinary authentication failed (401). ` +
+        `Please verify your Cloudinary credentials are correct. ` +
+        `Cloud name: "${config.cloud_name || 'NOT SET'}"`
+      );
+    }
+    
     throw new Error(`Failed to upload from URL to Cloudinary: ${error.message}`);
   }
 }
@@ -111,11 +172,27 @@ export async function deleteFromCloudinary(publicId: string): Promise<void> {
  * Check if Cloudinary is configured
  */
 export function isCloudinaryConfigured(): boolean {
-  return !!(
-    process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
-  );
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+  const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+  const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
+  
+  return !!(cloudName && apiKey && apiSecret);
+}
+
+/**
+ * Get Cloudinary configuration status (for debugging)
+ */
+export function getCloudinaryConfigStatus() {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+  const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+  const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
+  
+  return {
+    configured: !!(cloudName && apiKey && apiSecret),
+    cloud_name: cloudName || null,
+    api_key: apiKey ? `${apiKey.substring(0, 4)}...` : null,
+    api_secret: apiSecret ? '***' : null,
+  };
 }
 
 export { cloudinary };
