@@ -171,14 +171,29 @@ export async function POST(request: NextRequest) {
       // Production platforms have read-only file system
       
       // Check if we're in production
-      const isProduction = process.env.NODE_ENV === 'production';
+      // Use multiple checks to detect production environment
+      const isProduction = 
+        process.env.NODE_ENV === 'production' || 
+        process.env.VERCEL_ENV === 'production' ||
+        process.env.VERCEL === '1';
       
       if (isProduction) {
         // In production, Cloudinary is REQUIRED
+        // Log detailed debug info
+        console.error('❌ [Avatar Upload] Production upload failed - Cloudinary not configured');
+        console.error('🔍 [Avatar Upload] Environment check:', {
+          NODE_ENV: process.env.NODE_ENV,
+          VERCEL_ENV: process.env.VERCEL_ENV,
+          VERCEL: process.env.VERCEL,
+          has_cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
+          has_api_key: !!process.env.CLOUDINARY_API_KEY,
+          has_api_secret: !!process.env.CLOUDINARY_API_SECRET,
+        });
+        
         return NextResponse.json(
           { 
             success: false, 
-            error: 'Cloudinary is required in production. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.' 
+            error: 'Cloudinary is required in production. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables in your hosting platform (Vercel/Netlify/etc) and redeploy.' 
           },
           { status: 500 }
         );

@@ -60,10 +60,27 @@ export async function uploadToCloudinary(
   publicId?: string
 ): Promise<UploadResult> {
   try {
+    // Re-read environment variables at runtime to ensure they're available
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+    const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+    const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
+    
     // Validate Cloudinary is configured
-    if (!isCloudinaryConfigured()) {
-      throw new Error('Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET');
+    if (!cloudName || !apiKey || !apiSecret) {
+      const configStatus = getCloudinaryConfigStatus();
+      console.error('❌ [Upload] Cloudinary not configured:', configStatus);
+      throw new Error(
+        `Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables. ` +
+        `Current status: cloud_name=${!!cloudName}, api_key=${!!apiKey}, api_secret=${!!apiSecret}`
+      );
     }
+
+    // Re-configure Cloudinary at runtime to ensure fresh config
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+    });
 
     // Get current config for debugging
     const config = cloudinary.config();
@@ -131,6 +148,24 @@ export async function uploadFromUrlToCloudinary(
   folder: string
 ): Promise<UploadResult> {
   try {
+    // Re-read and re-configure Cloudinary at runtime
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+    const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+    const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
+    
+    if (!cloudName || !apiKey || !apiSecret) {
+      throw new Error(
+        `Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.`
+      );
+    }
+    
+    // Re-configure Cloudinary at runtime
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+    });
+    
     const uploadResult = await cloudinary.uploader.upload(imageUrl, {
       folder,
       resource_type: 'image' as const,
@@ -179,13 +214,32 @@ export async function deleteFromCloudinary(publicId: string): Promise<void> {
 
 /**
  * Check if Cloudinary is configured
+ * This function reads env vars at runtime (not at module load time)
+ * to ensure environment variables are available in production
  */
 export function isCloudinaryConfigured(): boolean {
+  // Read environment variables at runtime (not from cached module-level vars)
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
   const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
   const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
   
-  return !!(cloudName && apiKey && apiSecret);
+  const isConfigured = !!(cloudName && apiKey && apiSecret);
+  
+  // Debug logging in production to help troubleshoot
+  if (!isConfigured) {
+    console.log('🔍 [Cloudinary Config Check] Environment variables status:', {
+      has_cloud_name: !!cloudName,
+      has_api_key: !!apiKey,
+      has_api_secret: !!apiSecret,
+      cloud_name_length: cloudName?.length || 0,
+      api_key_length: apiKey?.length || 0,
+      api_secret_length: apiSecret?.length || 0,
+      node_env: process.env.NODE_ENV,
+      vercel_env: process.env.VERCEL_ENV || 'not-vercel',
+    });
+  }
+  
+  return isConfigured;
 }
 
 /**
