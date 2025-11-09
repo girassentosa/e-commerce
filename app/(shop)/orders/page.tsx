@@ -7,7 +7,7 @@ import { useOrder } from '@/contexts/OrderContext';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
-import { Package, ChevronRight, Search, MessageCircle, ArrowLeft } from 'lucide-react';
+import { Package, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -16,8 +16,9 @@ function OrdersPageContent() {
   const searchParams = useSearchParams();
   const { status } = useSession();
   const { orders, loading, pagination, fetchOrders } = useOrder();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  
+  // Get search query from URL (managed by Header component)
+  const searchQuery = searchParams.get('search') || '';
   
   // Get initial filter from URL params
   const urlStatus = searchParams.get('status');
@@ -43,39 +44,15 @@ function OrdersPageContent() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      fetchOrders(1, statusFilter, paymentStatusFilter);
+      // Use showLoading=false for smooth filter transitions (only show loading on initial load)
+      // Check if this is initial load by checking if we have no filters and no orders yet
+      const isInitialLoad = !statusFilter && !paymentStatusFilter && orders.length === 0 && !loading;
+      fetchOrders(1, statusFilter, paymentStatusFilter, isInitialLoad);
     }
-  }, [status, statusFilter, paymentStatusFilter, fetchOrders]);
+  }, [status, statusFilter, paymentStatusFilter, fetchOrders, orders.length, loading]);
 
-  const handleFilterClick = (filterType: string, value?: string) => {
-    let newStatusFilter: string | undefined;
-    let newPaymentStatusFilter: string | undefined;
-
-    if (filterType === 'status') {
-      newStatusFilter = value;
-      newPaymentStatusFilter = undefined;
-    } else if (filterType === 'paymentStatus') {
-      newPaymentStatusFilter = value;
-      newStatusFilter = undefined;
-    } else {
-      // Reset all filters
-      newStatusFilter = undefined;
-      newPaymentStatusFilter = undefined;
-    }
-
-    // Optimistic update - langsung update state dan URL
-    setStatusFilter(newStatusFilter);
-    setPaymentStatusFilter(newPaymentStatusFilter);
-
-    // Update URL dengan replace untuk smooth transition (tanpa scroll)
-    const params = new URLSearchParams();
-    if (newStatusFilter) params.set('status', newStatusFilter);
-    if (newPaymentStatusFilter) params.set('paymentStatus', newPaymentStatusFilter);
-    router.replace(`/orders${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false });
-    
-    // Fetch data di background tanpa blocking UI (tanpa loading indicator)
-    fetchOrders(1, newStatusFilter, newPaymentStatusFilter, false);
-  };
+  // Filter handling is now done in Header component
+  // This effect will fetch orders when filters change via URL
 
   // Only show loader on initial load when no orders exist
   if (status === 'loading') {
@@ -98,166 +75,8 @@ function OrdersPageContent() {
     );
   });
 
-  // Determine active filter
-  const isAllActive = !statusFilter && !paymentStatusFilter;
-  const isBelumBayarActive = paymentStatusFilter === 'PENDING';
-  const isDikemasActive = statusFilter === 'PROCESSING';
-  const isDikirimActive = statusFilter === 'SHIPPED';
-  const isSelesaiActive = statusFilter === 'DELIVERED';
-  const isPengembalianActive = statusFilter === 'REFUNDED';
-  const isDibatalkanActive = statusFilter === 'CANCELLED';
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header - Fixed height container to prevent layout shift */}
-      <div className="mb-4">
-        <div className="flex items-center min-h-[48px] gap-3">
-          {/* Left Section */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {!isSearchOpen ? (
-              <>
-                <button 
-                  onClick={() => router.push('/dashboard')}
-                  className="p-1 hover:opacity-70 transition-opacity"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <h1 className="text-lg font-bold text-gray-900">Pesanan Saya</h1>
-              </>
-            ) : (
-              <button 
-                onClick={() => {
-                  setIsSearchOpen(false);
-                  setSearchQuery('');
-                }}
-                className="p-1 hover:opacity-70 transition-opacity"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-            )}
-          </div>
-
-          {/* Middle Section - Search Input (only when search is open) */}
-          {isSearchOpen && (
-            <div className="flex items-center flex-1">
-              <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
-                <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Cari pesanan atau produk..."
-                  className="bg-transparent border-none outline-none text-sm text-gray-900 flex-1"
-                  autoFocus
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Right Section */}
-          <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
-            {!isSearchOpen ? (
-              <>
-                <button
-                  onClick={() => setIsSearchOpen(true)}
-                  className="p-2 hover:opacity-70 transition-opacity"
-                >
-                  <Search className="w-5 h-5 text-gray-600" />
-                </button>
-                <button className="p-2 hover:opacity-70 transition-opacity">
-                  <MessageCircle className="w-5 h-5 text-gray-600" />
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => {
-                  setIsSearchOpen(false);
-                  setSearchQuery('');
-                }}
-                className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors"
-              >
-                Batalkan
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Buttons - Horizontal Scroll */}
-      <div className="overflow-x-auto mb-6">
-        <div className="flex gap-2 min-w-max pb-1">
-          <button
-            onClick={() => handleFilterClick('all')}
-            className={`px-4 py-2 whitespace-nowrap text-sm font-medium transition-all duration-200 ease-in-out border-b-2 ${
-              isAllActive
-                ? 'text-gray-900 border-red-500'
-                : 'text-gray-700 border-transparent hover:text-gray-900'
-            }`}
-          >
-            Total Order
-          </button>
-          <button
-            onClick={() => handleFilterClick('paymentStatus', 'PENDING')}
-            className={`px-4 py-2 whitespace-nowrap text-sm font-medium transition-all duration-200 ease-in-out border-b-2 ${
-              isBelumBayarActive
-                ? 'text-gray-900 border-red-500'
-                : 'text-gray-700 border-transparent hover:text-gray-900'
-            }`}
-          >
-            Belum Bayar
-          </button>
-          <button
-            onClick={() => handleFilterClick('status', 'PROCESSING')}
-            className={`px-4 py-2 whitespace-nowrap text-sm font-medium transition-all duration-200 ease-in-out border-b-2 ${
-              isDikemasActive
-                ? 'text-gray-900 border-red-500'
-                : 'text-gray-700 border-transparent hover:text-gray-900'
-            }`}
-          >
-            Dikemas
-          </button>
-          <button
-            onClick={() => handleFilterClick('status', 'SHIPPED')}
-            className={`px-4 py-2 whitespace-nowrap text-sm font-medium transition-all duration-200 ease-in-out border-b-2 ${
-              isDikirimActive
-                ? 'text-gray-900 border-red-500'
-                : 'text-gray-700 border-transparent hover:text-gray-900'
-            }`}
-          >
-            Dikirim
-          </button>
-          <button
-            onClick={() => handleFilterClick('status', 'DELIVERED')}
-            className={`px-4 py-2 whitespace-nowrap text-sm font-medium transition-all duration-200 ease-in-out border-b-2 ${
-              isSelesaiActive
-                ? 'text-gray-900 border-red-500'
-                : 'text-gray-700 border-transparent hover:text-gray-900'
-            }`}
-          >
-            Selesai
-          </button>
-          <button
-            onClick={() => handleFilterClick('status', 'REFUNDED')}
-            className={`px-4 py-2 whitespace-nowrap text-sm font-medium transition-all duration-200 ease-in-out border-b-2 ${
-              isPengembalianActive
-                ? 'text-gray-900 border-red-500'
-                : 'text-gray-700 border-transparent hover:text-gray-900'
-            }`}
-          >
-            Pengembalian
-          </button>
-          <button
-            onClick={() => handleFilterClick('status', 'CANCELLED')}
-            className={`px-4 py-2 whitespace-nowrap text-sm font-medium transition-all duration-200 ease-in-out border-b-2 ${
-              isDibatalkanActive
-                ? 'text-gray-900 border-red-500'
-                : 'text-gray-700 border-transparent hover:text-gray-900'
-            }`}
-          >
-            Dibatalkan
-          </button>
-        </div>
-      </div>
+    <div className="-mt-2">
 
       {/* Search Results Info */}
       {searchQuery && filteredOrders.length > 0 && (
@@ -269,20 +88,11 @@ function OrdersPageContent() {
       {/* No search results */}
       {searchQuery && filteredOrders.length === 0 && orders.length > 0 && (
         <div className="text-center py-16">
-          <Search className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Tidak ada hasil</h2>
           <p className="text-gray-600 mb-6">
             Tidak ada pesanan yang cocok dengan "{searchQuery}"
           </p>
-          <button
-            onClick={() => {
-              setSearchQuery('');
-              setIsSearchOpen(false);
-            }}
-            className="text-indigo-600 hover:text-indigo-700 font-medium"
-          >
-            Hapus pencarian
-          </button>
         </div>
       )}
 
@@ -299,7 +109,7 @@ function OrdersPageContent() {
 
       {/* Orders list */}
       {filteredOrders.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-4 mb-0">
           {filteredOrders.map((order) => (
             <Link key={order.id} href={`/orders/${order.orderNumber}`}>
               <div className="border rounded-lg p-4 hover:shadow-lg transition cursor-pointer">
@@ -346,7 +156,7 @@ function OrdersPageContent() {
       )}
 
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex gap-2 justify-center mt-6">
+        <div className="flex gap-2 justify-center mt-6 mb-0">
           {[...Array(pagination.totalPages)].map((_, i) => (
             <button
               key={i}

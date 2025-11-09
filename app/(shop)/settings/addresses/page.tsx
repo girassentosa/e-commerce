@@ -85,7 +85,7 @@ function AddressesPageContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div>
       {/* Header - Fixed height container to prevent layout shift */}
       <div className="mb-4">
         <div className="flex items-center justify-center min-h-[48px] gap-3 relative">
@@ -102,17 +102,15 @@ function AddressesPageContent() {
         </div>
       </div>
 
-      {/* Alamat Saya Card - Full Width */}
-      <div className="w-full mb-8 w-screen -ml-[calc((100vw-100%)/2)]">
-        <div className="bg-white border border-gray-200 rounded-lg pt-6 pb-0 pl-4 pr-2 max-w-7xl mx-auto">
-          <div className="w-full">
-            {/* Header */}
-            <div className="mb-6">
-              <h2 className="text-base font-bold text-gray-900">Alamat Saya</h2>
-            </div>
+      {/* Alamat Saya Card */}
+      <div className="mb-0">
+        {/* Header */}
+        <div className="mb-6">
+          <h2 className="text-base font-bold text-gray-900">Alamat Saya</h2>
+        </div>
 
-            {/* Addresses List - Single card with dividers - Full width with dividers */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden -ml-4 -mr-2 mb-3">
+        {/* Addresses List - Single card with dividers */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden mb-3">
               {/* Address List */}
               {addresses.length > 0 ? (
                 addresses.map((address, index) => (
@@ -154,21 +152,19 @@ function AddressesPageContent() {
                   Belum ada alamat
                 </div>
               )}
-            </div>
+        </div>
 
-            {/* Add New Address Button - Card sendiri terpisah */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden -ml-4 -mr-2">
-              <button
-                onClick={handleAddAddress}
-                className="w-full flex items-center justify-center p-3 hover:bg-gray-100 transition-colors group"
-              >
-                <Plus className="w-5 h-5 text-indigo-500 group-hover:text-indigo-600 transition-colors flex-shrink-0 mr-1.5" />
-                <p className="text-sm text-gray-700 font-medium leading-tight">
-                  Tambah Alamat Baru
-                </p>
-              </button>
-            </div>
-          </div>
+        {/* Add New Address Button - Card sendiri terpisah */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+          <button
+            onClick={handleAddAddress}
+            className="w-full flex items-center justify-center p-3 hover:bg-gray-100 transition-colors group"
+          >
+            <Plus className="w-5 h-5 text-indigo-500 group-hover:text-indigo-600 transition-colors flex-shrink-0 mr-1.5" />
+            <p className="text-sm text-gray-700 font-medium leading-tight">
+              Tambah Alamat Baru
+            </p>
+          </button>
         </div>
       </div>
     </div>

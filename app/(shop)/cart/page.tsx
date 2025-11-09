@@ -32,10 +32,8 @@ export default function CartPage() {
   // Loading state
   if (loading && items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="flex justify-center items-center min-h-[400px]">
-          <Loader size="lg" />
-        </div>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader size="lg" />
       </div>
     );
   }
@@ -43,22 +41,20 @@ export default function CartPage() {
   // Empty cart state
   if (items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="mb-6">
-            <ShoppingBag className="w-24 h-24 mx-auto text-gray-300" strokeWidth={1} />
-          </div>
-          <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
-          <p className="text-gray-600 mb-8">
-            Looks like you haven't added anything to your cart yet.
-          </p>
-          <Link href="/products">
-            <Button size="lg">
-              <ShoppingBag className="w-5 h-5 mr-2" />
-              Browse Products
-            </Button>
-          </Link>
+      <div className="max-w-2xl mx-auto text-center">
+        <div className="mb-6">
+          <ShoppingBag className="w-24 h-24 mx-auto text-gray-300" strokeWidth={1} />
         </div>
+        <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
+        <p className="text-gray-600 mb-8">
+          Looks like you haven't added anything to your cart yet.
+        </p>
+        <Link href="/products">
+          <Button size="lg">
+            <ShoppingBag className="w-5 h-5 mr-2" />
+            Browse Products
+          </Button>
+        </Link>
       </div>
     );
   }
@@ -88,7 +84,7 @@ export default function CartPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div>
       {/* Header */}
       <div className="mb-8">
         <Link 

@@ -10,13 +10,10 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { TrendingUp, Check, Search, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { ProductGrid } from '@/components/products/ProductGrid';
 import { ProductGridSkeleton } from '@/components/products/ProductSkeleton';
 import { Pagination } from '@/components/ui/Pagination';
-import { Loader } from '@/components/ui/Loader';
-import { useCart } from '@/contexts/CartContext';
 import toast from 'react-hot-toast';
 
 interface Product {
@@ -55,7 +52,6 @@ interface ProductsData {
 function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { itemCount } = useCart();
 
   // Single state object for products and pagination - ensures all updates happen together
   const [productsData, setProductsData] = useState<ProductsData>({
@@ -68,8 +64,6 @@ function ProductsPageContent() {
     },
   });
   const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Get filters from URL params (memoized to prevent infinite loops)
   const currentFilters = useMemo(() => ({
@@ -145,180 +139,89 @@ function ProductsPageContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Filter products based on search query
+
+  // Get search query from URL
+  const urlSearchQuery = searchParams.get('search') || '';
+  
+  // Filter products based on search query from URL
   const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return productsData.products;
-    const query = searchQuery.toLowerCase();
+    if (!urlSearchQuery.trim()) return productsData.products;
+    const query = urlSearchQuery.toLowerCase();
     return productsData.products.filter((product) =>
       product.name.toLowerCase().includes(query) ||
       product.category?.name.toLowerCase().includes(query) ||
       product.brand?.toLowerCase().includes(query)
     );
-  }, [productsData.products, searchQuery]);
-
+  }, [productsData.products, urlSearchQuery]);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header - Fixed height container to prevent layout shift */}
-        <div className="mb-2">
-          <div className="flex items-center min-h-[56px] gap-3">
-            {/* Left Section */}
-            <div className="flex items-center gap-3 flex-shrink-0">
-              {!isSearchOpen ? (
-                <>
-                  <TrendingUp className="w-8 h-8 text-indigo-600" />
-                  <h1 className="text-3xl font-bold text-gray-900">Trending</h1>
-                </>
-              ) : (
-                <button 
-                  onClick={() => {
-                    setIsSearchOpen(false);
-                    setSearchQuery('');
-                  }}
-                  className="p-1 hover:opacity-70 transition-opacity"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-              )}
-            </div>
+      <div className="container mx-auto px-4 pt-0 pb-8">
 
-            {/* Middle Section - Search Input (only when search is open) */}
-            {isSearchOpen && (
-              <div className="flex items-center flex-1">
-                <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
-                  <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Cari produk..."
-                    className="bg-transparent border-none outline-none text-sm text-gray-900 flex-1"
-                    autoFocus
-                  />
-                </div>
+        {/* Features Card - Baru Setiap Hari & Gratis Ongkir */}
+        <div className="mb-8 -mt-2 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg py-2 px-4">
+          <div className="flex items-center justify-center gap-6 sm:gap-8">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
+                <Check className="w-3 h-3 text-white" />
               </div>
-            )}
-
-            {/* Right Section */}
-            <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
-              {!isSearchOpen ? (
-                <>
-                  <button
-                    onClick={() => setIsSearchOpen(true)}
-                    className="p-2 hover:opacity-70 transition-opacity"
-                  >
-                    <Search className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <Link href="/cart" className="relative p-2 hover:opacity-70 transition-opacity">
-                    <ShoppingCart className="w-5 h-5 text-gray-600" />
-                    {itemCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {itemCount > 99 ? '99+' : itemCount}
-                      </span>
-                    )}
-                  </Link>
-                </>
-              ) : (
-                <button
-                  onClick={() => {
-                    setIsSearchOpen(false);
-                    setSearchQuery('');
-                  }}
-                  className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors"
-                >
-                  Batalkan
-                </button>
-              )}
+              <span className="text-xs sm:text-sm text-red-700 italic">Baru Setiap Hari</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
+                <Check className="w-3 h-3 text-white" />
+              </div>
+              <span className="text-xs sm:text-sm text-red-700 italic">Gratis Ongkir</span>
             </div>
           </div>
         </div>
 
-        {/* Features Card */}
-        <div className="mb-8 w-screen -ml-[calc((100vw-100%)/2)] bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-            <div className="flex items-center justify-center gap-6 sm:gap-8">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
-                  <Check className="w-3 h-3 text-white" />
-                </div>
-                <span className="text-xs sm:text-sm text-red-700 italic">Baru Setiap Hari</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
-                  <Check className="w-3 h-3 text-white" />
-                </div>
-                <span className="text-xs sm:text-sm text-red-700 italic">Gratis Ongkir</span>
-              </div>
-            </div>
+        {/* Products Section - Struktur identik dengan halaman utama */}
+        {loading && productsData.products.length === 0 ? (
+          <ProductGridSkeleton count={12} />
+        ) : (
+          <div className="mb-12">
+               {/* Search Results Info */}
+               {urlSearchQuery && filteredProducts.length > 0 && (
+                 <div className="mb-4 text-sm text-gray-600">
+                   Menampilkan {filteredProducts.length} dari {productsData.products.length} produk
+                 </div>
+               )}
+
+               {/* No search results */}
+               {urlSearchQuery && filteredProducts.length === 0 && productsData.products.length > 0 ? (
+                 <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+                   <h2 className="text-xl font-semibold text-gray-900 mb-2">Tidak ada hasil</h2>
+                   <p className="text-gray-600 mb-6">
+                     Tidak ada produk yang cocok dengan "{urlSearchQuery}"
+                   </p>
+                 </div>
+               ) : filteredProducts.length > 0 ? (
+                 <>
+                   {/* Products Grid - Menggunakan columns={4} seperti halaman utama */}
+                   <ProductGrid
+                     products={filteredProducts}
+                     columns={4}
+                   />
+
+                   {/* Pagination - only show when not searching */}
+                   {!urlSearchQuery && productsData.pagination.totalPages > 1 && (
+                     <div className="mt-8">
+                       <Pagination
+                         currentPage={productsData.pagination.page}
+                         totalPages={productsData.pagination.totalPages}
+                         onPageChange={handlePageChange}
+                       />
+                     </div>
+                   )}
+                 </>
+               ) : !loading && !urlSearchQuery ? (
+                 <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                   <p className="text-gray-600">No products available</p>
+                 </div>
+               ) : null}
           </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 gap-8">
-          {/* Products Grid */}
-          <main className="w-full">
-            {loading && productsData.products.length === 0 ? (
-              <ProductGridSkeleton count={12} />
-            ) : (
-              <>
-                {/* Search Results Info */}
-                {searchQuery && filteredProducts.length > 0 && (
-                  <div className="mb-4 text-sm text-gray-600">
-                    Menampilkan {filteredProducts.length} dari {productsData.products.length} produk
-                  </div>
-                )}
-
-                {/* No search results */}
-                {searchQuery && filteredProducts.length === 0 && productsData.products.length > 0 && (
-                  <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
-                    <Search className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Tidak ada hasil</h2>
-                    <p className="text-gray-600 mb-6">
-                      Tidak ada produk yang cocok dengan "{searchQuery}"
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setIsSearchOpen(false);
-                      }}
-                      className="text-indigo-600 hover:text-indigo-700 font-medium"
-                    >
-                      Hapus pencarian
-                    </button>
-                  </div>
-                )}
-
-                {/* Products */}
-                {filteredProducts.length > 0 ? (
-                  <>
-                    <ProductGrid
-                      products={filteredProducts}
-                      columns={3}
-                    />
-
-                    {/* Pagination - only show when not searching */}
-                    {!searchQuery && productsData.pagination.totalPages > 1 && (
-                      <div className="mt-8">
-                        <Pagination
-                          currentPage={productsData.pagination.page}
-                          totalPages={productsData.pagination.totalPages}
-                          onPageChange={handlePageChange}
-                        />
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  !loading && !searchQuery && (
-                    <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-                      <p className="text-gray-600">No products available</p>
-                    </div>
-                  )
-                )}
-              </>
-            )}
-          </main>
-        </div>
+        )}
       </div>
     </div>
   );

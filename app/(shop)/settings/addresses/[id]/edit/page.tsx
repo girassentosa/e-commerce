@@ -75,7 +75,7 @@ function EditAddressPageContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div>
       {/* Header - Fixed height container to prevent layout shift */}
       <div className="mb-4">
         <div className="flex items-center justify-between min-h-[48px] gap-3">
@@ -101,19 +101,17 @@ function EditAddressPageContent() {
         </div>
       </div>
 
-      {/* Address Form Card - Full Width */}
-      <div className="w-full mb-8 w-screen -ml-[calc((100vw-100%)/2)]">
-        <div className="max-w-7xl mx-auto pl-4 pr-2">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 -ml-4 -mr-2">
-            <AddressForm 
-              addressId={addressId}
-              initialData={address}
-              onSuccess={handleSuccess} 
-              onCancel={handleCancel}
-              onSaveButtonRef={setSaveButtonProps}
-              showSaveButton={false}
-            />
-          </div>
+      {/* Address Form Card */}
+      <div className="mb-0">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <AddressForm 
+            addressId={addressId}
+            initialData={address}
+            onSuccess={handleSuccess} 
+            onCancel={handleCancel}
+            onSaveButtonRef={setSaveButtonProps}
+            showSaveButton={false}
+          />
         </div>
       </div>
     </div>

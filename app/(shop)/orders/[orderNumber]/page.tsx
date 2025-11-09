@@ -38,9 +38,7 @@ export default function OrderDetailPage() {
 
   if (loading || !currentOrder) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="flex justify-center"><Loader size="lg" /></div>
-      </div>
+      <div className="flex justify-center"><Loader size="lg" /></div>
     );
   }
 
@@ -49,7 +47,7 @@ export default function OrderDetailPage() {
   const canCancel = ['PENDING', 'PROCESSING'].includes(order.status);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div>
       <Link href="/orders" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4">
         <ArrowLeft className="w-4 h-4 mr-1" />
         Back to Orders

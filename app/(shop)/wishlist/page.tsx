@@ -34,10 +34,8 @@ export default function WishlistPage() {
   // Loading state
   if (loading && items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="flex justify-center items-center min-h-[400px]">
-          <Loader size="lg" />
-        </div>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader size="lg" />
       </div>
     );
   }
@@ -45,22 +43,20 @@ export default function WishlistPage() {
   // Empty wishlist state
   if (items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="mb-6">
-            <Heart className="w-24 h-24 mx-auto text-gray-300" strokeWidth={1} />
-          </div>
-          <h1 className="text-3xl font-bold mb-4">Your Wishlist is Empty</h1>
-          <p className="text-gray-600 mb-8">
-            Save your favorite items to your wishlist and shop them later.
-          </p>
-          <Link href="/products">
-            <Button size="lg">
-              <ShoppingCart className="w-5 h-5 mr-2" />
-              Browse Products
-            </Button>
-          </Link>
+      <div className="max-w-2xl mx-auto text-center">
+        <div className="mb-6">
+          <Heart className="w-24 h-24 mx-auto text-gray-300" strokeWidth={1} />
         </div>
+        <h1 className="text-3xl font-bold mb-4">Your Wishlist is Empty</h1>
+        <p className="text-gray-600 mb-8">
+          Save your favorite items to your wishlist and shop them later.
+        </p>
+        <Link href="/products">
+          <Button size="lg">
+            <ShoppingCart className="w-5 h-5 mr-2" />
+            Browse Products
+          </Button>
+        </Link>
       </div>
     );
   }
@@ -80,7 +76,7 @@ export default function WishlistPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -231,7 +227,7 @@ export default function WishlistPage() {
       </div>
 
       {/* Continue Shopping Link */}
-      <div className="mt-12 text-center">
+      <div className="mt-12 mb-0 text-center">
         <Link href="/products">
           <Button variant="outline" size="lg">
             Continue Shopping

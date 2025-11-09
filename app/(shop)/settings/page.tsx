@@ -38,7 +38,7 @@ function SettingsPageContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-white min-h-full">
+    <div>
       {/* Header - Fixed height container to prevent layout shift */}
       <div className="mb-4">
         <div className="flex items-center min-h-[48px] gap-3">
@@ -62,16 +62,15 @@ function SettingsPageContent() {
         </div>
       </div>
 
-      {/* Akun Saya Card - Full Width */}
-      <div className="w-full mb-8 w-screen -ml-[calc((100vw-100%)/2)]">
-        <div className="max-w-7xl mx-auto pl-4 pr-2">
-          {/* Header */}
-          <div className="mb-4 -ml-4 -mr-2">
-            <h2 className="text-base font-bold text-gray-900 px-4">Akun Saya</h2>
-          </div>
+      {/* Akun Saya Card */}
+      <div className="mb-6">
+        {/* Header */}
+        <div className="mb-4">
+          <h2 className="text-base font-bold text-gray-900">Akun Saya</h2>
+        </div>
 
-          {/* Settings Options - Single card with dividers - Full width with dividers */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden -ml-4 -mr-2">
+        {/* Settings Options - Single card with dividers */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
             {/* Akun dan Keamanan */}
             <Link 
               href="/settings/account"
@@ -117,13 +116,11 @@ function SettingsPageContent() {
             </Link>
           </div>
         </div>
-      </div>
 
-      {/* Logout Button Card - Full Width */}
-      <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
-        <div className="max-w-7xl mx-auto pl-4 pr-2">
-          {/* Logout Button - Full width card */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden -ml-4 -mr-2">
+      {/* Logout Button Card */}
+      <div className="mb-0">
+        {/* Logout Button */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center p-3 hover:bg-gray-100 transition-colors"
@@ -134,7 +131,6 @@ function SettingsPageContent() {
             </button>
           </div>
         </div>
-      </div>
     </div>
   );
 }

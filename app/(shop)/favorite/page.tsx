@@ -1,41 +1,40 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Search, ShoppingCart, Heart } from 'lucide-react';
+import { Heart, ShoppingCart, Search } from 'lucide-react';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
 import { Badge } from '@/components/ui/Badge';
+import { useFavoriteEditMode, FavoriteEditModeProvider } from '@/contexts/FavoriteEditModeContext';
 
 function FavoritePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status } = useSession();
   const { items, loading, removeItem } = useWishlist();
-  const { addItem: addToCart, itemCount } = useCart();
+  const { addItem: addToCart } = useCart();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   
-  // Get referrer from query params or default to dashboard
-  const fromPage = searchParams?.get('from') || 'dashboard';
+  // Get search query from URL (managed by Header component)
+  const searchQuery = searchParams.get('search') || '';
   
-  // Handle back navigation
-  const handleBack = () => {
-    if (fromPage === 'activities') {
-      router.push('/activities');
-    } else {
-      router.push('/dashboard');
+  // Get edit mode from context - MUST be called before any early returns
+  const { isEditMode, setIsEditMode } = useFavoriteEditMode();
+  
+  // Reset selected items when edit mode changes - MUST be called before any early returns
+  useEffect(() => {
+    if (!isEditMode) {
+      setSelectedItems([]);
     }
-  };
+  }, [isEditMode]);
 
   // Redirect to login if not authenticated
   if (status === 'unauthenticated') {
@@ -47,28 +46,6 @@ function FavoritePageContent() {
   if (loading && items.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-4 relative">
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button 
-              onClick={() => router.push('/dashboard')}
-              className="p-1 hover:opacity-70 transition-opacity"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <h1 className="text-lg font-bold text-gray-900">Pembeli</h1>
-          </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <button className="p-2 hover:opacity-70 transition-opacity">
-              <Search className="w-5 h-5 text-gray-600" />
-            </button>
-            <Link href="/cart" className="relative p-2 hover:opacity-70 transition-opacity">
-              <ShoppingCart className="w-5 h-5 text-gray-600" />
-            </Link>
-            <button className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors">
-              Ubah
-            </button>
-          </div>
-        </div>
         <div className="flex justify-center items-center min-h-[400px]">
           <Loader size="lg" />
         </div>
@@ -132,115 +109,11 @@ function FavoritePageContent() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header - Fixed height container to prevent layout shift */}
-      <div className="mb-4">
-        <div className="flex items-center min-h-[48px] gap-3">
-          {/* Left Section */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {!isSearchOpen ? (
-              <>
-                <button 
-                  onClick={handleBack}
-                  className="p-1 hover:opacity-70 transition-opacity"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <h1 className="text-lg font-bold text-gray-900">Pembeli</h1>
-              </>
-            ) : (
-              <button 
-                onClick={() => {
-                  setIsSearchOpen(false);
-                  setSearchQuery('');
-                }}
-                className="p-1 hover:opacity-70 transition-opacity"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-            )}
-          </div>
-
-          {/* Middle Section - Search Input (only when search is open) */}
-          {isSearchOpen && (
-            <div className="flex items-center flex-1">
-              <div className="flex items-center gap-3 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2">
-                <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Cari produk favorit..."
-                  className="bg-transparent border-none outline-none text-sm text-gray-900 flex-1"
-                  autoFocus
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Right Section */}
-          <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
-            {!isSearchOpen && !isEditMode && (
-              <>
-                <button
-                  onClick={() => {
-                    setIsSearchOpen(true);
-                    setIsEditMode(false);
-                  }}
-                  className="p-2 hover:opacity-70 transition-opacity"
-                >
-                  <Search className="w-5 h-5 text-gray-600" />
-                </button>
-                <Link href="/cart" className="relative p-2 hover:opacity-70 transition-opacity">
-                  <ShoppingCart className="w-5 h-5 text-gray-600" />
-                  {itemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {itemCount > 99 ? '99+' : itemCount}
-                    </span>
-                  )}
-                </Link>
-                <button 
-                  onClick={() => {
-                    setIsEditMode(true);
-                    setIsSearchOpen(false);
-                    setSearchQuery('');
-                    setSelectedItems([]);
-                  }}
-                  className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors"
-                >
-                  Ubah
-                </button>
-              </>
-            )}
-            {!isSearchOpen && isEditMode && (
-              <button 
-                onClick={() => {
-                  setIsEditMode(false);
-                  setSelectedItems([]);
-                }}
-                className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors"
-              >
-                Selesai
-              </button>
-            )}
-            {isSearchOpen && (
-              <button
-                onClick={() => {
-                  setIsSearchOpen(false);
-                  setSearchQuery('');
-                  setIsEditMode(false);
-                }}
-                className="text-xs text-gray-700 font-medium hover:text-gray-900 transition-colors"
-              >
-                Batalkan
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+    <div className="container mx-auto px-4 pt-0 pb-8">
 
       {/* Search Results Info */}
-      {searchQuery && filteredItems.length > 0 && (
+      <div className="-mt-2">
+        {searchQuery && filteredItems.length > 0 && (
         <div className="mb-4 text-sm text-gray-600">
           Menampilkan {filteredItems.length} dari {items.length} produk favorit
         </div>
@@ -273,15 +146,12 @@ function FavoritePageContent() {
           <p className="text-gray-600 mb-6">
             Tidak ada produk favorit yang cocok dengan "{searchQuery}"
           </p>
-          <button
-            onClick={() => {
-              setSearchQuery('');
-              setIsSearchOpen(false);
-            }}
+          <Link
+            href="/favorite"
             className="text-indigo-600 hover:text-indigo-700 font-medium"
           >
             Hapus pencarian
-          </button>
+          </Link>
         </div>
       )}
 
@@ -499,6 +369,7 @@ function FavoritePageContent() {
 
       {/* Spacer for footer */}
       {isEditMode && <div className="h-20"></div>}
+      </div>
     </div>
   );
 }
@@ -512,7 +383,9 @@ export default function FavoritePage() {
         </div>
       </div>
     }>
-      <FavoritePageContent />
+      <FavoriteEditModeProvider>
+        <FavoritePageContent />
+      </FavoriteEditModeProvider>
     </Suspense>
   );
 }

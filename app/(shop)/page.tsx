@@ -74,13 +74,25 @@ function HomePageContent() {
     fetchAllProducts();
   }, [currentFilters]);
 
+  // Filter products based on search query from URL
+  const searchQuery = searchParams.get('search') || '';
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products;
+    const query = searchQuery.toLowerCase();
+    return products.filter((product) =>
+      product.name.toLowerCase().includes(query) ||
+      product.category?.name.toLowerCase().includes(query) ||
+      product.brand?.toLowerCase().includes(query)
+    );
+  }, [products, searchQuery]);
+
   // If user is logged in, show customer-focused homepage
   if (session) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 pt-0 pb-8">
           {/* Welcome Section */}
-          <div className="mb-8">
+          <div className="mb-8 -mt-2">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
               Welcome back, {session.user.firstName || session.user.email}! 👋
             </h1>
@@ -97,12 +109,28 @@ function HomePageContent() {
               </h2>
             </div>
             
+            {/* Search Results Info */}
+            {searchQuery && filteredProducts.length > 0 && (
+              <div className="mb-4 text-sm text-gray-600">
+                Menampilkan {filteredProducts.length} dari {products.length} produk
+              </div>
+            )}
+
+            {/* No search results */}
+            {searchQuery && filteredProducts.length === 0 && products.length > 0 && (
+              <div className="text-center py-16 bg-white rounded-lg border border-gray-200 mb-4">
+                <p className="text-gray-600 mb-4">
+                  Tidak ada produk yang cocok dengan "{searchQuery}"
+                </p>
+              </div>
+            )}
+            
             {loadingProducts && products.length === 0 ? (
               <ProductGridSkeleton count={12} />
-            ) : products.length > 0 ? (
-              <ProductGrid products={products} columns={4} />
+            ) : filteredProducts.length > 0 ? (
+              <ProductGrid products={filteredProducts} columns={4} />
             ) : (
-              !loadingProducts && (
+              !loadingProducts && !searchQuery && (
                 <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
                   <p className="text-gray-600">No products available</p>
                 </div>
@@ -126,12 +154,28 @@ function HomePageContent() {
             </h2>
           </div>
           
+          {/* Search Results Info */}
+          {searchQuery && filteredProducts.length > 0 && (
+            <div className="mb-4 text-sm text-gray-600">
+              Menampilkan {filteredProducts.length} dari {products.length} produk
+            </div>
+          )}
+
+          {/* No search results */}
+          {searchQuery && filteredProducts.length === 0 && products.length > 0 && (
+            <div className="text-center py-16 bg-white rounded-lg border border-gray-200 mb-4">
+              <p className="text-gray-600">
+                Tidak ada produk yang cocok dengan "{searchQuery}"
+              </p>
+            </div>
+          )}
+          
           {loadingProducts && products.length === 0 ? (
             <ProductGridSkeleton count={12} />
-          ) : products.length > 0 ? (
-            <ProductGrid products={products} columns={4} />
+          ) : filteredProducts.length > 0 ? (
+            <ProductGrid products={filteredProducts} columns={4} />
           ) : (
-            !loadingProducts && (
+            !loadingProducts && !searchQuery && (
               <div className="text-center py-12 bg-gray-50 rounded-lg">
                 <p className="text-gray-600">No products available</p>
               </div>

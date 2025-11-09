@@ -242,9 +242,9 @@ export default function ProductDetailPage() {
   const isWishlisted = isInWishlist(product.id);
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div>
       {/* Header - Konsisten dengan favorite/last-viewed */}
-      <div className="flex items-center justify-between mb-3 relative">
+      <div className="flex items-center justify-between mb-3 relative -mt-2">
         <div className="flex items-center gap-2 flex-shrink-0">
           <button 
             onClick={() => router.back()}
@@ -268,7 +268,7 @@ export default function ProductDetailPage() {
 
       {/* Product Card - Style konsisten dengan favorite/last-viewed */}
       {/* Card wrapper - Centered, lebar dibatasi untuk desktop agar proporsional */}
-      <div className="flex justify-center items-start mb-6 w-full">
+      <div className="flex justify-center items-start mb-0 w-full">
         <div 
           ref={cardWrapperRef}
           className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg w-full max-w-full md:max-w-[600px] lg:max-w-[700px]"
