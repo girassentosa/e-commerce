@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Bell,
   MessageCircle,
+  Settings,
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { useCart } from '@/contexts/CartContext';
@@ -47,6 +48,7 @@ export default function Header() {
   const isBuyAgainPage = pathname === '/buy-again';
   const isSettingsPage = pathname === '/settings';
   const isAccountPage = pathname === '/settings/account';
+  const isAddressesPage = pathname === '/settings/addresses';
   const isDashboardPage = pathname === '/dashboard';
   const isProfilePage = pathname === '/settings/account/profile';
   const isUsernamePage = pathname === '/settings/account/username';
@@ -356,17 +358,34 @@ export default function Header() {
               <h1 className="text-xl font-bold text-gray-900">Pengaturan Akun</h1>
             </div>
           ) : isDashboardPage ? (
-            // Dashboard Title (Dashboard Page - ArrowLeft on left, title centered)
-            <>
-              <button 
-                onClick={() => router.push('/')}
-                className="p-1 hover:opacity-70 transition-opacity flex-shrink-0"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-              <h1 className="text-xl font-bold text-gray-900 flex-1 text-center">Dashboard</h1>
-              <div className="w-5 h-5 flex-shrink-0"></div> {/* Spacer untuk balance */}
-            </>
+            // Dashboard Title (Dashboard Page - ArrowLeft on left, title on left, icons on right)
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <button 
+                  onClick={() => router.push('/')}
+                  className="p-1 hover:opacity-70 transition-opacity"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Link href="/settings" className="p-1 hover:opacity-70 transition-opacity">
+                  <Settings className="w-5 h-5 text-gray-600" />
+                </Link>
+                <Link href="/cart" className="relative p-1 hover:opacity-70 transition-opacity">
+                  <ShoppingCart className="w-5 h-5 text-gray-600" />
+                  {itemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {itemCount > 99 ? '99+' : itemCount}
+                    </span>
+                  )}
+                </Link>
+                <button className="p-1 hover:opacity-70 transition-opacity">
+                  <MessageCircle className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
           ) : isActivitiesPage ? (
             // Activities Title (Activities Page - ArrowLeft on left, title centered)
             <>
@@ -389,6 +408,18 @@ export default function Header() {
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
               <h1 className="text-xl font-bold text-gray-900 flex-1 text-center">Akun dan Keamanan</h1>
+              <div className="w-5 h-5 flex-shrink-0"></div> {/* Spacer untuk balance */}
+            </>
+          ) : isAddressesPage ? (
+            // Addresses Page Title (Centered with back button)
+            <>
+              <button 
+                onClick={() => router.push('/settings')}
+                className="p-1 hover:opacity-70 transition-opacity flex-shrink-0"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-bold text-gray-900 flex-1 text-center">Alamat Saya</h1>
               <div className="w-5 h-5 flex-shrink-0"></div> {/* Spacer untuk balance */}
             </>
           ) : isProfilePage ? (
@@ -769,7 +800,7 @@ export default function Header() {
             )}
 
             {/* Cart Icon (for homepage and trending page) */}
-            {!isNotificationsPage && !isOrdersPage && !isActivitiesPage && !isFavoritePage && !isLastViewedPage && !isBuyAgainPage && !isSettingsPage && !isAccountPage && !isProfilePage && !isUsernamePage && !isPhonePage && !isEmailPage && !isPasswordPage && !isDashboardPage && (
+            {!isNotificationsPage && !isOrdersPage && !isActivitiesPage && !isFavoritePage && !isLastViewedPage && !isBuyAgainPage && !isSettingsPage && !isAccountPage && !isAddressesPage && !isProfilePage && !isUsernamePage && !isPhonePage && !isEmailPage && !isPasswordPage && !isDashboardPage && (
             <Link
               href="/cart"
                 className="relative p-2 hover:opacity-70 transition-opacity"

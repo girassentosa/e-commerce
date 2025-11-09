@@ -58,15 +58,14 @@ function AccountSettingsPageContent() {
     <div className="container mx-auto px-4 pt-0 pb-8">
       <div className="-mt-2">
         {/* Profile Saya Card - Full Width */}
-        <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
+        <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] -mt-[65px]">
         <div className="max-w-7xl mx-auto pl-4 pr-2">
-          {/* Header */}
-          <div className="mb-4 -ml-4 -mr-2">
-            <h2 className="text-base font-bold text-gray-900 px-4">Profile Saya</h2>
-          </div>
-
           {/* Profile Options - Single card with dividers - Full width with dividers */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden -ml-4 -mr-2">
+          <div className="bg-gray-50 border border-gray-200 overflow-hidden -ml-4 -mr-2">
+            {/* Header inside card */}
+            <div className="px-4 pt-3 pb-2 border-b border-gray-200">
+              <h2 className="text-base font-bold text-gray-900">Profile Saya</h2>
+            </div>
               {/* Profile Saya */}
               <Link 
                 href="/settings/account/profile"

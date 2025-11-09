@@ -216,14 +216,14 @@ function ProfilePageContent() {
   const avatarInitial = profile.firstName?.[0] || profile.email?.[0] || 'U';
 
   return (
-    <div className="container mx-auto px-4 pt-0 pb-8">
-      <div className="-mt-2">
+    <div className="container mx-auto px-4 pt-0 pb-0">
+      <div className="-mt-[67px]">
 
       {/* Profile Card - Full Width */}
-      <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
+      <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] min-h-[calc(100vh-64px)]">
         <div className="max-w-7xl mx-auto pl-4 pr-2">
           {/* Profile Form Card */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 -ml-4 -mr-2">
+          <div className="bg-gray-50 border-x border-t border-b border-gray-200 overflow-hidden -ml-4 -mr-2 p-4 pb-8">
             {/* Avatar Preview Card */}
             <div className="mb-6">
               <div className="flex flex-col items-center justify-center">
