@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { Camera } from 'lucide-react';
+import { Camera, Link as LinkIcon, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSaveAction } from '@/contexts/SaveActionContext';
 
@@ -29,6 +29,8 @@ function ProfilePageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
+  const [urlInput, setUrlInput] = useState('');
 
   // Fetch user profile data
   useEffect(() => {
@@ -98,7 +100,7 @@ function ProfilePageContent() {
     }));
   };
 
-  // Handle avatar upload
+  // Handle avatar upload from file
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -158,6 +160,55 @@ function ProfilePageContent() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  // Handle avatar upload from URL
+  const handleAvatarUrlUpload = async () => {
+    if (!urlInput.trim()) {
+      toast.error('Masukkan URL gambar');
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(urlInput.trim());
+    } catch {
+      toast.error('Format URL tidak valid');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const formData = new FormData();
+      formData.append('url', urlInput.trim());
+
+      const response = await fetch('/api/profile/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setProfile((prev) => ({
+          ...prev,
+          avatarUrl: data.data.url,
+        }));
+        setAvatarPreview(data.data.url);
+        toast.success('Foto profil berhasil diubah dari URL');
+        setUrlInput('');
+        setUploadMode('file');
+        // Update session
+        updateSession();
+      } else {
+        toast.error(data.error || 'Gagal mengubah foto profil');
+      }
+    } catch (error) {
+      console.error('Error uploading avatar from URL:', error);
+      toast.error('Gagal mengubah foto profil');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -244,7 +295,13 @@ function ProfilePageContent() {
                     </div>
                   )}
                   <button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => {
+                      if (uploadMode === 'file') {
+                        fileInputRef.current?.click();
+                      } else {
+                        setUploadMode('url');
+                      }
+                    }}
                     disabled={isLoading}
                     className="absolute bottom-0 right-0 p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                   >
@@ -258,13 +315,71 @@ function ProfilePageContent() {
                     className="hidden"
                   />
                 </div>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading}
-                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Ubah Foto
-                </button>
+                
+                {/* Upload Mode Tabs */}
+                <div className="flex gap-2 mb-3 border-b border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode('file')}
+                    className={`px-3 py-1 text-xs font-medium transition-colors ${
+                      uploadMode === 'file'
+                        ? 'text-indigo-600 border-b-2 border-indigo-600'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <Upload className="w-3 h-3 inline mr-1" />
+                    File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode('url')}
+                    className={`px-3 py-1 text-xs font-medium transition-colors ${
+                      uploadMode === 'url'
+                        ? 'text-indigo-600 border-b-2 border-indigo-600'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <LinkIcon className="w-3 h-3 inline mr-1" />
+                    URL
+                  </button>
+                </div>
+
+                {/* Upload Options */}
+                {uploadMode === 'file' ? (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading}
+                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Ubah Foto
+                  </button>
+                ) : (
+                  <div className="w-full max-w-xs space-y-2">
+                    <input
+                      type="url"
+                      value={urlInput}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      placeholder="https://example.com/image.jpg"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                      disabled={isLoading}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isLoading && urlInput.trim()) {
+                          handleAvatarUrlUpload();
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={handleAvatarUrlUpload}
+                      disabled={isLoading || !urlInput.trim()}
+                      className="w-full px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? 'Mengunggah...' : 'Unggah dari URL'}
+                    </button>
+                    <p className="text-xs text-gray-500 text-center">
+                      Paste URL gambar dari galeri, Google Images, atau website
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

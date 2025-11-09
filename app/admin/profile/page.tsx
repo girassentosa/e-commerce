@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Loader } from '@/components/ui/Loader';
 import { profileSchema, passwordChangeSchema } from '@/lib/validations/profile';
-import { Upload, Loader2, User } from 'lucide-react';
+import { Upload, Loader2, User, Link as LinkIcon } from 'lucide-react';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
@@ -20,6 +20,8 @@ export default function AdminProfilePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
+  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
+  const [urlInput, setUrlInput] = useState('');
 
   const [profileData, setProfileData] = useState({
     email: '',
@@ -213,6 +215,51 @@ export default function AdminProfilePage() {
     }
   };
 
+  const handleAvatarUrlUpload = async () => {
+    if (!urlInput.trim()) {
+      toast.error('Please enter an image URL');
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(urlInput.trim());
+    } catch {
+      toast.error('Invalid URL format');
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      const formData = new FormData();
+      formData.append('url', urlInput.trim());
+
+      const response = await fetch('/api/profile/avatar', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to upload avatar from URL');
+      }
+
+      setProfileData((prev) => ({ ...prev, avatarUrl: data.data.url }));
+      toast.success('Avatar uploaded successfully from URL!');
+      setUrlInput('');
+      setUploadMode('file');
+      // Update session and refresh UI
+      await update();
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error uploading avatar from URL:', error);
+      toast.error(error.message || 'Failed to upload avatar from URL');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -367,39 +414,109 @@ export default function AdminProfilePage() {
                 )}
               </div>
 
-              <input
-                type="file"
-                id="avatar-upload"
-                accept="image/png,image/jpg,image/jpeg,image/gif,image/webp"
-                onChange={handleAvatarUpload}
-                className="hidden"
-                disabled={uploadingAvatar}
-              />
-              <label
-                htmlFor="avatar-upload"
-                className={`
-                  inline-flex items-center justify-center font-medium rounded-lg 
-                  px-4 py-2 text-base transition-all duration-200 
-                  border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
-                  ${uploadingAvatar ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                `}
-              >
-                {uploadingAvatar ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Photo
-                  </>
-                )}
-              </label>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                PNG, JPG, JPEG, GIF, WEBP (max 2MB)
-              </p>
+              {/* Upload Mode Tabs */}
+              <div className="flex gap-2 mb-3 border-b border-gray-200 w-full justify-center">
+                <button
+                  type="button"
+                  onClick={() => setUploadMode('file')}
+                  className={`px-3 py-1 text-xs font-medium transition-colors ${
+                    uploadMode === 'file'
+                      ? 'text-indigo-600 border-b-2 border-indigo-600'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Upload className="w-3 h-3 inline mr-1" />
+                  File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadMode('url')}
+                  className={`px-3 py-1 text-xs font-medium transition-colors ${
+                    uploadMode === 'url'
+                      ? 'text-indigo-600 border-b-2 border-indigo-600'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <LinkIcon className="w-3 h-3 inline mr-1" />
+                  URL
+                </button>
+              </div>
+
+              {/* Upload Options */}
+              {uploadMode === 'file' ? (
+                <>
+                  <input
+                    type="file"
+                    id="avatar-upload"
+                    accept="image/png,image/jpg,image/jpeg,image/gif,image/webp"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                    disabled={uploadingAvatar}
+                  />
+                  <label
+                    htmlFor="avatar-upload"
+                    className={`
+                      inline-flex items-center justify-center font-medium rounded-lg 
+                      px-4 py-2 text-base transition-all duration-200 
+                      border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 
+                      focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+                      ${uploadingAvatar ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
+                  >
+                    {uploadingAvatar ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Photo
+                      </>
+                    )}
+                  </label>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    PNG, JPG, JPEG, GIF, WEBP (max 2MB)
+                  </p>
+                </>
+              ) : (
+                <div className="w-full space-y-3">
+                  <input
+                    type="url"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    placeholder="https://example.com/image.jpg"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    disabled={uploadingAvatar}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !uploadingAvatar && urlInput.trim()) {
+                        handleAvatarUrlUpload();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAvatarUrlUpload}
+                    disabled={uploadingAvatar || !urlInput.trim()}
+                    className="w-full"
+                  >
+                    {uploadingAvatar ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <LinkIcon className="w-4 h-4 mr-2" />
+                        Upload from URL
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-gray-500 text-center">
+                    Paste image URL from gallery, Google Images, or any website
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           </div>
