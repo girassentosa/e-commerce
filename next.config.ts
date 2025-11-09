@@ -14,6 +14,9 @@ const nextConfig: NextConfig = {
   },
   // Suppress hydration warnings in development
   reactStrictMode: true,
+  // Note: middleware.ts deprecation warning cannot be suppressed
+  // This is a Next.js framework warning, not a code issue
+  // middleware.ts is still fully functional in Next.js 16
 };
 
 export default nextConfig;

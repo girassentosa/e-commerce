@@ -14,13 +14,15 @@ if (cloudName && apiKey && apiSecret) {
   });
   
   // Log configuration (without sensitive data)
-  // Log in both development and production for debugging
-  console.log('✅ Cloudinary configured:', {
-    cloud_name: cloudName,
-    api_key: apiKey ? `${apiKey.substring(0, 4)}...` : 'missing',
-    api_secret: apiSecret ? '***' : 'missing',
-    environment: process.env.NODE_ENV || 'unknown',
-  });
+  // Only log in development to reduce build warnings
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Cloudinary configured:', {
+      cloud_name: cloudName,
+      api_key: apiKey ? `${apiKey.substring(0, 4)}...` : 'missing',
+      api_secret: apiSecret ? '***' : 'missing',
+      environment: process.env.NODE_ENV || 'unknown',
+    });
+  }
 } else {
   // Warn in both environments, but especially important in production
   const isProduction = process.env.NODE_ENV === 'production';
@@ -28,13 +30,16 @@ if (cloudName && apiKey && apiSecret) {
     ? '⚠️ CRITICAL: Cloudinary not configured in PRODUCTION - uploads will FAIL!'
     : '⚠️ Cloudinary not configured - will use local storage (development only)';
   
-  console.warn(warningMessage);
-  console.warn('Missing:', {
-    cloud_name: !cloudName,
-    api_key: !apiKey,
-    api_secret: !apiSecret,
-    environment: process.env.NODE_ENV || 'unknown',
-  });
+  // Only warn in development to reduce build warnings
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(warningMessage);
+    console.warn('Missing:', {
+      cloud_name: !cloudName,
+      api_key: !apiKey,
+      api_secret: !apiSecret,
+      environment: process.env.NODE_ENV || 'unknown',
+    });
+  }
   
   if (isProduction) {
     console.error('❌ PRODUCTION ERROR: Cloudinary is REQUIRED in production. Local storage will NOT work.');
@@ -225,8 +230,8 @@ export function isCloudinaryConfigured(): boolean {
   
   const isConfigured = !!(cloudName && apiKey && apiSecret);
   
-  // Debug logging in production to help troubleshoot
-  if (!isConfigured) {
+  // Debug logging only in development to reduce build warnings
+  if (!isConfigured && process.env.NODE_ENV === 'development') {
     console.log('🔍 [Cloudinary Config Check] Environment variables status:', {
       has_cloud_name: !!cloudName,
       has_api_key: !!apiKey,

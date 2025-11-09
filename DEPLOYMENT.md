@@ -273,11 +273,55 @@ npm install && npm run prisma:generate && npm run build
 2. Pastikan database sudah running
 3. Untuk cloud databases, pastikan IP whitelist sudah di-set (jika diperlukan)
 
-### Error: "NEXTAUTH_SECRET is missing"
+### Error: "NEXTAUTH_SECRET is missing" atau "error=configuration"
+
+**Penyebab:**
+- `NEXTAUTH_SECRET` atau `NEXTAUTH_URL` tidak di-set di production
+- NextAuth **WAJIB** kedua env vars ini di production (tidak ada fallback)
 
 **Solution:**
 1. Generate secret: `openssl rand -base64 32`
-2. Set di environment variables platform deployment
+2. Set di environment variables platform deployment:
+   - `NEXTAUTH_SECRET` (minimal 32 karakter)
+   - `NEXTAUTH_URL` (format: `https://your-domain.com`, tanpa trailing slash)
+3. **PENTING:** Pastikan set di **Production** environment (bukan Preview)
+4. **Redeploy** setelah set env vars
+
+**Kenapa Wajib:**
+- Development: NextAuth punya fallback (auto-generate secret, auto-detect URL)
+- Production: NextAuth **TIDAK** punya fallback, **WAJIB** di-set manual
+
+### Error: "Cloudinary is required in production"
+
+**Penyebab:**
+- Cloudinary credentials tidak di-set atau tidak ter-load di production
+- File system di production (Vercel/Netlify) adalah read-only, tidak bisa pakai local storage
+
+**Solution:**
+1. Set 3 environment variables di hosting platform:
+   - `CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
+2. Pastikan set di **Production** environment
+3. **Redeploy** setelah set env vars
+4. Test dengan debug endpoint: `/api/debug/env` (Admin only)
+
+**Note:** 
+- Development: Bisa pakai local storage (tanpa Cloudinary)
+- Production: **WAJIB** pakai Cloudinary (local storage tidak bisa write)
+
+### Error: "Environment Variables Tidak Ter-Load di Production"
+
+**Penyebab:**
+- Environment variables di-set tapi tidak ter-load saat runtime
+- Tidak redeploy setelah set env vars
+
+**Solution:**
+1. Verifikasi env vars di hosting platform (Settings → Environment Variables)
+2. Pastikan environment scope benar (Production, bukan Preview)
+3. **Redeploy** setelah set/ubah env vars (env vars hanya ter-load saat build/deploy)
+4. Cek logs di hosting platform untuk error detail
+5. Test dengan debug endpoint: `/api/debug/env` (Admin only)
 
 ### Error: "Build failed"
 
