@@ -38,39 +38,18 @@ function SettingsPageContent() {
   }
 
   return (
-    <div>
-      {/* Header - Fixed height container to prevent layout shift */}
-      <div className="mb-4">
-        <div className="flex items-center min-h-[48px] gap-3">
-          {/* Left Section */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button 
-              onClick={handleBack}
-              className="p-1 hover:opacity-70 transition-opacity"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <h1 className="text-lg font-bold text-gray-900">Pengaturan Akun</h1>
-          </div>
+    <div className="container mx-auto px-4 pt-0 pb-8">
+      <div className="-mt-2">
+        {/* Akun Saya Card - Full Width */}
+        <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
+          <div className="max-w-7xl mx-auto pl-4 pr-2">
+            {/* Header */}
+            <div className="mb-4 -ml-4 -mr-2">
+              <h2 className="text-base font-bold text-gray-900 px-4">Akun Saya</h2>
+            </div>
 
-          {/* Right Section */}
-          <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
-            <button className="p-2 hover:opacity-70 transition-opacity">
-              <MessageCircle className="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Akun Saya Card */}
-      <div className="mb-6">
-        {/* Header */}
-        <div className="mb-4">
-          <h2 className="text-base font-bold text-gray-900">Akun Saya</h2>
-        </div>
-
-        {/* Settings Options - Single card with dividers */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+            {/* Settings Options - Single card with dividers - Full width with dividers */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden -ml-4 -mr-2 mb-6">
             {/* Akun dan Keamanan */}
             <Link 
               href="/settings/account"
@@ -114,23 +93,22 @@ function SettingsPageContent() {
               </div>
               <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
             </Link>
-          </div>
-        </div>
+            </div>
 
-      {/* Logout Button Card */}
-      <div className="mb-0">
-        {/* Logout Button */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center p-3 hover:bg-gray-100 transition-colors"
-            >
-              <p className="text-sm text-red-600 font-medium leading-tight">
-                Ganti Akun / Keluar
-              </p>
-            </button>
+            {/* Logout Button Card - Full Width */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden -ml-4 -mr-2">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center p-3 hover:bg-gray-100 transition-colors"
+              >
+                <p className="text-sm text-red-600 font-medium leading-tight">
+                  Ganti Akun / Keluar
+                </p>
+              </button>
+            </div>
           </div>
         </div>
+      </div>
     </div>
   );
 }

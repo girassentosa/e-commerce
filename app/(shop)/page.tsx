@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
-import { ProductGrid } from '@/components/products/ProductGrid';
+import { ProductCard } from '@/components/products/ProductCard';
 import { ProductGridSkeleton } from '@/components/products/ProductSkeleton';
 
 interface Product {
@@ -90,7 +90,7 @@ function HomePageContent() {
   if (session) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 pt-0 pb-8">
+        <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-0 pb-4 sm:pb-6 md:pb-8">
           {/* Welcome Section */}
           <div className="mb-8 -mt-2">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
@@ -102,7 +102,7 @@ function HomePageContent() {
           </div>
 
           {/* All Products Section */}
-          <div className="mb-12">
+          <div>
             <div className="mb-6">
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
                 ⭐ All Products
@@ -128,7 +128,20 @@ function HomePageContent() {
             {loadingProducts && products.length === 0 ? (
               <ProductGridSkeleton count={12} />
             ) : filteredProducts.length > 0 ? (
-              <ProductGrid products={filteredProducts} columns={4} />
+              <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] mb-2 sm:mb-6 md:mb-8">
+                <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
+                  <div className="px-2 sm:px-2.5 md:px-3 pb-2 sm:pb-3 md:pb-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2">
+                      {filteredProducts.map((product) => (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               !loadingProducts && !searchQuery && (
                 <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
@@ -145,9 +158,9 @@ function HomePageContent() {
   // Default landing page for non-logged in users
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-0 pb-8">
         {/* All Products Section */}
-        <div>
+        <div className="-mt-2">
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-gray-900">
               ⭐ All Products
@@ -173,7 +186,20 @@ function HomePageContent() {
           {loadingProducts && products.length === 0 ? (
             <ProductGridSkeleton count={12} />
           ) : filteredProducts.length > 0 ? (
-            <ProductGrid products={filteredProducts} columns={4} />
+            <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] mb-2 sm:mb-6 md:mb-8">
+              <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
+                <div className="px-2 sm:px-2.5 md:px-3 pb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2">
+                    {filteredProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             !loadingProducts && !searchQuery && (
               <div className="text-center py-12 bg-gray-50 rounded-lg">

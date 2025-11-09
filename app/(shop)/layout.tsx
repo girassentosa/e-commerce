@@ -19,7 +19,7 @@ function ShopLayoutContent({
 }) {
   const pathname = usePathname();
   const hideFooter = pathname === '/' || pathname === '/dashboard' || pathname === '/orders' || pathname === '/products' || pathname === '/notifications' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname === '/cart' || pathname === '/checkout' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/') || pathname?.startsWith('/checkout/');
-  const hideHeader = pathname === '/dashboard' || pathname === '/settings' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/');
+  const hideHeader = pathname?.startsWith('/orders/') || pathname?.startsWith('/products/');
   const hideBottomNav = pathname === '/orders' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/');
 
   return (

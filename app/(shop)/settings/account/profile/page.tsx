@@ -4,8 +4,9 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { ArrowLeft, Camera } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSaveAction } from '@/contexts/SaveActionContext';
 
 interface UserProfile {
   firstName?: string | null;
@@ -21,17 +22,13 @@ function ProfilePageContent() {
   const router = useRouter();
   const { data: session, status, update: updateSession } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const saveAction = useSaveAction();
 
   const [profile, setProfile] = useState<UserProfile>({});
   const [originalProfile, setOriginalProfile] = useState<UserProfile>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-
-  // Handle back navigation
-  const handleBack = () => {
-    router.push('/settings/account');
-  };
 
   // Fetch user profile data
   useEffect(() => {
@@ -69,6 +66,12 @@ function ProfilePageContent() {
 
     fetchUserProfile();
   }, [status, session]);
+
+  // Set save action for header
+  useEffect(() => {
+    saveAction.setOnSave(() => handleSave);
+    return () => saveAction.setOnSave(null);
+  }, [profile, originalProfile, avatarPreview, isSaving]);
 
   // Check if there are changes
   const hasChanges = () => {
@@ -213,34 +216,11 @@ function ProfilePageContent() {
   const avatarInitial = profile.firstName?.[0] || profile.email?.[0] || 'U';
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header - Fixed height container to prevent layout shift */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between min-h-[48px] gap-3">
-          {/* Left Section */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={handleBack}
-              className="p-1 hover:opacity-70 transition-opacity"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <h1 className="text-lg font-bold text-gray-900">Profile</h1>
-          </div>
-
-          {/* Save Button - Right (always visible but disabled until there are changes) */}
-          <button
-            onClick={handleSave}
-            disabled={!hasChanges() || isSaving}
-            className="px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-          >
-            {isSaving ? 'Menyimpan...' : 'Simpan'}
-          </button>
-        </div>
-      </div>
+    <div className="container mx-auto px-4 pt-0 pb-8">
+      <div className="-mt-2">
 
       {/* Profile Card - Full Width */}
-      <div className="w-full mb-8 w-screen -ml-[calc((100vw-100%)/2)]">
+      <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
         <div className="max-w-7xl mx-auto pl-4 pr-2">
           {/* Profile Form Card */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 -ml-4 -mr-2">
@@ -372,6 +352,7 @@ function ProfilePageContent() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

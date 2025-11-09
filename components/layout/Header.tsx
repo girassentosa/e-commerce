@@ -22,6 +22,7 @@ import Card from '@/components/ui/Card';
 import { useCart } from '@/contexts/CartContext';
 import { ProductFilters } from '@/components/products/ProductFilters';
 import { useFavoriteEditMode } from '@/contexts/FavoriteEditModeContext';
+import { useSaveAction } from '@/contexts/SaveActionContext';
 
 export default function Header() {
   const { itemCount } = useCart();
@@ -44,9 +45,20 @@ export default function Header() {
   const isFavoritePage = pathname === '/favorite';
   const isLastViewedPage = pathname === '/last-viewed';
   const isBuyAgainPage = pathname === '/buy-again';
+  const isSettingsPage = pathname === '/settings';
+  const isAccountPage = pathname === '/settings/account';
+  const isDashboardPage = pathname === '/dashboard';
+  const isProfilePage = pathname === '/settings/account/profile';
+  const isUsernamePage = pathname === '/settings/account/username';
+  const isPhonePage = pathname === '/settings/account/phone';
+  const isEmailPage = pathname === '/settings/account/email';
+  const isPasswordPage = pathname === '/settings/account/password';
   
   // Edit mode state for favorite page - always use hook (returns default if context not available)
   const favoriteEditMode = useFavoriteEditMode();
+  
+  // Save action for settings pages
+  const saveAction = useSaveAction();
 
   // Initialize search query from URL
   useEffect(() => {
@@ -332,6 +344,29 @@ export default function Header() {
               </button>
               <h1 className="text-xl font-bold text-gray-900">Beli Lagi</h1>
             </div>
+          ) : isSettingsPage ? (
+            // Settings Title (Settings Page)
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button 
+                onClick={() => router.push('/dashboard')}
+                className="p-1 hover:opacity-70 transition-opacity"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-bold text-gray-900">Pengaturan Akun</h1>
+            </div>
+          ) : isDashboardPage ? (
+            // Dashboard Title (Dashboard Page - ArrowLeft on left, title centered)
+            <>
+              <button 
+                onClick={() => router.push('/')}
+                className="p-1 hover:opacity-70 transition-opacity flex-shrink-0"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-bold text-gray-900 flex-1 text-center">Dashboard</h1>
+              <div className="w-5 h-5 flex-shrink-0"></div> {/* Spacer untuk balance */}
+            </>
           ) : isActivitiesPage ? (
             // Activities Title (Activities Page - ArrowLeft on left, title centered)
             <>
@@ -344,6 +379,73 @@ export default function Header() {
               <h1 className="text-xl font-bold text-gray-900 flex-1 text-center">Aktifitas Saya</h1>
               <div className="w-5 h-5 flex-shrink-0"></div> {/* Spacer untuk balance */}
             </>
+          ) : isAccountPage ? (
+            // Account Page Title (Centered with back button)
+            <>
+              <button 
+                onClick={() => router.push('/settings')}
+                className="p-1 hover:opacity-70 transition-opacity flex-shrink-0"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-bold text-gray-900 flex-1 text-center">Akun dan Keamanan</h1>
+              <div className="w-5 h-5 flex-shrink-0"></div> {/* Spacer untuk balance */}
+            </>
+          ) : isProfilePage ? (
+            // Profile Page Title
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button 
+                onClick={() => router.push('/settings/account')}
+                className="p-1 hover:opacity-70 transition-opacity"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-bold text-gray-900">Profile</h1>
+            </div>
+          ) : isUsernamePage ? (
+            // Username Page Title
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button 
+                onClick={() => router.push('/settings/account')}
+                className="p-1 hover:opacity-70 transition-opacity"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-bold text-gray-900">Username</h1>
+            </div>
+          ) : isPhonePage ? (
+            // Phone Page Title
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button 
+                onClick={() => router.push('/settings/account')}
+                className="p-1 hover:opacity-70 transition-opacity"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-bold text-gray-900">No HP</h1>
+            </div>
+          ) : isEmailPage ? (
+            // Email Page Title
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button 
+                onClick={() => router.push('/settings/account')}
+                className="p-1 hover:opacity-70 transition-opacity"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-bold text-gray-900">Email</h1>
+            </div>
+          ) : isPasswordPage ? (
+            // Password Page Title
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button 
+                onClick={() => router.push('/settings/account')}
+                className="p-1 hover:opacity-70 transition-opacity"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-bold text-gray-900">Pemeriksaan Keamanan</h1>
+            </div>
           ) : isOrdersPage && isSearchOpen ? (
             // Back Button (Orders Page - Search Open)
             <button
@@ -425,14 +527,14 @@ export default function Header() {
             </button>
           ) : (
             // Search Card Link (Other Pages - Redirect to Products)
-            <Link href="/products" className="flex-1 max-w-xl mx-2 sm:mx-4 lg:mx-8">
-              <Card padding="sm" className="hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Search className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm text-gray-600 truncate">Cari produk...</span>
-                </div>
-              </Card>
-            </Link>
+          <Link href="/products" className="flex-1 max-w-xl mx-2 sm:mx-4 lg:mx-8">
+            <Card padding="sm" className="hover:shadow-md transition-shadow cursor-pointer">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Search className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600 flex-shrink-0" />
+                <span className="text-xs sm:text-sm text-gray-600 truncate">Cari produk...</span>
+              </div>
+            </Card>
+          </Link>
           )}
 
           {/* Middle Section - Search Input (only when search is open) */}
@@ -591,6 +693,23 @@ export default function Header() {
               </button>
             )}
 
+            {/* Profile/Username/Phone/Email/Password Pages - Simpan Button */}
+            {(isProfilePage || isUsernamePage || isPhonePage || isEmailPage || isPasswordPage) && (
+              <button
+                onClick={saveAction.triggerSave}
+                className="px-4 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+              >
+                Simpan
+              </button>
+            )}
+
+            {/* Settings Page - Message icon */}
+            {isSettingsPage && (
+              <button className="p-2 hover:opacity-70 transition-opacity">
+                <MessageCircle className="w-5 h-5 text-gray-600" />
+              </button>
+            )}
+
             {/* Notifications Page - Cart Icon and Message Icon */}
             {isNotificationsPage && (
               <>
@@ -650,18 +769,18 @@ export default function Header() {
             )}
 
             {/* Cart Icon (for homepage and trending page) */}
-            {!isNotificationsPage && !isOrdersPage && !isActivitiesPage && !isFavoritePage && !isLastViewedPage && !isBuyAgainPage && (
-              <Link
-                href="/cart"
+            {!isNotificationsPage && !isOrdersPage && !isActivitiesPage && !isFavoritePage && !isLastViewedPage && !isBuyAgainPage && !isSettingsPage && !isAccountPage && !isProfilePage && !isUsernamePage && !isPhonePage && !isEmailPage && !isPasswordPage && !isDashboardPage && (
+            <Link
+              href="/cart"
                 className="relative p-2 hover:opacity-70 transition-opacity"
-              >
+            >
                 <ShoppingCart className="w-5 h-5 text-gray-600" />
-                {itemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              {itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {itemCount > 99 ? '99+' : itemCount}
-                  </span>
-                )}
-              </Link>
+                </span>
+              )}
+            </Link>
             )}
           </div>
         </div>

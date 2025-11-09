@@ -76,7 +76,8 @@ function OrdersPageContent() {
   });
 
   return (
-    <div className="-mt-2">
+    <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-0 pb-4 sm:pb-6 md:pb-8">
+      <div className="-mt-2">
 
       {/* Search Results Info */}
       {searchQuery && filteredOrders.length > 0 && (
@@ -109,10 +110,13 @@ function OrdersPageContent() {
 
       {/* Orders list */}
       {filteredOrders.length > 0 && (
-        <div className="space-y-4 mb-0">
-          {filteredOrders.map((order) => (
-            <Link key={order.id} href={`/orders/${order.orderNumber}`}>
-              <div className="border rounded-lg p-4 hover:shadow-lg transition cursor-pointer">
+        <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] mb-2 sm:mb-6 md:mb-8">
+          <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
+            <div className="px-2 sm:px-2.5 md:px-3 pb-2 sm:pb-3 md:pb-4">
+              <div className="space-y-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2">
+                {filteredOrders.map((order) => (
+                  <Link key={order.id} href={`/orders/${order.orderNumber}`}>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-lg transition cursor-pointer">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="font-semibold text-lg">{order.orderNumber}</p>
@@ -149,19 +153,22 @@ function OrdersPageContent() {
                   <p className="text-lg font-bold">${parseFloat(order.total).toFixed(2)}</p>
                   <ChevronRight className="w-5 h-5 text-gray-400" />
                 </div>
+                    </div>
+                  </Link>
+                ))}
               </div>
-            </Link>
-          ))}
+            </div>
+          </div>
         </div>
       )}
 
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex gap-2 justify-center mt-6 mb-0">
+        <div className="flex gap-1 sm:gap-2 justify-center mt-4 sm:mt-6 mb-0">
           {[...Array(pagination.totalPages)].map((_, i) => (
             <button
               key={i}
               onClick={() => fetchOrders(i + 1, statusFilter, paymentStatusFilter)}
-              className={`px-4 py-2 rounded ${
+              className={`px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded ${
                 pagination.page === i + 1
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 hover:bg-gray-200'
@@ -172,6 +179,7 @@ function OrdersPageContent() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

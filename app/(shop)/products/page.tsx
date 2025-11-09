@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Check } from 'lucide-react';
-import { ProductGrid } from '@/components/products/ProductGrid';
+import { ProductCard } from '@/components/products/ProductCard';
 import { ProductGridSkeleton } from '@/components/products/ProductSkeleton';
 import { Pagination } from '@/components/ui/Pagination';
 import toast from 'react-hot-toast';
@@ -156,31 +156,35 @@ function ProductsPageContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 pt-0 pb-8">
-
-        {/* Features Card - Baru Setiap Hari & Gratis Ongkir */}
-        <div className="mb-8 -mt-2 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg py-2 px-4">
-          <div className="flex items-center justify-center gap-6 sm:gap-8">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
-                <Check className="w-3 h-3 text-white" />
+      <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-0 pb-4 sm:pb-6 md:pb-8">
+        <div className="-mt-2 sm:-mt-4 md:-mt-6">
+          {/* Features Card - Baru Setiap Hari & Gratis Ongkir - Full Width */}
+          <div className="w-full mb-4 sm:mb-3 md:mb-2 w-screen -ml-[calc((100vw-100%)/2)]">
+            <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
+              <div className="bg-gradient-to-r from-red-50 to-red-100 border-y border-red-200 py-2 px-2 sm:px-3 md:px-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2">
+                <div className="flex items-center justify-center gap-6 sm:gap-8">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-xs sm:text-sm text-red-700 italic">Baru Setiap Hari</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-xs sm:text-sm text-red-700 italic">Gratis Ongkir</span>
+                  </div>
+                </div>
               </div>
-              <span className="text-xs sm:text-sm text-red-700 italic">Baru Setiap Hari</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
-                <Check className="w-3 h-3 text-white" />
-              </div>
-              <span className="text-xs sm:text-sm text-red-700 italic">Gratis Ongkir</span>
             </div>
           </div>
-        </div>
 
         {/* Products Section - Struktur identik dengan halaman utama */}
         {loading && productsData.products.length === 0 ? (
           <ProductGridSkeleton count={12} />
         ) : (
-          <div className="mb-12">
+          <div>
                {/* Search Results Info */}
                {urlSearchQuery && filteredProducts.length > 0 && (
                  <div className="mb-4 text-sm text-gray-600">
@@ -198,11 +202,21 @@ function ProductsPageContent() {
                  </div>
                ) : filteredProducts.length > 0 ? (
                  <>
-                   {/* Products Grid - Menggunakan columns={4} seperti halaman utama */}
-                   <ProductGrid
-                     products={filteredProducts}
-                     columns={4}
-                   />
+                   {/* Products Grid - Full Width Edge-to-Edge */}
+                   <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] mb-2 sm:mb-6 md:mb-8">
+                     <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
+                       <div className="px-2 sm:px-2.5 md:px-3 pb-2 sm:pb-3 md:pb-4">
+                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2">
+                         {filteredProducts.map((product) => (
+                           <ProductCard
+                             key={product.id}
+                             product={product}
+                           />
+                         ))}
+                         </div>
+                       </div>
+                     </div>
+                   </div>
 
                    {/* Pagination - only show when not searching */}
                    {!urlSearchQuery && productsData.pagination.totalPages > 1 && (
@@ -222,6 +236,7 @@ function ProductsPageContent() {
                ) : null}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

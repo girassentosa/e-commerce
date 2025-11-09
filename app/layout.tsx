@@ -9,6 +9,8 @@ import { LastViewedProvider } from "@/contexts/LastViewedContext";
 import { BuyAgainProvider } from "@/contexts/BuyAgainContext";
 import { CheckoutProvider } from "@/contexts/CheckoutContext";
 import { OrderProvider } from "@/contexts/OrderContext";
+import { FavoriteEditModeProvider } from "@/contexts/FavoriteEditModeContext";
+import { SaveActionProvider } from "@/contexts/SaveActionContext";
 import { APP_NAME } from "@/lib/constants";
 
 const inter = Inter({
@@ -38,8 +40,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
         <SessionProvider>
           <CartProvider>
             <WishlistProvider>
@@ -47,8 +49,12 @@ export default function RootLayout({
                 <BuyAgainProvider>
                   <CheckoutProvider>
                     <OrderProvider>
-                      {children}
-                      <ToastProvider />
+                      <FavoriteEditModeProvider>
+                        <SaveActionProvider>
+                          {children}
+                          <ToastProvider />
+                        </SaveActionProvider>
+                      </FavoriteEditModeProvider>
                     </OrderProvider>
                   </CheckoutProvider>
                 </BuyAgainProvider>

@@ -48,7 +48,7 @@ function LastViewedPageContent() {
   });
 
   return (
-    <div className="container mx-auto px-4 pt-0 pb-8">
+    <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-0 pb-8">
 
       {/* Search Results Info */}
       <div className="-mt-2">
@@ -103,17 +103,20 @@ function LastViewedPageContent() {
 
       {/* Products Grid */}
       {filteredItems.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredItems.map((item) => {
-            const { product } = item;
-            const price = parseFloat(product.salePrice || product.price);
-            const originalPrice = product.salePrice ? parseFloat(product.price) : null;
-            const imageUrl = product.images[0]?.imageUrl;
-            const isLoading = actionLoading === product.id;
-            const isOutOfStock = product.stockQuantity === 0;
-            const isLowStock = product.stockQuantity > 0 && product.stockQuantity <= 5;
+        <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
+          <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
+            <div className="px-2 sm:px-2.5 md:px-3 pb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2">
+                {filteredItems.map((item) => {
+                  const { product } = item;
+                  const price = parseFloat(product.salePrice || product.price);
+                  const originalPrice = product.salePrice ? parseFloat(product.price) : null;
+                  const imageUrl = product.images[0]?.imageUrl;
+                  const isLoading = actionLoading === product.id;
+                  const isOutOfStock = product.stockQuantity === 0;
+                  const isLowStock = product.stockQuantity > 0 && product.stockQuantity <= 5;
 
-            return (
+                  return (
               <div
                 key={item.id}
                 className="bg-white rounded-lg border overflow-hidden hover:shadow-lg transition-shadow relative group"
@@ -222,8 +225,11 @@ function LastViewedPageContent() {
                   </Button>
                 </div>
               </div>
-            );
-          })}
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       )}
       </div>
