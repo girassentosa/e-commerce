@@ -55,17 +55,43 @@ function AccountSettingsPageContent() {
   const avatarInitial = session?.user?.firstName?.[0] || session?.user?.email?.[0] || 'U';
 
   return (
-    <div className="container mx-auto px-4 pt-0 pb-8">
-      <div className="-mt-2">
-        {/* Profile Saya Card - Full Width */}
-        <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] -mt-[65px]">
-        <div className="max-w-7xl mx-auto pl-4 pr-2">
-          {/* Profile Options - Single card with dividers - Full width with dividers */}
-          <div className="bg-gray-50 border border-gray-200 overflow-hidden -ml-4 -mr-2">
-            {/* Header inside card */}
-            <div className="px-4 pt-3 pb-2 border-b border-gray-200">
-              <h2 className="text-base font-bold text-gray-900">Profile Saya</h2>
-            </div>
+    <div className="min-h-screen bg-white">
+      {/* Account Settings Header - Standalone, Fixed at Top */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16">
+            {/* Back Arrow */}
+            <button
+              onClick={handleBack}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </button>
+
+            {/* Account Settings Title - Centered */}
+            <h1 className="!text-base !font-semibold text-gray-900 flex-1 text-center">
+              Akun dan Keamanan
+            </h1>
+
+            {/* Empty space for balance (no cart icon) */}
+            <div className="w-[44px]"></div>
+          </div>
+        </div>
+      </header>
+
+      {/* Account Settings Content */}
+      <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-4 pb-4 sm:pb-6 md:pb-8">
+        <div className="-mt-2">
+          {/* Profile Saya Card - Full Width */}
+          <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
+            <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
+              {/* Profile Options - Single card with dividers - Full width with dividers */}
+              <div className="bg-gray-50 border border-gray-200 overflow-hidden -ml-4 -mr-2">
+                {/* Header inside card */}
+                <div className="px-4 pt-3 pb-2 border-b border-gray-200">
+                  <h2 className="!text-base !font-semibold text-gray-900">Profile Saya</h2>
+                </div>
               {/* Profile Saya */}
               <Link 
                 href="/settings/account/profile"
@@ -166,9 +192,10 @@ function AccountSettingsPageContent() {
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
               </Link>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

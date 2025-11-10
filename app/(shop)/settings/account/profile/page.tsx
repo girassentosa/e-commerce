@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { Camera } from 'lucide-react';
+import { Camera, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSaveAction } from '@/contexts/SaveActionContext';
 
@@ -67,11 +67,10 @@ function ProfilePageContent() {
     fetchUserProfile();
   }, [status, session]);
 
-  // Set save action for header
-  useEffect(() => {
-    saveAction.setOnSave(() => handleSave);
-    return () => saveAction.setOnSave(null);
-  }, [profile, originalProfile, avatarPreview, isSaving]);
+  // Handle back navigation
+  const handleBack = () => {
+    router.push('/settings/account');
+  };
 
   // Check if there are changes
   const hasChanges = () => {
@@ -217,14 +216,45 @@ function ProfilePageContent() {
   const avatarInitial = profile.firstName?.[0] || profile.email?.[0] || 'U';
 
   return (
-    <div className="container mx-auto px-4 pt-0 pb-8">
-      <div className="-mt-2">
+    <div className="min-h-screen bg-white">
+      {/* Profile Header - Standalone, Fixed at Top */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16">
+            {/* Back Arrow */}
+            <button
+              onClick={handleBack}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </button>
 
-      {/* Profile Card - Full Width */}
-      <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
-        <div className="max-w-7xl mx-auto pl-4 pr-2">
-          {/* Profile Form Card */}
-          <div className="bg-gray-50 border-x border-t border-b border-gray-200 overflow-hidden -ml-4 -mr-2 pt-6 p-4 pb-8">
+            {/* Profile Title - Centered */}
+            <h1 className="!text-base !font-semibold text-gray-900 flex-1 text-center">
+              Profile Baru
+            </h1>
+
+            {/* Simpan Button - Right */}
+            <button
+              onClick={handleSave}
+              disabled={!hasChanges() || isSaving}
+              className="px-6 py-3 bg-blue-600 text-white text-base font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+            >
+              {isSaving ? 'Menyimpan...' : 'Simpan'}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Profile Content */}
+      <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-4 pb-4 sm:pb-6 md:pb-8">
+        <div className="-mt-2">
+          {/* Profile Card - Full Width */}
+          <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
+            <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
+              {/* Profile Form Card */}
+              <div className="bg-gray-50 border-x border-t border-b border-gray-200 overflow-hidden -ml-4 -mr-2 pt-6 p-4 pb-8">
             {/* Avatar Preview Card */}
             <div className="mb-6">
               <div className="flex flex-col items-center justify-center">
@@ -344,9 +374,10 @@ function ProfilePageContent() {
                 />
               </div>
             </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

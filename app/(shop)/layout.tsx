@@ -1,6 +1,7 @@
 /**
- * Shop Layout
- * Layout untuk shop pages dengan Header & Footer
+ * Shop Layout - Mobile-First Approach
+ * Bottom Navigation: Home, Categories, Cart, Profile
+ * Thumb-friendly touch targets (min 44px)
  */
 
 'use client';
@@ -10,7 +11,8 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import { Home, TrendingUp, Bell, User } from 'lucide-react';
+import { Home, Grid3x3, ShoppingCart, User } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
 
 function ShopLayoutContent({
   children,
@@ -18,63 +20,128 @@ function ShopLayoutContent({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { itemCount } = useCart();
+  
   const hideFooter = pathname === '/' || pathname === '/dashboard' || pathname === '/orders' || pathname === '/products' || pathname === '/notifications' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname === '/cart' || pathname === '/checkout' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/') || pathname?.startsWith('/checkout/');
-  const hideHeader = pathname?.startsWith('/orders/') || pathname?.startsWith('/products/');
-  const hideBottomNav = pathname === '/orders' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/');
+  const hideHeader = pathname === '/dashboard' || pathname === '/settings' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/');
+  const hideBottomNav = pathname === '/orders' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/') || pathname?.startsWith('/checkout/');
+
+  const isActive = (path: string) => {
+    if (path === '/') return pathname === '/';
+    if (path === '/products') return pathname === '/products' || pathname?.startsWith('/products?');
+    if (path === '/cart') return pathname === '/cart';
+    if (path === '/profile') return pathname === '/profile' || pathname === '/dashboard';
+    return false;
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {!hideHeader && <Header />}
-      <main className={`flex-grow bg-white p-4 sm:p-6 lg:p-8 ${!hideBottomNav ? 'pb-20' : 'pb-8'}`}>{children}</main>
+      <main className={`flex-grow bg-white ${!hideBottomNav ? 'pb-20 sm:pb-16' : 'pb-8'}`}>
+        {children}
+      </main>
       {!hideFooter && <Footer />}
-      {/* Bottom Navigation - Sticky Footer */}
+      
+      {/* ========================================
+          BOTTOM NAVIGATION BAR (All Devices)
+          Thumb-friendly: min 44px touch targets
+          Responsive: Compact on desktop/tablet
+      ======================================== */}
       {!hideBottomNav && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 py-2">
-            <div className="grid grid-cols-4 gap-2 sm:gap-4">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-2xl backdrop-blur-lg bg-opacity-95">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-4 gap-0">
+              {/* Home */}
               <Link 
                 href="/" 
-                className="flex flex-col items-center hover:opacity-70 transition-opacity group py-2"
+                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative group transition-all min-h-[44px] touch-manipulation"
               >
-                <Home className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
-                  pathname === '/' ? 'text-red-600' : 'text-gray-600 group-hover:text-indigo-600'
-                }`} />
-                <span className={`text-xs sm:text-sm font-medium mt-1 text-center ${
-                  pathname === '/' ? 'text-red-600' : 'text-gray-700'
-                }`}>Beranda</span>
+                {isActive('/') && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></div>
+                )}
+                <div className={`p-2 sm:p-2.5 rounded-xl transition-all duration-300 ${
+                  isActive('/') 
+                    ? 'bg-blue-100 scale-110' 
+                    : 'group-active:bg-gray-100 group-active:scale-95'
+                }`}>
+                  <Home className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                    isActive('/') ? 'text-blue-600' : 'text-gray-600'
+                  }`} />
+                </div>
+                <span className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 transition-colors ${
+                  isActive('/') ? 'text-blue-600' : 'text-gray-600'
+                }`}>Home</span>
               </Link>
+              
+              {/* Categories */}
               <Link 
-                href="/products?sort=popular" 
-                className="flex flex-col items-center hover:opacity-70 transition-opacity group py-2"
+                href="/products" 
+                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative group transition-all min-h-[44px] touch-manipulation"
               >
-                <TrendingUp className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
-                  (pathname === '/products' || (pathname?.startsWith('/products?') && !pathname?.includes('/products/'))) ? 'text-red-600' : 'text-gray-600 group-hover:text-indigo-600'
-                }`} />
-                <span className={`text-xs sm:text-sm font-medium mt-1 text-center ${
-                  (pathname === '/products' || (pathname?.startsWith('/products?') && !pathname?.includes('/products/'))) ? 'text-red-600' : 'text-gray-700'
-                }`}>Trending</span>
+                {isActive('/products') && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></div>
+                )}
+                <div className={`p-2 sm:p-2.5 rounded-xl transition-all duration-300 ${
+                  isActive('/products')
+                    ? 'bg-blue-100 scale-110' 
+                    : 'group-active:bg-gray-100 group-active:scale-95'
+                }`}>
+                  <Grid3x3 className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                    isActive('/products') ? 'text-blue-600' : 'text-gray-600'
+                  }`} />
+                </div>
+                <span className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 transition-colors ${
+                  isActive('/products') ? 'text-blue-600' : 'text-gray-600'
+                }`}>Categories</span>
               </Link>
+              
+              {/* Cart */}
               <Link 
-                href="/notifications" 
-                className="flex flex-col items-center hover:opacity-70 transition-opacity group relative py-2"
+                href="/cart" 
+                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative group transition-all min-h-[44px] touch-manipulation"
               >
-                <Bell className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
-                  pathname === '/notifications' ? 'text-red-600' : 'text-gray-600 group-hover:text-indigo-600'
-                }`} />
-                <span className={`text-xs sm:text-sm font-medium mt-1 text-center ${
-                  pathname === '/notifications' ? 'text-red-600' : 'text-gray-700'
-                }`}>Notifikasi</span>
+                {isActive('/cart') && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></div>
+                )}
+                <div className={`p-2 sm:p-2.5 rounded-xl relative transition-all duration-300 ${
+                  isActive('/cart')
+                    ? 'bg-blue-100 scale-110' 
+                    : 'group-active:bg-gray-100 group-active:scale-95'
+                }`}>
+                  <ShoppingCart className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                    isActive('/cart') ? 'text-blue-600' : 'text-gray-600'
+                  }`} />
+                  {itemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] sm:text-[10px] font-bold rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center shadow-lg">
+                      {itemCount > 99 ? '99+' : itemCount}
+                    </span>
+                  )}
+                </div>
+                <span className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 transition-colors ${
+                  isActive('/cart') ? 'text-blue-600' : 'text-gray-600'
+                }`}>Cart</span>
               </Link>
+              
+              {/* Profile */}
               <Link 
                 href="/dashboard" 
-                className="flex flex-col items-center hover:opacity-70 transition-opacity group py-2"
+                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative group transition-all min-h-[44px] touch-manipulation"
               >
-                <User className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
-                  pathname === '/dashboard' || pathname?.startsWith('/dashboard') ? 'text-red-600' : 'text-gray-600 group-hover:text-indigo-600'
-                }`} />
-                <span className={`text-xs sm:text-sm font-medium mt-1 text-center ${
-                  pathname === '/dashboard' || pathname?.startsWith('/dashboard') ? 'text-red-600' : 'text-gray-700'
-                }`}>Saya</span>
+                {isActive('/profile') && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></div>
+                )}
+                <div className={`p-2 sm:p-2.5 rounded-xl transition-all duration-300 ${
+                  isActive('/profile')
+                    ? 'bg-blue-100 scale-110' 
+                    : 'group-active:bg-gray-100 group-active:scale-95'
+                }`}>
+                  <User className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                    isActive('/profile') ? 'text-blue-600' : 'text-gray-600'
+                  }`} />
+                </div>
+                <span className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 transition-colors ${
+                  isActive('/profile') ? 'text-blue-600' : 'text-gray-600'
+                }`}>Profile</span>
               </Link>
             </div>
           </div>
@@ -99,4 +166,3 @@ export default function ShopLayout({
     </Suspense>
   );
 }
-
