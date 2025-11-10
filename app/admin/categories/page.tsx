@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/admin/DataTable';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/admin/ConfirmDialog';
-import { Plus, Edit, Trash2, FolderTree } from 'lucide-react';
+import { Plus, Edit, Trash2, FolderTree, Search, Filter } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { useAdminHeader } from '@/contexts/AdminHeaderContext';
 
 interface Category {
   id: string;
@@ -29,8 +31,15 @@ interface Category {
 
 export default function AdminCategoriesPage() {
   const router = useRouter();
+  const { setHeader } = useAdminHeader();
+
+  useEffect(() => {
+    setHeader(FolderTree, 'Categories');
+  }, [setHeader]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
@@ -49,12 +58,34 @@ export default function AdminCategoriesPage() {
       }
 
       setCategories(data.data);
+      setFilteredCategories(data.data);
     } catch (error: any) {
       console.error('Error fetching categories:', error);
       toast.error(error.message || 'Failed to load categories');
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (search.trim() === '') {
+      setFilteredCategories(categories);
+    } else {
+      const filtered = categories.filter((category) =>
+        category.name.toLowerCase().includes(search.toLowerCase()) ||
+        category.slug.toLowerCase().includes(search.toLowerCase()) ||
+        (category.parent && category.parent.name.toLowerCase().includes(search.toLowerCase()))
+      );
+      setFilteredCategories(filtered);
+    }
+  }, [search, categories]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+  };
+
+  const handleClearFilters = () => {
+    setSearch('');
   };
 
   const handleDelete = async (categoryId: string) => {
@@ -86,23 +117,25 @@ export default function AdminCategoriesPage() {
         return (
           <div className="flex items-center gap-3">
             {imageUrl ? (
-              <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
                 <Image
                   src={imageUrl}
                   alt={category.name}
-                  width={48}
-                  height={48}
+                  width={64}
+                  height={64}
                   className="w-full h-full object-cover"
                 />
               </div>
             ) : (
-              <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
-                <FolderTree className="w-6 h-6 text-gray-400" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 border border-gray-200">
+                <FolderTree className="w-7 h-7 sm:w-8 sm:h-8 text-gray-400" />
               </div>
             )}
-            <div>
-              <p className="font-semibold text-gray-900">{category.name}</p>
-              <p className="text-xs text-gray-500">Slug: {category.slug}</p>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm sm:text-base text-gray-900 mb-1 line-clamp-2">{category.name}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs text-gray-500">Slug: {category.slug}</p>
+              </div>
             </div>
           </div>
         );
@@ -147,11 +180,11 @@ export default function AdminCategoriesPage() {
       key: 'actions',
       label: 'Actions',
       render: (category: Category) => (
-        <div className="flex gap-2">
+        <div className="flex items-center justify-end gap-2 flex-nowrap">
           <Link
             href={`/admin/categories/${category.id}/edit`}
             onClick={(e) => e.stopPropagation()}
-            className="text-blue-600 hover:text-blue-900"
+            className="p-2 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 active:scale-95 touch-manipulation flex items-center justify-center shrink-0"
             title="Edit"
           >
             <Edit className="w-4 h-4" />
@@ -162,7 +195,7 @@ export default function AdminCategoriesPage() {
               setCategoryToDelete(category.id);
               setShowDeleteDialog(true);
             }}
-            className="text-red-600 hover:text-red-900"
+            className="p-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 active:scale-95 touch-manipulation flex items-center justify-center shrink-0"
             title="Delete"
           >
             <Trash2 className="w-4 h-4" />
@@ -173,26 +206,86 @@ export default function AdminCategoriesPage() {
   ];
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Categories</h1>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base">{categories.length} total categories</p>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+                <FolderTree className="w-6 h-6 sm:w-8 sm:h-8" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">Categories Management</h1>
+                <p className="text-orange-100 text-sm sm:text-base mt-1">
+                  {categories.length} total categories in your store
+                </p>
+              </div>
+            </div>
+          </div>
+          <Link href="/admin/categories/new" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-white text-orange-600 hover:bg-gray-100 font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Category
+            </Button>
+          </Link>
         </div>
-        <Link href="/admin/categories/new" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Category
-          </Button>
-        </Link>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      {/* Filters Card */}
+      <div className="admin-filter-card">
+        <div className="admin-card-header">
+          <div className="flex items-center gap-2">
+            <div className="bg-orange-100 rounded-lg p-1.5">
+              <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+            </div>
+            <h2 className="text-base sm:text-lg font-bold text-gray-900">Filters & Search</h2>
+          </div>
+        </div>
+        <div className="p-4 sm:p-6">
+          <form onSubmit={handleSearch} className="space-y-4">
+            {/* Search Input - Full Width */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                <span className="hidden sm:inline">Search Categories</span>
+                <span className="sm:hidden">Search</span>
+              </label>
+              <div className="relative">
+                <div className="absolute left-2 sm:left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+                </div>
+                <Input
+                  type="text"
+                  placeholder="Search by name, slug, or parent category..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-8 sm:pl-10 md:pl-12 border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-xs sm:text-sm md:text-base py-2 sm:py-2.5"
+                />
+              </div>
+            </div>
+
+            {/* Apply Button - Full Width */}
+            {search && (
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClearFilters}
+                  className="w-full border-orange-300 text-orange-600 hover:bg-orange-50 rounded-lg sm:rounded-xl"
+                >
+                  Clear Search
+                </Button>
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
+
+      {/* Table Card */}
+      <div className="admin-table-card">
         <DataTable
           columns={columns as any}
-          data={categories}
+          data={filteredCategories}
           loading={loading}
           emptyMessage="No categories found"
         />

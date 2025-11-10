@@ -12,19 +12,31 @@ import { OrderProvider } from "@/contexts/OrderContext";
 import { FavoriteEditModeProvider } from "@/contexts/FavoriteEditModeContext";
 import { SaveActionProvider } from "@/contexts/SaveActionContext";
 import { APP_NAME } from "@/lib/constants";
+import { getStoreSettingsServer, getSEOSettingsServer } from "@/lib/settings";
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: APP_NAME,
-    template: `%s | ${APP_NAME}`,
-  },
-  description: "Modern e-commerce platform built with Next.js 14",
-};
+// Generate metadata dynamically from settings
+export async function generateMetadata(): Promise<Metadata> {
+  const storeSettings = await getStoreSettingsServer();
+  const seoSettings = await getSEOSettingsServer();
+  
+  const storeName = storeSettings.storeName || APP_NAME;
+  const metaTitle = seoSettings.metaTitle || storeName;
+  const metaDescription = seoSettings.metaDescription || storeSettings.storeDescription || 
+    "Modern e-commerce platform built with Next.js 14";
+
+  return {
+    title: {
+      default: metaTitle,
+      template: `%s | ${storeName}`,
+    },
+    description: metaDescription,
+  };
+}
 
 export const viewport: Viewport = {
   width: 'device-width',

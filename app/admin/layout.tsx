@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminHeader } from '@/components/admin/AdminHeader';
+import { AdminHeaderProvider } from '@/contexts/AdminHeaderContext';
 import { Loader } from '@/components/ui/Loader';
 
 export default function AdminLayout({
@@ -45,27 +46,21 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
-      {/* Sidebar */}
-      <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <AdminHeaderProvider>
+      <div className="admin-layout">
+        {/* Sidebar */}
+        <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Sidebar Overlay for Mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+        {/* Main Content */}
+        <div className="admin-main-content">
+          {/* Header */}
+          <AdminHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
-      {/* Main Content */}
-      <div className="flex-1 lg:ml-64 w-full bg-white">
-        {/* Header */}
-        <AdminHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-
-        {/* Page Content */}
-        <main className="p-4 sm:p-6 lg:p-8 bg-white">{children}</main>
+          {/* Page Content */}
+          <main className="admin-content-wrapper">{children}</main>
+        </div>
       </div>
-    </div>
+    </AdminHeaderProvider>
   );
 }
 

@@ -3,11 +3,32 @@
  * Main footer dengan links dan info
  */
 
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { APP_NAME } from '@/lib/constants';
+import { getStoreSettings } from '@/lib/settings';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const [storeSettings, setStoreSettings] = useState<{
+    storeName?: string;
+    storeDescription?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    storeAddress?: string;
+  }>({});
+
+  useEffect(() => {
+    getStoreSettings().then((settings) => {
+      setStoreSettings(settings);
+    });
+  }, []);
+
+  const displayName = storeSettings.storeName || APP_NAME;
+  const displayDescription = storeSettings.storeDescription || 
+    'Your one-stop shop for everything you need. Quality products, great prices, and excellent service.';
 
   return (
     <footer className="bg-gray-900 text-gray-300">
@@ -17,11 +38,25 @@ export default function Footer() {
           <div>
             <div className="flex items-center space-x-2 mb-4">
               <span className="text-2xl">🛍️</span>
-              <span className="text-xl font-bold text-white">{APP_NAME}</span>
+              <span className="text-xl font-bold text-white">{displayName}</span>
             </div>
             <p className="text-sm">
-              Your one-stop shop for everything you need. Quality products, great prices, and excellent service.
+              {displayDescription}
             </p>
+            {storeSettings.contactEmail && (
+              <p className="text-sm mt-2">
+                <a href={`mailto:${storeSettings.contactEmail}`} className="hover:text-white transition-colors">
+                  {storeSettings.contactEmail}
+                </a>
+              </p>
+            )}
+            {storeSettings.contactPhone && (
+              <p className="text-sm">
+                <a href={`tel:${storeSettings.contactPhone}`} className="hover:text-white transition-colors">
+                  {storeSettings.contactPhone}
+                </a>
+              </p>
+            )}
           </div>
 
           {/* Shop Links */}
@@ -95,7 +130,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-sm">
-              © {currentYear} {APP_NAME}. All rights reserved.
+              © {currentYear} {displayName}. All rights reserved.
             </p>
             <div className="flex space-x-6">
               <Link href="/privacy" className="text-sm hover:text-white transition-colors">

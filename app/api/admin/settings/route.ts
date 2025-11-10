@@ -1,0 +1,126 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+/**
+ * GET /api/admin/settings
+ * Get all settings or by category (Admin only)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get('category');
+
+    const where: any = {};
+    if (category) {
+      where.category = category;
+    }
+
+    const settings = await prisma.setting.findMany({
+      where,
+      orderBy: [
+        { category: 'asc' },
+        { key: 'asc' },
+      ],
+    });
+
+    // Transform to key-value object
+    const settingsMap: Record<string, any> = {};
+    settings.forEach((setting) => {
+      try {
+        // Try to parse JSON, fallback to string
+        settingsMap[setting.key] = JSON.parse(setting.value);
+      } catch {
+        settingsMap[setting.key] = setting.value;
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: category ? settingsMap : { settings, map: settingsMap },
+    });
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch settings' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PUT /api/admin/settings
+ * Update settings (bulk update) (Admin only)
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { settings } = body;
+
+    if (!settings || typeof settings !== 'object') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid settings data' },
+        { status: 400 }
+      );
+    }
+
+    const updates = [];
+    const adminId = session.user.id;
+
+    for (const [key, value] of Object.entries(settings)) {
+      // Convert value to string (JSON stringify if object/array)
+      const stringValue = typeof value === 'string' 
+        ? value 
+        : JSON.stringify(value);
+
+      updates.push(
+        prisma.setting.upsert({
+          where: { key },
+          update: {
+            value: stringValue,
+            updatedBy: adminId,
+          },
+          create: {
+            key,
+            value: stringValue,
+            category: 'general', // Default category, can be updated later
+            updatedBy: adminId,
+          },
+        })
+      );
+    }
+
+    await Promise.all(updates);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Settings updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to update settings' },
+      { status: 500 }
+    );
+  }
+}
+

@@ -211,3 +211,189 @@ textarea {
   -ms-user-select: text;
   user-select: text;
 }
+
+/* ============================================
+   ADMIN PANEL CUSTOM STYLES
+   ============================================ */
+
+/* Admin Panel CSS Variables */
+:root {
+  --admin-sidebar-width: 256px;
+  --admin-header-height: 64px;
+  --admin-content-padding: 0.75rem;
+  --admin-content-padding-md: 1rem;
+  --admin-content-padding-lg: 1.5rem;
+  --admin-card-radius: 0.75rem;
+  --admin-card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --admin-card-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --admin-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Admin Layout - Compact and Professional */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #f9fafb, #ffffff, #f9fafb);
+}
+
+.admin-sidebar {
+  width: var(--admin-sidebar-width);
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 50;
+  background: linear-gradient(to bottom, #ffffff, #f9fafb, #ffffff);
+  border-right: 1px solid rgba(229, 231, 235, 0.8);
+  box-shadow: 2px 0 8px -2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.02);
+}
+
+@media (min-width: 1024px) {
+  .admin-sidebar {
+    position: fixed;
+  }
+}
+
+.admin-main-content {
+  flex: 1;
+  width: 100%;
+  position: relative;
+  z-index: 30;
+}
+
+@media (min-width: 1024px) {
+  .admin-main-content {
+    margin-left: var(--admin-sidebar-width);
+    width: calc(100% - var(--admin-sidebar-width));
+  }
+}
+
+.admin-content-wrapper {
+  padding: var(--admin-content-padding);
+  min-height: calc(100vh - var(--admin-header-height));
+  background: transparent;
+}
+
+@media (min-width: 640px) {
+  .admin-content-wrapper {
+    padding: var(--admin-content-padding-md);
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-content-wrapper {
+    padding: var(--admin-content-padding-lg);
+  }
+}
+
+/* Admin Card Styles */
+.admin-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--admin-card-radius);
+  box-shadow: var(--admin-card-shadow);
+  transition: var(--admin-transition);
+}
+
+.admin-card:hover {
+  box-shadow: var(--admin-card-shadow-hover);
+}
+
+.admin-card-header {
+  background: linear-gradient(to right, #f9fafb, #f3f4f6);
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Admin Gradient Headers */
+.admin-header-gradient {
+  border-radius: var(--admin-card-radius);
+  padding: 1.5rem 2rem;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+/* Admin Stats Card */
+.admin-stats-card {
+  border-radius: var(--admin-card-radius);
+  padding: 1.5rem;
+  transition: var(--admin-transition);
+}
+
+.admin-stats-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--admin-card-shadow-hover);
+}
+
+/* Admin Filter Card */
+.admin-filter-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--admin-card-radius);
+  box-shadow: var(--admin-card-shadow);
+  overflow: visible;
+  transition: var(--admin-transition);
+}
+
+.admin-filter-card:hover {
+  box-shadow: var(--admin-card-shadow-hover);
+}
+
+/* Smooth transitions for admin elements */
+.admin-transition {
+  transition: var(--admin-transition);
+}
+
+/* Admin sidebar menu item active indicator */
+.admin-menu-active {
+  position: relative;
+}
+
+.admin-menu-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 2rem;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Admin table card */
+.admin-table-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--admin-card-radius);
+  box-shadow: var(--admin-card-shadow);
+  overflow: hidden;
+  transition: var(--admin-transition);
+}
+
+.admin-table-card:hover {
+  box-shadow: var(--admin-card-shadow-hover);
+}
+
+/* Admin Settings Tabs Scrollbar */
+.admin-settings-tabs-container {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+  -webkit-overflow-scrolling: touch;
+  -ms-overflow-style: -ms-autohiding-scrollbar;
+}
+
+.admin-settings-tabs-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.admin-settings-tabs-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-settings-tabs-container::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
+}
+
+.admin-settings-tabs-container::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}

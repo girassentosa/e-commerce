@@ -7,14 +7,16 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Loader } from '@/components/ui/Loader';
 import { profileSchema, passwordChangeSchema } from '@/lib/validations/profile';
-import { Upload, Loader2, User, Link as LinkIcon } from 'lucide-react';
+import { Upload, Loader2, User, Link as LinkIcon, UserCircle, Settings, Lock, Camera } from 'lucide-react';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
+import { useAdminHeader } from '@/contexts/AdminHeaderContext';
 
 export default function AdminProfilePage() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
+  const { setHeader } = useAdminHeader();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -36,6 +38,10 @@ export default function AdminProfilePage() {
     newPassword: '',
     confirmPassword: '',
   });
+
+  useEffect(() => {
+    setHeader(UserCircle, 'Profile Settings');
+  }, [setHeader]);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -268,183 +274,66 @@ export default function AdminProfilePage() {
     );
   }
 
+  const avatarInitial = profileData.firstName?.[0]?.toUpperCase() || 
+    profileData.lastName?.[0]?.toUpperCase() || 
+    profileData.email[0]?.toUpperCase() || 
+    'A';
+
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Profile Settings</h1>
-
-      <form onSubmit={handleProfileSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Personal Information */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Personal Information</h2>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name *
-                    </label>
-                    <Input
-                      type="text"
-                      value={profileData.firstName}
-                      onChange={(e) => handleProfileChange('firstName', e.target.value)}
-                      error={profileErrors.firstName}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name *
-                    </label>
-                    <Input
-                      type="text"
-                      value={profileData.lastName}
-                      onChange={(e) => handleProfileChange('lastName', e.target.value)}
-                      error={profileErrors.lastName}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address *
-                  </label>
-                  <Input
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) => handleProfileChange('email', e.target.value)}
-                    error={profileErrors.email}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
-                  <Input
-                    type="tel"
-                    value={profileData.phone}
-                    onChange={(e) => handleProfileChange('phone', e.target.value)}
-                    error={profileErrors.phone}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Change Password */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Change Password (Optional)</h2>
-              <p className="text-sm text-gray-600 mb-4">Leave blank if you don't want to change password</p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={passwordData.oldPassword}
-                    onChange={(e) => handlePasswordChange('oldPassword', e.target.value)}
-                    error={passwordErrors.oldPassword}
-                    placeholder="Enter current password"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={passwordData.newPassword}
-                    onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                    error={passwordErrors.newPassword}
-                    placeholder="Enter new password"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Confirm New Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                    error={passwordErrors.confirmPassword}
-                    placeholder="Confirm new password"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <Button type="submit" disabled={submitting} fullWidth>
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving Changes...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </Button>
-            </div>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-pink-600 via-rose-600 to-pink-600 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+            <UserCircle className="w-6 h-6 sm:w-8 sm:h-8" />
           </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">Profile Settings</h1>
+            <p className="text-pink-100 text-sm sm:text-base mt-1">
+              Manage your account information and preferences
+            </p>
+          </div>
+        </div>
+      </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-          {/* Profile Picture */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Profile Picture</h2>
-            <div className="flex flex-col items-center">
-              <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-4 overflow-hidden">
-                {profileData.avatarUrl ? (
-                  <Image
-                    src={profileData.avatarUrl}
-                    alt="Profile"
-                    width={128}
-                    height={128}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User className="w-16 h-16 text-gray-400" />
-                )}
+      <form onSubmit={handleProfileSubmit} className="space-y-6">
+        {/* Personal Information and Change Password - 2 columns on all devices except mobile, 1 column on mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 items-stretch">
+          {/* Personal Information with Profile Picture */}
+          <div className="admin-card h-full flex flex-col">
+            <div className="admin-card-header">
+              <div className="flex items-center gap-2">
+                <div className="bg-pink-100 rounded-lg p-1.5">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">Personal Information</h2>
               </div>
-
-              {/* Upload Mode Tabs */}
-              <div className="flex gap-2 mb-3 border-b border-gray-200 w-full justify-center">
-                <button
-                  type="button"
-                  onClick={() => setUploadMode('file')}
-                  className={`px-3 py-1 text-xs font-medium transition-colors ${
-                    uploadMode === 'file'
-                      ? 'text-indigo-600 border-b-2 border-indigo-600'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <Upload className="w-3 h-3 inline mr-1" />
-                  File
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUploadMode('url')}
-                  className={`px-3 py-1 text-xs font-medium transition-colors ${
-                    uploadMode === 'url'
-                      ? 'text-indigo-600 border-b-2 border-indigo-600'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <LinkIcon className="w-3 h-3 inline mr-1" />
-                  URL
-                </button>
-              </div>
-
-              {/* Upload Options */}
-              {uploadMode === 'file' ? (
-                <>
+            </div>
+            <div className="p-4 sm:p-6 space-y-6 flex-1">
+              {/* Profile Picture - Center */}
+              <div className="flex justify-center flex-shrink-0">
+                <div className="relative">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 bg-gradient-to-br from-pink-100 to-rose-100 rounded-full flex items-center justify-center overflow-hidden border-4 border-gray-200 shadow-lg">
+                    {profileData.avatarUrl ? (
+                      <Image
+                        src={profileData.avatarUrl}
+                        alt="Profile"
+                        width={128}
+                        height={128}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-3xl sm:text-4xl md:text-5xl font-bold text-pink-600">
+                        {avatarInitial}
+                      </span>
+                    )}
+                  </div>
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-white animate-spin" />
+                    </div>
+                  )}
+                  {/* Camera Icon Button */}
                   <input
                     type="file"
                     id="avatar-upload"
@@ -456,69 +345,164 @@ export default function AdminProfilePage() {
                   <label
                     htmlFor="avatar-upload"
                     className={`
-                      inline-flex items-center justify-center font-medium rounded-lg 
-                      px-4 py-2 text-base transition-all duration-200 
-                      border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 
-                      focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
-                      ${uploadingAvatar ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                      absolute bottom-0 right-0 p-2 bg-pink-600 text-white rounded-full 
+                      hover:bg-pink-700 transition-colors shadow-lg cursor-pointer
+                      ${uploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''}
                     `}
                   >
-                    {uploadingAvatar ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload Photo
-                      </>
-                    )}
+                    <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
                   </label>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    PNG, JPG, JPEG, GIF, WEBP (max 2MB)
-                  </p>
-                </>
-              ) : (
-                <div className="w-full space-y-3">
-                  <input
-                    type="url"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    disabled={uploadingAvatar}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !uploadingAvatar && urlInput.trim()) {
-                        handleAvatarUrlUpload();
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleAvatarUrlUpload}
-                    disabled={uploadingAvatar || !urlInput.trim()}
-                    className="w-full"
-                  >
-                    {uploadingAvatar ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <LinkIcon className="w-4 h-4 mr-2" />
-                        Upload from URL
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-xs text-gray-500 text-center">
-                    Paste image URL from gallery, Google Images, or any website
-                  </p>
                 </div>
-              )}
+              </div>
+
+              {/* Form Fields */}
+              <div className="space-y-4 flex-1">
+                {/* First Name and Last Name - Side by Side (2 columns on all devices) */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                      First Name *
+                    </label>
+                    <Input
+                      type="text"
+                      value={profileData.firstName}
+                      onChange={(e) => handleProfileChange('firstName', e.target.value)}
+                      error={profileErrors.firstName}
+                      className="text-xs sm:text-sm md:text-base"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                      Last Name *
+                    </label>
+                    <Input
+                      type="text"
+                      value={profileData.lastName}
+                      onChange={(e) => handleProfileChange('lastName', e.target.value)}
+                      error={profileErrors.lastName}
+                      className="text-xs sm:text-sm md:text-base"
+                    />
+                  </div>
+                </div>
+
+                {/* Email Address and Phone - Side by Side (2 columns on all devices) */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                      Email Address *
+                    </label>
+                    <Input
+                      type="email"
+                      value={profileData.email}
+                      onChange={(e) => handleProfileChange('email', e.target.value)}
+                      error={profileErrors.email}
+                      className="text-xs sm:text-sm md:text-base"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                      Phone
+                    </label>
+                    <Input
+                      type="tel"
+                      value={profileData.phone}
+                      onChange={(e) => handleProfileChange('phone', e.target.value)}
+                      error={profileErrors.phone}
+                      className="text-xs sm:text-sm md:text-base"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Change Password */}
+          <div className="admin-card h-full flex flex-col">
+            <div className="admin-card-header">
+              <div className="flex items-center gap-2">
+                <div className="bg-pink-100 rounded-lg p-1.5">
+                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">Change Password (Optional)</h2>
+              </div>
+            </div>
+            <div className="p-4 sm:p-6 flex-1 flex flex-col justify-end">
+              <p className="text-xs sm:text-sm text-gray-600 mb-4 flex-shrink-0">Leave blank if you don't want to change password</p>
+              <div className="space-y-4">
+                {/* Current Password - Full Width */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                    Current Password
+                  </label>
+                  <Input
+                    type="password"
+                    value={passwordData.oldPassword}
+                    onChange={(e) => handlePasswordChange('oldPassword', e.target.value)}
+                    error={passwordErrors.oldPassword}
+                    placeholder="Enter current password"
+                    className="text-xs sm:text-sm md:text-base"
+                  />
+                </div>
+
+                {/* New Password - Full Width */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                    New Password
+                  </label>
+                  <Input
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                    error={passwordErrors.newPassword}
+                    placeholder="Enter new password"
+                    className="text-xs sm:text-sm md:text-base"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+                </div>
+
+                {/* Confirm Password - Full Width */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                    Confirm New Password
+                  </label>
+                  <Input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                    error={passwordErrors.confirmPassword}
+                    placeholder="Confirm new password"
+                    className="text-xs sm:text-sm md:text-base"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Button - Full Width */}
+        <div className="w-full">
+          <div className="admin-card">
+            <div className="p-4 sm:p-6">
+              <Button 
+                type="submit" 
+                disabled={submitting} 
+                className="w-full bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 py-2.5 sm:py-3"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
+                    <span className="text-sm sm:text-base">Saving Changes...</span>
+                  </>
+                ) : (
+                  <>
+                    <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    <span className="text-sm sm:text-base">Save Changes</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </form>

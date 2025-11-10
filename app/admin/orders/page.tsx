@@ -13,9 +13,16 @@ import {
   Eye,
   Calendar,
   DollarSign,
+  ShoppingBag,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  CreditCard,
+  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { useAdminHeader } from '@/contexts/AdminHeaderContext';
 
 interface Order {
   id: string;
@@ -46,6 +53,11 @@ interface Order {
 
 export default function AdminOrdersPage() {
   const router = useRouter();
+  const { setHeader } = useAdminHeader();
+
+  useEffect(() => {
+    setHeader(ShoppingBag, 'Orders');
+  }, [setHeader]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -56,6 +68,8 @@ export default function AdminOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [paymentStatusDropdownOpen, setPaymentStatusDropdownOpen] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -200,126 +214,401 @@ export default function AdminOrdersPage() {
       key: 'actions',
       label: 'Actions',
       render: (order: Order) => (
-        <Link 
-          href={`/admin/orders/${order.orderNumber}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Button variant="ghost" size="sm" className="w-full sm:w-auto">
-            <Eye className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">View</span>
-          </Button>
-        </Link>
+        <div className="flex items-center justify-end gap-2 flex-nowrap">
+          <Link
+            href={`/admin/orders/${order.orderNumber}`}
+            onClick={(e) => e.stopPropagation()}
+            className="p-2 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 active:scale-95 touch-manipulation flex items-center justify-center shrink-0"
+            title="View"
+          >
+            <Eye className="w-4 h-4" />
+          </Link>
+        </div>
       ),
     },
   ];
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Orders</h1>
-        <p className="text-gray-600 text-sm sm:text-base">
-          Manage and track all customer orders ({totalCount} total)
-        </p>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+            <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">Orders Management</h1>
+            <p className="text-emerald-100 text-sm sm:text-base mt-1">
+              Manage and track all customer orders • {totalCount} total orders
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
-        <form onSubmit={handleSearch} className="space-y-4">
-          {/* Search and Status Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Search */}
-            <div className="sm:col-span-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Search by order number, customer email or name..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+      {/* Filters Card */}
+      <div className="admin-filter-card">
+        <div className="admin-card-header">
+          <div className="flex items-center gap-2">
+            <div className="bg-emerald-100 rounded-lg p-1.5">
+              <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
             </div>
-
-            {/* Order Status Filter */}
-            <div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-              >
-                <option value="">All Statuses</option>
-                <option value="PENDING">Pending</option>
-                <option value="PROCESSING">Processing</option>
-                <option value="SHIPPED">Shipped</option>
-                <option value="DELIVERED">Delivered</option>
-                <option value="CANCELLED">Cancelled</option>
-                <option value="REFUNDED">Refunded</option>
-              </select>
-            </div>
-
-            {/* Payment Status Filter */}
-            <div>
-              <select
-                value={paymentStatusFilter}
-                onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-              >
-                <option value="">All Payment Status</option>
-                <option value="PENDING">Pending</option>
-                <option value="PAID">Paid</option>
-                <option value="FAILED">Failed</option>
-                <option value="REFUNDED">Refunded</option>
-              </select>
-            </div>
+            <h2 className="text-base sm:text-lg font-bold text-gray-900">Filters & Search</h2>
           </div>
+        </div>
+        <div className="p-4 sm:p-6">
+          <form onSubmit={handleSearch} className="space-y-4">
+            {/* Filters Grid - 3 Columns on All Devices */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+              {/* Search Input */}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                  <span className="hidden sm:inline">Search Orders</span>
+                  <span className="sm:hidden">Search</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute left-2 sm:left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder="Search..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8 sm:pl-10 md:pl-12 border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-xs sm:text-sm md:text-base py-2 sm:py-2.5"
+                  />
+                </div>
+              </div>
 
-          {/* Date Range Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date From
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="pl-10"
-                />
+              {/* Order Status Filter */}
+              <div className="relative z-30">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                  Status
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusDropdownOpen(!statusDropdownOpen);
+                    setPaymentStatusDropdownOpen(false);
+                  }}
+                  className="w-full px-2 sm:px-3 py-2 sm:py-2.5 border border-gray-300 rounded-lg sm:rounded-xl bg-white text-gray-900 text-xs sm:text-sm md:text-base hover:border-emerald-300 transition-colors flex items-center justify-between gap-2"
+                >
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                    {statusFilter === 'PENDING' ? (
+                      <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 shrink-0" />
+                    ) : statusFilter === 'PROCESSING' ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 shrink-0" />
+                    ) : statusFilter === 'SHIPPED' ? (
+                      <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500 shrink-0" />
+                    ) : statusFilter === 'DELIVERED' ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 shrink-0" />
+                    ) : statusFilter === 'CANCELLED' || statusFilter === 'REFUNDED' ? (
+                      <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500 shrink-0" />
+                    ) : (
+                      <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
+                    )}
+                    <span className="truncate">
+                      {statusFilter === 'PENDING' ? 'Pending' : 
+                       statusFilter === 'PROCESSING' ? 'Processing' : 
+                       statusFilter === 'SHIPPED' ? 'Shipped' : 
+                       statusFilter === 'DELIVERED' ? 'Delivered' : 
+                       statusFilter === 'CANCELLED' ? 'Cancelled' : 
+                       statusFilter === 'REFUNDED' ? 'Refunded' : 
+                       'All'}
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 shrink-0 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {statusDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setStatusDropdownOpen(false)}
+                    ></div>
+                    <div
+                      className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-2xl"
+                      style={{
+                        maxHeight: '9rem',
+                        overflowY: 'auto',
+                        WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: '#cbd5e1 #f1f5f9',
+                        overscrollBehavior: 'contain'
+                      }}
+                      onWheel={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onTouchMove={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusFilter('');
+                            setCurrentPage(1);
+                            setStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-emerald-50 active:bg-emerald-100 transition-colors touch-manipulation ${
+                            statusFilter === '' ? 'bg-emerald-50 text-emerald-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <Filter className="w-4 h-4 text-gray-400 shrink-0" />
+                          <span>All</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusFilter('PENDING');
+                            setCurrentPage(1);
+                            setStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-yellow-50 active:bg-yellow-100 transition-colors touch-manipulation ${
+                            statusFilter === 'PENDING' ? 'bg-yellow-50 text-yellow-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <Clock className="w-4 h-4 text-yellow-500 shrink-0" />
+                          <span>Pending</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusFilter('PROCESSING');
+                            setCurrentPage(1);
+                            setStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-blue-50 active:bg-blue-100 transition-colors touch-manipulation ${
+                            statusFilter === 'PROCESSING' ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0" />
+                          <span>Processing</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusFilter('SHIPPED');
+                            setCurrentPage(1);
+                            setStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-indigo-50 active:bg-indigo-100 transition-colors touch-manipulation ${
+                            statusFilter === 'SHIPPED' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <ShoppingBag className="w-4 h-4 text-indigo-500 shrink-0" />
+                          <span>Shipped</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusFilter('DELIVERED');
+                            setCurrentPage(1);
+                            setStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-green-50 active:bg-green-100 transition-colors touch-manipulation ${
+                            statusFilter === 'DELIVERED' ? 'bg-green-50 text-green-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                          <span>Delivered</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusFilter('CANCELLED');
+                            setCurrentPage(1);
+                            setStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-red-50 active:bg-red-100 transition-colors touch-manipulation ${
+                            statusFilter === 'CANCELLED' ? 'bg-red-50 text-red-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          <span>Cancelled</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusFilter('REFUNDED');
+                            setCurrentPage(1);
+                            setStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-red-50 active:bg-red-100 transition-colors touch-manipulation ${
+                            statusFilter === 'REFUNDED' ? 'bg-red-50 text-red-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          <span>Refunded</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Payment Status Filter */}
+              <div className="relative z-20">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                  Payment
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentStatusDropdownOpen(!paymentStatusDropdownOpen);
+                    setStatusDropdownOpen(false);
+                  }}
+                  className="w-full px-2 sm:px-3 py-2 sm:py-2.5 border border-gray-300 rounded-lg sm:rounded-xl bg-white text-gray-900 text-xs sm:text-sm md:text-base hover:border-emerald-300 transition-colors flex items-center justify-between gap-2"
+                >
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                    {paymentStatusFilter === 'PENDING' ? (
+                      <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 shrink-0" />
+                    ) : paymentStatusFilter === 'PAID' ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 shrink-0" />
+                    ) : paymentStatusFilter === 'FAILED' || paymentStatusFilter === 'REFUNDED' ? (
+                      <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500 shrink-0" />
+                    ) : (
+                      <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
+                    )}
+                    <span className="truncate">
+                      {paymentStatusFilter === 'PENDING' ? 'Pending' : 
+                       paymentStatusFilter === 'PAID' ? 'Paid' : 
+                       paymentStatusFilter === 'FAILED' ? 'Failed' : 
+                       paymentStatusFilter === 'REFUNDED' ? 'Refunded' : 
+                       'All'}
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 shrink-0 transition-transform ${paymentStatusDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {paymentStatusDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setPaymentStatusDropdownOpen(false)}
+                    ></div>
+                    <div
+                      className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-2xl"
+                      style={{
+                        maxHeight: '9rem',
+                        overflowY: 'auto',
+                        WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: '#cbd5e1 #f1f5f9',
+                        overscrollBehavior: 'contain'
+                      }}
+                      onWheel={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onTouchMove={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPaymentStatusFilter('');
+                            setCurrentPage(1);
+                            setPaymentStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-emerald-50 active:bg-emerald-100 transition-colors touch-manipulation ${
+                            paymentStatusFilter === '' ? 'bg-emerald-50 text-emerald-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <CreditCard className="w-4 h-4 text-gray-400 shrink-0" />
+                          <span>All</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPaymentStatusFilter('PENDING');
+                            setCurrentPage(1);
+                            setPaymentStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-yellow-50 active:bg-yellow-100 transition-colors touch-manipulation ${
+                            paymentStatusFilter === 'PENDING' ? 'bg-yellow-50 text-yellow-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <Clock className="w-4 h-4 text-yellow-500 shrink-0" />
+                          <span>Pending</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPaymentStatusFilter('PAID');
+                            setCurrentPage(1);
+                            setPaymentStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-green-50 active:bg-green-100 transition-colors touch-manipulation ${
+                            paymentStatusFilter === 'PAID' ? 'bg-green-50 text-green-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                          <span>Paid</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPaymentStatusFilter('FAILED');
+                            setCurrentPage(1);
+                            setPaymentStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-red-50 active:bg-red-100 transition-colors touch-manipulation ${
+                            paymentStatusFilter === 'FAILED' ? 'bg-red-50 text-red-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          <span>Failed</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPaymentStatusFilter('REFUNDED');
+                            setCurrentPage(1);
+                            setPaymentStatusDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-red-50 active:bg-red-100 transition-colors touch-manipulation ${
+                            paymentStatusFilter === 'REFUNDED' ? 'bg-red-50 text-red-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          <span>Refunded</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
+
+            {/* Apply Button - Full Width on Mobile */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date To
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex items-end gap-2">
-              <Button type="submit" variant="primary" className="flex-1 sm:flex-none">
-                <Filter className="w-4 h-4 mr-2" />
-                Apply
-              </Button>
-              <Button type="button" variant="outline" onClick={handleClearFilters} className="flex-1 sm:flex-none">
-                Clear
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 py-2.5 sm:py-3"
+              >
+                <Filter className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <span className="text-sm sm:text-base">Apply Filters</span>
               </Button>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* Orders Table Card */}
+      <div className="admin-table-card">
         <DataTable
           columns={columns}
           data={orders}
@@ -330,7 +619,7 @@ export default function AdminOrdersPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="p-4 sm:p-6 border-t border-gray-200">
+          <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

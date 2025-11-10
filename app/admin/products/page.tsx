@@ -17,10 +17,15 @@ import {
   Eye,
   EyeOff,
   Package,
+  FolderTree,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { useAdminHeader } from '@/contexts/AdminHeaderContext';
 
 interface Product {
   id: string;
@@ -46,6 +51,11 @@ interface Product {
 
 export default function AdminProductsPage() {
   const router = useRouter();
+  const { setHeader } = useAdminHeader();
+
+  useEffect(() => {
+    setHeader(Package, 'Products');
+  }, [setHeader]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -58,6 +68,8 @@ export default function AdminProductsPage() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -262,23 +274,31 @@ export default function AdminProductsPage() {
         return (
           <div className="flex items-center gap-3">
             {imageUrl ? (
-              <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
                 <Image
                   src={imageUrl}
                   alt={product.name}
-                  width={48}
-                  height={48}
+                  width={64}
+                  height={64}
                   className="w-full h-full object-cover"
                 />
               </div>
             ) : (
-              <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
-                <Package className="w-6 h-6 text-gray-400" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 border border-gray-200">
+                <Package className="w-7 h-7 sm:w-8 sm:h-8 text-gray-400" />
               </div>
             )}
-            <div>
-              <p className="font-semibold text-gray-900">{product.name}</p>
-              <p className="text-xs text-gray-500">SKU: {product.sku || 'N/A'}</p>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm sm:text-base text-gray-900 mb-1 line-clamp-2">{product.name}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs text-gray-500">SKU: {product.sku || 'N/A'}</p>
+                {product.brand && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <p className="text-xs text-gray-500">{product.brand}</p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -294,13 +314,19 @@ export default function AdminProductsPage() {
       key: 'price',
       label: 'Price',
       render: (product: Product) => (
-        <div>
-          <p className="font-semibold text-gray-900">
-            ${parseFloat(product.price).toFixed(2)}
-          </p>
-          {product.salePrice && (
-            <p className="text-xs text-green-600">
-              Sale: ${parseFloat(product.salePrice).toFixed(2)}
+        <div className="flex flex-col">
+          {product.salePrice ? (
+            <>
+              <p className="text-xs text-gray-400 line-through">
+                ${parseFloat(product.price).toFixed(2)}
+              </p>
+              <p className="font-bold text-base text-green-600">
+                ${parseFloat(product.salePrice).toFixed(2)}
+              </p>
+            </>
+          ) : (
+            <p className="font-bold text-base text-gray-900">
+              ${parseFloat(product.price).toFixed(2)}
             </p>
           )}
         </div>
@@ -318,8 +344,9 @@ export default function AdminProductsPage() {
               ? 'secondary'
               : 'default'
           }
+          className="text-xs px-2.5 py-1 font-semibold"
         >
-          {product.stockQuantity}
+          {product.stockQuantity} {product.stockQuantity === 1 ? 'item' : 'items'}
         </Badge>
       ),
     },
@@ -327,11 +354,21 @@ export default function AdminProductsPage() {
       key: 'status',
       label: 'Status',
       render: (product: Product) => (
-        <div className="flex gap-2 flex-wrap">
-          <Badge variant={product.isActive ? 'default' : 'secondary'}>
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
+          <Badge 
+            variant={product.isActive ? 'default' : 'secondary'}
+            className="text-xs px-2 py-0.5"
+          >
             {product.isActive ? 'Active' : 'Inactive'}
           </Badge>
-          {product.isFeatured && <Badge variant="default">Featured</Badge>}
+          {product.isFeatured && (
+            <Badge 
+              variant="default"
+              className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 border-purple-200"
+            >
+              Featured
+            </Badge>
+          )}
         </div>
       ),
     },
@@ -339,13 +376,13 @@ export default function AdminProductsPage() {
       key: 'actions',
       label: 'Actions',
       render: (product: Product) => (
-        <div className="flex gap-2">
+        <div className="flex items-center justify-end gap-2 flex-nowrap">
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleToggleStatus(product.id, product.isActive);
             }}
-            className="text-gray-600 hover:text-gray-900"
+            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200 active:scale-95 touch-manipulation flex items-center justify-center shrink-0"
             title={product.isActive ? 'Deactivate' : 'Activate'}
           >
             {product.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -353,7 +390,7 @@ export default function AdminProductsPage() {
           <Link
             href={`/admin/products/${product.id}/edit`}
             onClick={(e) => e.stopPropagation()}
-            className="text-blue-600 hover:text-blue-900"
+            className="p-2 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 active:scale-95 touch-manipulation flex items-center justify-center shrink-0"
             title="Edit"
           >
             <Edit className="w-4 h-4" />
@@ -364,7 +401,7 @@ export default function AdminProductsPage() {
               setProductToDelete(product.id);
               setShowDeleteDialog(true);
             }}
-            className="text-red-600 hover:text-red-900"
+            className="p-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 active:scale-95 touch-manipulation flex items-center justify-center shrink-0"
             title="Delete"
           >
             <Trash2 className="w-4 h-4" />
@@ -375,78 +412,281 @@ export default function AdminProductsPage() {
   ];
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base">{totalCount} total products</p>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+                <Package className="w-6 h-6 sm:w-8 sm:h-8" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">Products Management</h1>
+                <p className="text-purple-100 text-sm sm:text-base mt-1">
+                  {totalCount} total products in your store
+                </p>
+              </div>
+            </div>
+          </div>
+          <Link href="/admin/products/new" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-white text-purple-600 hover:bg-gray-100 font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Product
+            </Button>
+          </Link>
         </div>
-        <Link href="/admin/products/new" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Product
-          </Button>
-        </Link>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-        <form onSubmit={handleSearch} className="space-y-3 sm:space-y-0 sm:flex sm:gap-3 sm:flex-wrap">
-          <div className="flex-1 min-w-[200px] relative">
-            <Input
-              type="text"
-              placeholder="Search by name, SKU, or brand..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
-            <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+      {/* Filters Card */}
+      <div className="admin-filter-card">
+        <div className="admin-card-header">
+          <div className="flex items-center gap-2">
+            <div className="bg-purple-100 rounded-lg p-1.5">
+              <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+            </div>
+            <h2 className="text-base sm:text-lg font-bold text-gray-900">Filters & Search</h2>
           </div>
-          <select
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <Button type="submit" variant="outline" className="w-full sm:w-auto">
-            <Filter className="w-4 h-4 mr-2" />
-            Apply Filters
-          </Button>
-        </form>
+        </div>
+        <div className="p-4 sm:p-6">
+          <form onSubmit={handleSearch} className="space-y-4">
+            {/* Filters Grid - 3 Columns on All Devices */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+              {/* Search Input */}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                  <span className="hidden sm:inline">Search Products</span>
+                  <span className="sm:hidden">Search</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute left-2 sm:left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder="Search..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8 sm:pl-10 md:pl-12 border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-xs sm:text-sm md:text-base py-2 sm:py-2.5"
+                  />
+                </div>
+              </div>
+
+              {/* Category Filter */}
+              <div className="relative z-30">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                  Category
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoryDropdownOpen(!categoryDropdownOpen);
+                    setStatusDropdownOpen(false);
+                  }}
+                  className="w-full px-2 sm:px-3 py-2 sm:py-2.5 border border-gray-300 rounded-lg sm:rounded-xl bg-white text-gray-900 text-xs sm:text-sm md:text-base hover:border-purple-300 transition-colors flex items-center justify-between gap-2"
+                >
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                    <FolderTree className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 shrink-0" />
+                    <span className="truncate">
+                      {categoryFilter 
+                        ? categories.find(c => c.id === categoryFilter)?.name || 'All'
+                        : 'All'
+                      }
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 shrink-0 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {categoryDropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setCategoryDropdownOpen(false)}
+                    ></div>
+                    <div 
+                      className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-2xl"
+                      style={{
+                        maxHeight: '9rem', // 3 items: ~3rem per item (py-2.5 + text height)
+                        overflowY: 'auto',
+                        WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: '#cbd5e1 #f1f5f9',
+                        overscrollBehavior: 'contain'
+                      }}
+                      onWheel={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onTouchMove={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCategoryFilter('');
+                            setCurrentPage(1);
+                            setCategoryDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-purple-50 active:bg-purple-100 transition-colors touch-manipulation ${
+                            categoryFilter === '' ? 'bg-purple-50 text-purple-600' : 'text-gray-900'
+                          }`}
+                        >
+                          <FolderTree className="w-4 h-4 text-orange-500 shrink-0" />
+                          <span>All</span>
+                        </button>
+                        {categories.map((cat) => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCategoryFilter(cat.id);
+                              setCurrentPage(1);
+                              setCategoryDropdownOpen(false);
+                            }}
+                            className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-purple-50 active:bg-purple-100 transition-colors touch-manipulation ${
+                              categoryFilter === cat.id ? 'bg-purple-50 text-purple-600' : 'text-gray-900'
+                            }`}
+                          >
+                            <FolderTree className="w-4 h-4 text-orange-500 shrink-0" />
+                            <span className="truncate">{cat.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Status Filter */}
+              <div className="relative">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                  Status
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusDropdownOpen(!statusDropdownOpen);
+                    setCategoryDropdownOpen(false);
+                  }}
+                  className="w-full px-2 sm:px-3 py-2 sm:py-2.5 border border-gray-300 rounded-lg sm:rounded-xl bg-white text-gray-900 text-xs sm:text-sm md:text-base hover:border-purple-300 transition-colors flex items-center justify-between gap-2"
+                >
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                    {statusFilter === 'active' ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 shrink-0" />
+                    ) : statusFilter === 'inactive' ? (
+                      <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500 shrink-0" />
+                    ) : (
+                      <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
+                    )}
+                    <span className="truncate">
+                      {statusFilter === 'active' ? 'Active' : statusFilter === 'inactive' ? 'Inactive' : 'All'}
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 shrink-0 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {statusDropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setStatusDropdownOpen(false)}
+                    ></div>
+                    <div 
+                      className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-2xl"
+                      style={{
+                        maxHeight: '9rem', // 3 items: ~3rem per item (py-2.5 + text height)
+                        overflowY: 'auto',
+                        WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: '#cbd5e1 #f1f5f9',
+                        overscrollBehavior: 'contain'
+                      }}
+                      onWheel={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onTouchMove={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStatusFilter('');
+                          setCurrentPage(1);
+                          setStatusDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-purple-50 active:bg-purple-100 transition-colors touch-manipulation ${
+                          statusFilter === '' ? 'bg-purple-50 text-purple-600' : 'text-gray-900'
+                        }`}
+                      >
+                        <Filter className="w-4 h-4 text-gray-400 shrink-0" />
+                        <span>All</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStatusFilter('active');
+                          setCurrentPage(1);
+                          setStatusDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-green-50 active:bg-green-100 transition-colors touch-manipulation ${
+                          statusFilter === 'active' ? 'bg-green-50 text-green-600' : 'text-gray-900'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                        <span>Active</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStatusFilter('inactive');
+                          setCurrentPage(1);
+                          setStatusDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-red-50 active:bg-red-100 transition-colors touch-manipulation ${
+                          statusFilter === 'inactive' ? 'bg-red-50 text-red-600' : 'text-gray-900'
+                        }`}
+                      >
+                        <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                        <span>Inactive</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Apply Button - Full Width on Mobile */}
+            <div>
+              <Button 
+                type="submit" 
+                variant="primary" 
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 py-2.5 sm:py-3"
+              >
+                <Filter className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <span className="text-sm sm:text-base">Apply Filters</span>
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
 
       {/* Bulk Actions */}
       {selectedProducts.size > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-blue-900 font-medium text-sm sm:text-base">
-            {selectedProducts.size} product(s) selected
-          </p>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-500 rounded-lg p-2">
+              <Package className="w-5 h-5 text-white" />
+            </div>
+            <p className="text-blue-900 font-semibold text-sm sm:text-base">
+              {selectedProducts.size} product(s) selected
+            </p>
+          </div>
           <Button 
             variant="outline" 
             onClick={handleBulkDelete} 
-            className="text-red-600 border-red-300 w-full sm:w-auto"
+            className="text-red-600 border-red-300 hover:bg-red-50 w-full sm:w-auto rounded-xl font-semibold"
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Delete Selected
@@ -454,8 +694,8 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      {/* Table Card */}
+      <div className="admin-table-card">
         <DataTable
           columns={columns as any}
           data={products}

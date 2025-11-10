@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { Camera, Link as LinkIcon, Upload } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSaveAction } from '@/contexts/SaveActionContext';
 
@@ -29,8 +29,6 @@ function ProfilePageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
-  const [urlInput, setUrlInput] = useState('');
 
   // Fetch user profile data
   useEffect(() => {
@@ -163,54 +161,6 @@ function ProfilePageContent() {
     }
   };
 
-  // Handle avatar upload from URL
-  const handleAvatarUrlUpload = async () => {
-    if (!urlInput.trim()) {
-      toast.error('Masukkan URL gambar');
-      return;
-    }
-
-    // Validate URL format
-    try {
-      new URL(urlInput.trim());
-    } catch {
-      toast.error('Format URL tidak valid');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const formData = new FormData();
-      formData.append('url', urlInput.trim());
-
-      const response = await fetch('/api/profile/avatar', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setProfile((prev) => ({
-          ...prev,
-          avatarUrl: data.data.url,
-        }));
-        setAvatarPreview(data.data.url);
-        toast.success('Foto profil berhasil diubah dari URL');
-        setUrlInput('');
-        setUploadMode('file');
-        // Update session
-        updateSession();
-      } else {
-        toast.error(data.error || 'Gagal mengubah foto profil');
-      }
-    } catch (error) {
-      console.error('Error uploading avatar from URL:', error);
-      toast.error('Gagal mengubah foto profil');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Handle save
   const handleSave = async () => {
@@ -267,14 +217,14 @@ function ProfilePageContent() {
   const avatarInitial = profile.firstName?.[0] || profile.email?.[0] || 'U';
 
   return (
-    <div className="container mx-auto px-4 pt-0 pb-0">
-      <div className="-mt-[67px]">
+    <div className="container mx-auto px-4 pt-0 pb-8">
+      <div className="-mt-2">
 
       {/* Profile Card - Full Width */}
-      <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] min-h-[calc(100vh-64px)]">
+      <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
         <div className="max-w-7xl mx-auto pl-4 pr-2">
           {/* Profile Form Card */}
-          <div className="bg-gray-50 border-x border-t border-b border-gray-200 overflow-hidden -ml-4 -mr-2 p-4 pb-8">
+          <div className="bg-gray-50 border-x border-t border-b border-gray-200 overflow-hidden -ml-4 -mr-2 pt-6 p-4 pb-8">
             {/* Avatar Preview Card */}
             <div className="mb-6">
               <div className="flex flex-col items-center justify-center">
@@ -295,13 +245,7 @@ function ProfilePageContent() {
                     </div>
                   )}
                   <button
-                    onClick={() => {
-                      if (uploadMode === 'file') {
-                        fileInputRef.current?.click();
-                      } else {
-                        setUploadMode('url');
-                      }
-                    }}
+                    onClick={() => fileInputRef.current?.click()}
                     disabled={isLoading}
                     className="absolute bottom-0 right-0 p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                   >
@@ -315,71 +259,6 @@ function ProfilePageContent() {
                     className="hidden"
                   />
                 </div>
-                
-                {/* Upload Mode Tabs */}
-                <div className="flex gap-2 mb-3 border-b border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setUploadMode('file')}
-                    className={`px-3 py-1 text-xs font-medium transition-colors ${
-                      uploadMode === 'file'
-                        ? 'text-indigo-600 border-b-2 border-indigo-600'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    <Upload className="w-3 h-3 inline mr-1" />
-                    File
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUploadMode('url')}
-                    className={`px-3 py-1 text-xs font-medium transition-colors ${
-                      uploadMode === 'url'
-                        ? 'text-indigo-600 border-b-2 border-indigo-600'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    <LinkIcon className="w-3 h-3 inline mr-1" />
-                    URL
-                  </button>
-                </div>
-
-                {/* Upload Options */}
-                {uploadMode === 'file' ? (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isLoading}
-                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Ubah Foto
-                  </button>
-                ) : (
-                  <div className="w-full max-w-xs space-y-2">
-                    <input
-                      type="url"
-                      value={urlInput}
-                      onChange={(e) => setUrlInput(e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                      disabled={isLoading}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !isLoading && urlInput.trim()) {
-                          handleAvatarUrlUpload();
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={handleAvatarUrlUpload}
-                      disabled={isLoading || !urlInput.trim()}
-                      className="w-full px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoading ? 'Mengunggah...' : 'Unggah dari URL'}
-                    </button>
-                    <p className="text-xs text-gray-500 text-center">
-                      Paste URL gambar dari galeri, Google Images, atau website
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
 
