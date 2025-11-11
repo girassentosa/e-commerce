@@ -9,6 +9,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ProductCard } from '@/components/products/ProductCard';
+import { ProductGrid } from '@/components/products/ProductGrid';
 import { ProductGridSkeleton } from '@/components/products/ProductSkeleton';
 import { FilterBar } from '@/components/products/FilterBar';
 import { FilterSidebar } from '@/components/products/FilterSidebar';
@@ -96,8 +97,8 @@ function HomePageContent() {
   // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
-      try {
-        setLoadingProducts(true);
+    try {
+      setLoadingProducts(true);
         const res = await fetch('/api/products');
         if (res.ok) {
           const data = await res.json();
@@ -107,13 +108,13 @@ function HomePageContent() {
           setProducts(productsList);
         } else {
           console.error('Failed to fetch products:', res.status);
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      } finally {
-        setLoadingProducts(false);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
     fetchProducts();
   }, []);
@@ -247,9 +248,9 @@ function HomePageContent() {
 
   const showFilters = products.length > 0;
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-[1440px] mx-auto px-6 py-6 sm:py-8">
+    return (
+      <div className="min-h-screen bg-gray-50">
+      <div className="max-w-[1440px] mx-auto px-1 sm:px-3 py-6 sm:py-8">
         
         {/* ========================================
             1. HERO BANNER - MINIMALIST
@@ -427,16 +428,19 @@ function HomePageContent() {
               Flash Deals
             </h2>
 
-            <div className="overflow-x-auto scrollbar-hide -mx-6 px-6">
-              <div className="flex gap-4 pb-2">
+            <div className="overflow-x-auto scrollbar-hide w-screen -ml-[calc((100vw-100%)/2)] sm:w-auto sm:ml-0">
+              <div className="flex gap-0 sm:gap-2 md:gap-3 pb-2">
                 {flashDeals.map((product) => (
-                  <div key={product.id} className="flex-shrink-0 w-48 sm:w-56">
+                  <div
+                    key={product.id}
+                    className="flex-shrink-0 w-[50vw] sm:w-60 md:w-64 lg:w-72"
+                  >
                     <ProductCard product={product} />
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+              </div>
         )}
       </div>
 
@@ -471,8 +475,8 @@ function HomePageContent() {
       {/* ========================================
           6. ALL PRODUCTS WITH SIDEBAR
       ======================================== */}
-      <div className="max-w-[1440px] mx-auto px-6 pb-8">
-        <div className="flex gap-6">
+      <div className="max-w-[1440px] mx-auto px-1 sm:px-3 pb-8">
+        <div className="flex gap-3 sm:gap-4">
           {/* Sidebar Filters (Desktop Only) */}
           {showFilters && (
             <FilterSidebar
@@ -507,16 +511,18 @@ function HomePageContent() {
             {loadingProducts ? (
               <ProductGridSkeleton count={12} />
             ) : filteredAndSortedProducts.length > 0 ? (
-              <div className={`grid ${
-                viewMode === 'grid'
-                  ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
-                  : 'grid-cols-1'
-              } gap-x-4 gap-y-6`}>
-                {filteredAndSortedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
+              viewMode === 'grid' ? (
+                <div className="w-screen -ml-[calc((100vw-100%)/2)] sm:w-auto sm:ml-0">
+                  <ProductGrid products={filteredAndSortedProducts} columns={4} />
+                </div>
+              ) : (
+                <div className="w-screen -ml-[calc((100vw-100%)/2)] sm:w-auto sm:ml-0 space-y-4">
+                  {filteredAndSortedProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )
+          ) : (
               <div className="text-center py-12">
                 <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No products found</h3>
@@ -535,9 +541,9 @@ function HomePageContent() {
                   </button>
                 )}
               </div>
-            )}
-          </div>
+          )}
         </div>
+      </div>
       </div>
 
       {/* Mobile Filter Modal */}

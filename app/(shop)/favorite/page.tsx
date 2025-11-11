@@ -4,13 +4,11 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Heart, ShoppingCart, Search } from 'lucide-react';
+import { Heart, ShoppingCart, Search, ArrowLeft } from 'lucide-react';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { useCart } from '@/contexts/CartContext';
+import { ProductCard } from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
-import { Badge } from '@/components/ui/Badge';
 import { useFavoriteEditMode, FavoriteEditModeProvider } from '@/contexts/FavoriteEditModeContext';
 
 function FavoritePageContent() {
@@ -18,10 +16,10 @@ function FavoritePageContent() {
   const searchParams = useSearchParams();
   const { status } = useSession();
   const { items, loading, removeItem } = useWishlist();
-  const { addItem: addToCart } = useCart();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [showSearchCard, setShowSearchCard] = useState(false);
+  const [searchInputValue, setSearchInputValue] = useState('');
   
   // Get search query from URL (managed by Header component)
   const searchQuery = searchParams.get('search') || '';
@@ -35,6 +33,11 @@ function FavoritePageContent() {
       setSelectedItems([]);
     }
   }, [isEditMode]);
+
+  // Sync search input with URL query
+  useEffect(() => {
+    setSearchInputValue(searchQuery);
+  }, [searchQuery]);
 
   // Redirect to login if not authenticated
   if (status === 'unauthenticated') {
@@ -52,13 +55,6 @@ function FavoritePageContent() {
       </div>
     );
   }
-
-  // Handle add to cart
-  const handleAddToCart = async (productId: string) => {
-    setActionLoading(productId);
-    await addToCart(productId, 1);
-    setActionLoading(null);
-  };
 
   // Handle remove from wishlist
   const handleRemove = async (productId: string) => {
@@ -108,8 +104,95 @@ function FavoritePageContent() {
     );
   });
 
+  // Handle back button
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
+  // Handle search icon click - show search card
+  const handleSearchClick = () => {
+    setShowSearchCard(true);
+    setSearchInputValue(searchQuery);
+  };
+
+  // Handle search submit
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchInputValue.trim()) {
+      router.push(`/favorite?search=${encodeURIComponent(searchInputValue.trim())}`);
+    } else {
+      router.push('/favorite');
+    }
+    setShowSearchCard(false);
+  };
+
+  // Handle cancel search
+  const handleCancelSearch = () => {
+    setShowSearchCard(false);
+    setSearchInputValue('');
+    router.push('/favorite');
+  };
+
   return (
-    <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-0 pb-8">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header - Konsisten dengan halaman lainnya */}
+      <header className="sticky top-0 z-40 bg-white shadow-sm">
+        <div className="px-4 sm:px-6 border-b border-gray-200">
+          <div className="max-w-[1440px] mx-auto">
+            {/* Search Card - Full Width, Muncul dari Kiri */}
+            {showSearchCard ? (
+              <div className="flex items-center h-14 sm:h-16 gap-3">
+                <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={searchInputValue}
+                    onChange={(e) => setSearchInputValue(e.target.value)}
+                    placeholder="Cari produk favorit..."
+                    autoFocus
+                    className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm sm:text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    style={{
+                      WebkitTextFillColor: '#111827', // Explicit color for iOS
+                      color: '#111827', // Explicit color for iOS
+                    }}
+                  />
+                </form>
+                <button
+                  onClick={handleCancelSearch}
+                  className="text-sm sm:text-base text-gray-700 hover:text-gray-900 font-medium px-2 py-1"
+                >
+                  Batalkan
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between h-14 sm:h-16">
+                <button
+                  onClick={handleBack}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  aria-label="Kembali"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-700" />
+                </button>
+                <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex-1 text-center">
+                  Favorite Saya
+                </h1>
+                <button
+                  onClick={handleSearchClick}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  aria-label="Search"
+                >
+                  <Search className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+      
+      <div className="container mx-auto px-1 sm:px-3 md:px-4 pt-4 pb-8">
 
       {/* Search Results Info */}
       <div className="-mt-2">
@@ -157,163 +240,14 @@ function FavoritePageContent() {
 
       {/* Wishlist Grid */}
       {filteredItems.length > 0 && (
-        <div className="w-full w-screen -ml-[calc((100vw-100%)/2)]">
-          <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
-            <div className="px-2 sm:px-2.5 md:px-3 pb-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2">
-                {filteredItems.map((item) => {
-                  const { product } = item;
-                  const price = parseFloat(product.salePrice || product.price);
-                  const originalPrice = product.salePrice ? parseFloat(product.price) : null;
-                  const imageUrl = product.images[0]?.imageUrl;
-                  const isLoading = actionLoading === product.id;
-                  const isOutOfStock = product.stockQuantity === 0;
-                  const isLowStock = product.stockQuantity > 0 && product.stockQuantity <= 5;
-
-                  return (
-              <div
-                key={item.id}
-                className="bg-white rounded-lg border overflow-hidden hover:shadow-lg transition-shadow relative group"
-              >
-                {/* Loading overlay */}
-                {isLoading && (
-                  <div className="absolute inset-0 bg-white/50 rounded-lg flex items-center justify-center z-10">
-                    <Loader />
-                  </div>
-                )}
-
-
-                {/* Product Image */}
-                <Link href={`/products/${product.slug}`}>
-                  <div className="relative aspect-square bg-gray-100 overflow-hidden">
-                    {imageUrl && imageUrl.trim() !== '' && !imageErrors[product.id] ? (
-                      <Image
-                        src={imageUrl}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={() => setImageErrors(prev => ({ ...prev, [product.id]: true }))}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        No Image
-                      </div>
-                    )}
-
-                    {/* Sale Badge */}
-                    {product.salePrice && !imageErrors[product.id] && (
-                      <div className="absolute top-2 left-2">
-                        <Badge variant="destructive">Sale</Badge>
-                      </div>
-                    )}
-
-                    {/* Stock Badges */}
-                    {isOutOfStock && !imageErrors[product.id] && (
-                      <div className="absolute top-2 left-2">
-                        <Badge variant="secondary">Out of Stock</Badge>
-                      </div>
-                    )}
-                    {isLowStock && !product.salePrice && !imageErrors[product.id] && (
-                      <div className="absolute top-2 left-2">
-                        <Badge variant="warning">Low Stock</Badge>
-                      </div>
-                    )}
-                  </div>
-                </Link>
-
-                {/* Product Details */}
-                <div className="p-4">
-                  <Link href={`/products/${product.slug}`}>
-                    <p className="text-sm text-gray-500 mb-1">{product.category.name}</p>
-                    <h3 className="font-semibold text-gray-900 mb-2 hover:text-blue-600 line-clamp-2 min-h-[3rem]">
-                      {product.name}
-                    </h3>
-                  </Link>
-
-                  {/* Price */}
-                  <div className="mb-3">
-                    {originalPrice ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-red-600">
-                          ${price.toFixed(2)}
-                        </span>
-                        <span className="text-sm text-gray-500 line-through">
-                          ${originalPrice.toFixed(2)}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-lg font-bold text-gray-900">
-                        ${price.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Stock Status Text */}
-                  {isOutOfStock ? (
-                    <p className="text-sm text-red-600 mb-3">Out of stock</p>
-                  ) : isLowStock ? (
-                    <p className="text-sm text-orange-600 mb-3">
-                      Only {product.stockQuantity} left
-                    </p>
-                  ) : (
-                    <p className="text-sm text-green-600 mb-3">In stock</p>
-                  )}
-
-                  {/* Checkbox for Edit Mode */}
-                  {isEditMode && (
-                    <div className="mb-3">
-                      <label className="flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.includes(product.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedItems([...selectedItems, product.id]);
-                            } else {
-                              setSelectedItems(selectedItems.filter(id => id !== product.id));
-                            }
-                          }}
-                          className="w-4 h-4 accent-red-600 border-gray-300 rounded cursor-pointer"
-                          style={{
-                            outline: 'none',
-                            boxShadow: 'none',
-                          }}
-                          onFocus={(e) => e.target.blur()}
-                        />
-                        <span className="ml-2 text-xs text-gray-600">Pilih untuk dihapus</span>
-                      </label>
-                    </div>
-                  )}
-
-                  {/* Add to Cart Button - Only show when not in edit mode */}
-                  {!isEditMode && (
-                    <Button
-                      onClick={() => handleAddToCart(product.id)}
-                      disabled={isLoading || isOutOfStock}
-                      className="w-full"
-                      size="sm"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader size="sm" className="mr-2" />
-                          Adding...
-                        </>
-                      ) : isOutOfStock ? (
-                        'Out of Stock'
-                      ) : (
-                        <>
-                          <ShoppingCart className="w-4 h-4 mr-2" />
-                          Add to Cart
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </div>
-                  );
-                })}
-              </div>
-            </div>
+        <div className="pb-4 w-screen -ml-[calc((100vw-100%)/2)] sm:w-auto sm:ml-0">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0 sm:gap-2 md:gap-3">
+                {filteredItems.map((item) => (
+                  <ProductCard
+                    key={item.id}
+                    product={item.product}
+                  />
+                ))}
           </div>
         </div>
       )}
@@ -375,6 +309,7 @@ function FavoritePageContent() {
 
       {/* Spacer for footer */}
       {isEditMode && <div className="h-20"></div>}
+      </div>
       </div>
     </div>
   );

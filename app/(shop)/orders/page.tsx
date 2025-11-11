@@ -7,7 +7,7 @@ import { useOrder } from '@/contexts/OrderContext';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
-import { Package, ChevronRight } from 'lucide-react';
+import { Package, ChevronRight, ArrowLeft, Search } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -29,12 +29,19 @@ function OrdersPageContent() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string | undefined>(
     urlPaymentStatus || undefined
   );
+  const [showSearchCard, setShowSearchCard] = useState(false);
+  const [searchInputValue, setSearchInputValue] = useState('');
 
   // Update state when URL params change
   useEffect(() => {
     setStatusFilter(urlStatus || undefined);
     setPaymentStatusFilter(urlPaymentStatus || undefined);
   }, [urlStatus, urlPaymentStatus]);
+
+  // Sync search input with URL query
+  useEffect(() => {
+    setSearchInputValue(searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -75,8 +82,160 @@ function OrdersPageContent() {
     );
   });
 
+  // Handle back button - Always go to dashboard when on filtered orders page
+  const handleBack = () => {
+    router.push('/dashboard');
+  };
+
+  // Handle search icon click - show search card
+  const handleSearchClick = () => {
+    setShowSearchCard(true);
+    setSearchInputValue(searchQuery);
+  };
+
+  // Handle search submit
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchInputValue.trim()) {
+      const params = new URLSearchParams();
+      if (statusFilter) params.set('status', statusFilter);
+      if (paymentStatusFilter) params.set('paymentStatus', paymentStatusFilter);
+      params.set('search', searchInputValue.trim());
+      router.push(`/orders?${params.toString()}`);
+    }
+    setShowSearchCard(false);
+  };
+
+  // Handle cancel search
+  const handleCancelSearch = () => {
+    setShowSearchCard(false);
+    setSearchInputValue('');
+  };
+
+  // Handle filter button click
+  const handleFilterClick = (filterStatus: string | null, filterPaymentStatus: string | null) => {
+    const params = new URLSearchParams();
+    if (filterStatus) {
+      params.set('status', filterStatus);
+    }
+    if (filterPaymentStatus) {
+      params.set('paymentStatus', filterPaymentStatus);
+    }
+    const queryString = params.toString();
+    router.push(`/orders${queryString ? `?${queryString}` : ''}`);
+  };
+
+  // Determine active filter
+  const isFilterActive = (filterStatus: string | null, filterPaymentStatus: string | null) => {
+    if (filterStatus === null && filterPaymentStatus === null) {
+      // Total Order (all) - active when no filters
+      return !statusFilter && !paymentStatusFilter;
+    }
+    if (filterStatus === 'PENDING' && filterPaymentStatus === 'PENDING') {
+      // Belum Bayar
+      return statusFilter === 'PENDING' && paymentStatusFilter === 'PENDING';
+    }
+    // Other filters
+    return statusFilter === filterStatus;
+  };
+
+  const filterButtons = [
+    { label: 'Total Order', status: null, paymentStatus: null },
+    { label: 'Belum Bayar', status: 'PENDING', paymentStatus: 'PENDING' },
+    { label: 'Dikemas', status: 'PROCESSING', paymentStatus: null },
+    { label: 'Dikirim', status: 'SHIPPED', paymentStatus: null },
+    { label: 'Selesai', status: 'DELIVERED', paymentStatus: null },
+    { label: 'Pengembalian', status: 'RETURNED', paymentStatus: null },
+    { label: 'Dibatalkan', status: 'CANCELLED', paymentStatus: null },
+  ];
+
   return (
-    <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-0 pb-4 sm:pb-6 md:pb-8">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header - Konsisten dengan halaman Categories */}
+      <header className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
+        <div className="px-4 sm:px-6">
+          <div className="max-w-[1440px] mx-auto">
+            {/* Search Card - Full Width, Muncul dari Kiri */}
+            {showSearchCard ? (
+              <div className="flex items-center h-14 sm:h-16 gap-3">
+                <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={searchInputValue}
+                    onChange={(e) => setSearchInputValue(e.target.value)}
+                    placeholder="Cari pesanan..."
+                    autoFocus
+                    className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm sm:text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    style={{
+                      WebkitTextFillColor: '#111827', // Explicit color for iOS
+                      color: '#111827', // Explicit color for iOS
+                    }}
+                  />
+                </form>
+                <button
+                  onClick={handleCancelSearch}
+                  className="text-sm sm:text-base text-gray-700 hover:text-gray-900 font-medium px-2 py-1"
+                >
+                  Batalkan
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Top Row: Back, Title, Search */}
+                <div className="flex items-center h-14 sm:h-16">
+                  <button
+                    onClick={handleBack}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    aria-label="Kembali"
+                  >
+                    <ArrowLeft className="w-5 h-5 text-gray-700" />
+                  </button>
+                  <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 ml-3">
+                    Pesanan Saya
+                  </h1>
+                  <div className="flex-1"></div>
+                  <button
+                    onClick={handleSearchClick}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    aria-label="Search"
+                  >
+                    <Search className="w-5 h-5 text-gray-700" />
+                  </button>
+                </div>
+              </>
+            )}
+            
+            {/* Filter Buttons - Horizontal Scroll (Hidden when search card is open) */}
+            {!showSearchCard && (
+            <div className="overflow-x-auto scrollbar-hide touch-pan-x -mx-4 sm:-mx-6 px-4 sm:px-6">
+              <div className="inline-flex gap-4 sm:gap-6 md:gap-8 py-1.5 sm:py-2 md:py-2.5 items-center min-w-full">
+                {filterButtons.map((filter) => {
+                  const isActive = isFilterActive(filter.status, filter.paymentStatus);
+                  return (
+                    <span
+                      key={filter.label}
+                      onClick={() => handleFilterClick(filter.status, filter.paymentStatus)}
+                      className={`flex-shrink-0 text-xs sm:text-sm md:text-base cursor-pointer whitespace-nowrap relative pb-1 select-none ${
+                        isActive
+                          ? 'text-blue-600 font-semibold'
+                          : 'text-gray-700'
+                      }`}
+                    >
+                      {filter.label}
+                      {isActive && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500"></div>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            )}
+          </div>
+        </div>
+      </header>
+      
+      <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-4 pb-4 sm:pb-6 md:pb-8">
       <div className="-mt-2">
 
       {/* Search Results Info */}
@@ -179,6 +338,7 @@ function OrdersPageContent() {
           ))}
         </div>
       )}
+      </div>
       </div>
     </div>
   );

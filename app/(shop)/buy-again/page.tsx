@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { RotateCcw, ShoppingCart, Search } from 'lucide-react';
+import { RotateCcw, ShoppingCart, Search, ArrowLeft } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useBuyAgain } from '@/contexts/BuyAgainContext';
 import { Button } from '@/components/ui/Button';
@@ -47,8 +47,39 @@ function BuyAgainPageContent() {
     );
   });
 
+  // Handle back button
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4 pt-0 pb-8">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header - Konsisten dengan halaman lainnya */}
+      <header className="sticky top-0 z-40 bg-white shadow-sm">
+        <div className="px-4 sm:px-6 border-b border-gray-200">
+          <div className="max-w-[1440px] mx-auto">
+            <div className="flex items-center justify-between h-14 sm:h-16">
+              <button
+                onClick={handleBack}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Kembali"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex-1 text-center">
+                Beli Lagi
+              </h1>
+              <div className="w-9 h-9 flex-shrink-0"></div>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <div className="container mx-auto px-1 sm:px-3 md:px-4 pt-4 pb-8">
 
       {/* Search Results Info */}
       <div className="-mt-2">
@@ -103,8 +134,9 @@ function BuyAgainPageContent() {
 
       {/* Products Grid */}
       {filteredItems.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredItems.map((item) => {
+        <div className="w-screen -ml-[calc((100vw-100%)/2)] sm:w-auto sm:ml-0">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-0 sm:gap-2 md:gap-3">
+            {filteredItems.map((item) => {
             const { product } = item;
             const price = parseFloat(product.salePrice || product.price);
             const originalPrice = product.salePrice ? parseFloat(product.price) : null;
@@ -224,8 +256,10 @@ function BuyAgainPageContent() {
               </div>
             );
           })}
+          </div>
         </div>
       )}
+      </div>
       </div>
     </div>
   );

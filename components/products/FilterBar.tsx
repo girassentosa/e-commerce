@@ -5,7 +5,6 @@
  * Shopee/Tokopedia style filtering
  */
 
-import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Grid3x3, List, SlidersHorizontal } from 'lucide-react';
 
 interface FilterBarProps {
@@ -39,27 +38,6 @@ export function FilterBar({
   onOpenMobileFilters,
   activeFiltersCount,
 }: FilterBarProps) {
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const clickedOutside = Object.values(dropdownRefs.current).every(
-        (ref) => ref && !ref.contains(event.target as Node)
-      );
-      if (clickedOutside) {
-        setOpenDropdown(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const toggleDropdown = (dropdown: string) => {
-    setOpenDropdown(openDropdown === dropdown ? null : dropdown);
-  };
 
   const priceRanges = [
     { label: 'All Prices', value: null },
@@ -84,18 +62,17 @@ export function FilterBar({
     { label: 'Terpopuler', value: 'popular' },
   ];
 
-  const selectedCategoryName = categories.find(c => c.id === selectedCategory)?.name || 'All Categories';
   const selectedPriceLabel = priceRanges.find(p => p.value === priceRange)?.label || 'All Prices';
   const selectedRatingLabel = ratingOptions.find(r => r.value === minRating)?.label || 'All Ratings';
   const selectedSortLabel = sortOptions.find(s => s.value === sortBy)?.label || 'Terbaru';
 
   return (
     <div className="sticky top-[3.5rem] sm:top-16 z-40 bg-white border-b border-gray-200 shadow-sm">
-      <div className="max-w-[1440px] mx-auto px-6">
+      <div className="max-w-[1440px] mx-auto px-1 sm:px-3">
         <div className="py-3">
-          {/* All Buttons in One Row - Horizontal Scroll on Mobile */}
-          <div className="overflow-x-auto scrollbar-hide -mx-6 px-6">
-            <div className="flex items-center gap-2 min-w-max">
+          {/* All Filters in One Row - Horizontal Scroll on Mobile */}
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-2 min-w-max px-2 sm:px-3">
               {/* Mobile Filter Button */}
               <button
                 onClick={onOpenMobileFilters}
@@ -110,149 +87,62 @@ export function FilterBar({
                 )}
               </button>
 
-              {/* Category Dropdown */}
-              <div className="relative flex-shrink-0" ref={(el) => { dropdownRefs.current['category'] = el; }}>
-                <button
-                  onClick={() => toggleDropdown('category')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium border whitespace-nowrap ${
-                    selectedCategory
-                      ? 'bg-blue-50 border-blue-300 text-blue-700'
-                      : 'bg-white border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="hidden sm:inline">📂</span>
-                  <span className="max-w-[120px] truncate">{selectedCategoryName}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform flex-shrink-0 ${openDropdown === 'category' ? 'rotate-180' : ''}`} />
-                </button>
+              {/* Category Select - Removed since categories page exists */}
 
-              {openDropdown === 'category' && (
-                <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 max-h-80 overflow-y-auto z-50">
-                  <button
-                    onClick={() => {
-                      onCategoryChange(null);
-                      setOpenDropdown(null);
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm"
-                  >
-                    All Categories
-                  </button>
-                  {categories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => {
-                        onCategoryChange(category.id);
-                        setOpenDropdown(null);
-                      }}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-50 text-sm ${
-                        selectedCategory === category.id ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                      }`}
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-              {/* Price Dropdown */}
-              <div className="relative flex-shrink-0" ref={(el) => { dropdownRefs.current['price'] = el; }}>
-                <button
-                  onClick={() => toggleDropdown('price')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium border whitespace-nowrap ${
+              {/* Price Select */}
+              <div className="relative flex-shrink-0">
+                <select
+                  value={priceRange || ''}
+                  onChange={(e) => onPriceRangeChange(e.target.value || null)}
+                  className={`px-4 py-2 pr-8 rounded-lg transition-colors text-sm font-medium border appearance-none cursor-pointer ${
                     priceRange
                       ? 'bg-blue-50 border-blue-300 text-blue-700'
                       : 'bg-white border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span className="hidden sm:inline">💰</span>
-                  <span className="max-w-[120px] truncate">{selectedPriceLabel}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform flex-shrink-0 ${openDropdown === 'price' ? 'rotate-180' : ''}`} />
-                </button>
-
-              {openDropdown === 'price' && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
                   {priceRanges.map((range) => (
-                    <button
-                      key={range.label}
-                      onClick={() => {
-                        onPriceRangeChange(range.value);
-                        setOpenDropdown(null);
-                      }}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-50 text-sm ${
-                        priceRange === range.value ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                      }`}
-                    >
+                    <option key={range.label} value={range.value || ''}>
                       {range.label}
-                    </button>
+                    </option>
                   ))}
-                </div>
-              )}
-            </div>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+              </div>
 
-              {/* Rating Dropdown */}
-              <div className="relative flex-shrink-0" ref={(el) => { dropdownRefs.current['rating'] = el; }}>
-                <button
-                  onClick={() => toggleDropdown('rating')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium border whitespace-nowrap ${
+              {/* Rating Select */}
+              <div className="relative flex-shrink-0">
+                <select
+                  value={minRating || ''}
+                  onChange={(e) => onMinRatingChange(e.target.value ? Number(e.target.value) : null)}
+                  className={`px-4 py-2 pr-8 rounded-lg transition-colors text-sm font-medium border appearance-none cursor-pointer ${
                     minRating
                       ? 'bg-blue-50 border-blue-300 text-blue-700'
                       : 'bg-white border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <span>⭐</span>
-                  <span className="hidden sm:inline max-w-[100px] truncate">{selectedRatingLabel}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform flex-shrink-0 ${openDropdown === 'rating' ? 'rotate-180' : ''}`} />
-                </button>
-
-              {openDropdown === 'rating' && (
-                <div className="absolute top-full left-0 mt-2 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
                   {ratingOptions.map((rating) => (
-                    <button
-                      key={rating.label}
-                      onClick={() => {
-                        onMinRatingChange(rating.value);
-                        setOpenDropdown(null);
-                      }}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-50 text-sm ${
-                        minRating === rating.value ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                      }`}
-                    >
+                    <option key={rating.label} value={rating.value || ''}>
                       {rating.label}
-                    </button>
+                    </option>
                   ))}
-                </div>
-              )}
-            </div>
-              {/* Sort Dropdown */}
-              <div className="relative flex-shrink-0" ref={(el) => { dropdownRefs.current['sort'] = el; }}>
-                <button
-                  onClick={() => toggleDropdown('sort')}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 rounded-lg transition-colors text-sm font-medium whitespace-nowrap"
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+              </div>
+              {/* Sort Select */}
+              <div className="relative flex-shrink-0">
+                <select
+                  value={sortBy}
+                  onChange={(e) => onSortChange(e.target.value)}
+                  className="px-4 py-2 pr-8 bg-white border border-gray-200 hover:border-gray-300 rounded-lg transition-colors text-sm font-medium appearance-none cursor-pointer"
                 >
-                  <span className="text-gray-600">Sort:</span>
-                  <span className="text-gray-900">{selectedSortLabel}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform flex-shrink-0 ${openDropdown === 'sort' ? 'rotate-180' : ''}`} />
-                </button>
-
-              {openDropdown === 'sort' && (
-                <div className="absolute top-full left-0 mt-2 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
                   {sortOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        onSortChange(option.value);
-                        setOpenDropdown(null);
-                      }}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-50 text-sm ${
-                        sortBy === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                      }`}
-                    >
+                    <option key={option.value} value={option.value}>
                       {option.label}
-                    </button>
+                    </option>
                   ))}
-                </div>
-              )}
-            </div>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+              </div>
 
               {/* View Mode Toggle */}
               <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 flex-shrink-0">

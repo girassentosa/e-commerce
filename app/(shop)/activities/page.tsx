@@ -1,14 +1,47 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Eye, RotateCcw, ChevronRight } from 'lucide-react';
+import { Heart, Eye, RotateCcw, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useWishlist } from '@/contexts/WishlistContext';
 
 export default function ActivitiesPage() {
+  const router = useRouter();
   const { count: wishlistCount } = useWishlist();
 
+  // Handle back button
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
   return (
-    <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-0 pb-4 sm:pb-6 md:pb-8">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header - Konsisten dengan halaman lainnya */}
+      <header className="sticky top-0 z-40 bg-white shadow-sm">
+        <div className="px-4 sm:px-6 border-b border-gray-200">
+          <div className="max-w-[1440px] mx-auto">
+            <div className="flex items-center justify-between h-14 sm:h-16">
+              <button
+                onClick={handleBack}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Kembali"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex-1 text-center">
+                Aktifitas Saya
+              </h1>
+              <div className="w-9 h-9 flex-shrink-0"></div>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-4 pb-4 sm:pb-6 md:pb-8">
       <div className="-mt-2">
         {/* Activity Cards - Full Width */}
         <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] mb-2 sm:mb-6 md:mb-8">
@@ -42,6 +75,7 @@ export default function ActivitiesPage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -61,9 +61,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className
           )}
           style={{
-            // Ensure text color is not transparent on iOS
-            WebkitTextFillColor: 'inherit',
-            color: 'inherit',
+            // Ensure text color is not transparent on iOS - use explicit color
+            WebkitTextFillColor: '#111827', // Explicit gray-900 color for iOS
+            color: '#111827', // Explicit gray-900 color for iOS
           }}
           {...props}
         />

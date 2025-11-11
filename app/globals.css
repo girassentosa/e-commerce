@@ -144,6 +144,12 @@ html {
   font-size: 16px;
 }
 
+/* Allow horizontal scroll for specific containers */
+.overflow-x-auto {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -218,10 +224,18 @@ small {
 input,
 textarea,
 select {
-  -webkit-text-fill-color: inherit;
-  color: inherit;
+  -webkit-text-fill-color: #111827 !important; /* Explicit gray-900 color for iOS */
+  color: #111827 !important; /* Explicit gray-900 color for iOS */
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* Fix for input focus state on iOS */
+input:focus,
+textarea:focus,
+select:focus {
+  -webkit-text-fill-color: #111827 !important;
+  color: #111827 !important;
 }
 
 /* Fix autofill styling for iOS */
@@ -237,11 +251,11 @@ select:-webkit-autofill,
 select:-webkit-autofill:hover,
 select:-webkit-autofill:focus,
 select:-webkit-autofill:active {
-  -webkit-text-fill-color: inherit !important;
+  -webkit-text-fill-color: #111827 !important; /* Explicit gray-900 color for iOS */
   -webkit-box-shadow: 0 0 0px 1000px white inset !important;
   box-shadow: 0 0 0px 1000px white inset !important;
   transition: background-color 5000s ease-in-out 0s;
-  color: inherit !important;
+  color: #111827 !important; /* Explicit gray-900 color for iOS */
 }
 
 /* Dark mode autofill fix */
@@ -258,8 +272,10 @@ select:-webkit-autofill:active {
   select:-webkit-autofill:hover,
   select:-webkit-autofill:focus,
   select:-webkit-autofill:active {
+    -webkit-text-fill-color: #111827 !important; /* Keep text visible even in dark mode */
     -webkit-box-shadow: 0 0 0px 1000px #0a0a0a inset !important;
     box-shadow: 0 0 0px 1000px #0a0a0a inset !important;
+    color: #111827 !important;
   }
 }
 

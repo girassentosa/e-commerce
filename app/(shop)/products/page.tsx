@@ -10,11 +10,13 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Check } from 'lucide-react';
+import { Check, ArrowLeft, ShoppingCart } from 'lucide-react';
+import Link from 'next/link';
 import { ProductCard } from '@/components/products/ProductCard';
 import { ProductGridSkeleton } from '@/components/products/ProductSkeleton';
 import { Pagination } from '@/components/ui/Pagination';
 import toast from 'react-hot-toast';
+import { useCart } from '@/contexts/CartContext';
 
 interface Product {
   id: string;
@@ -49,9 +51,16 @@ interface ProductsData {
   pagination: PaginationMeta;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { itemCount } = useCart();
 
   // Single state object for products and pagination - ensures all updates happen together
   const [productsData, setProductsData] = useState<ProductsData>({
@@ -64,6 +73,8 @@ function ProductsPageContent() {
     },
   });
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
   // Get filters from URL params (memoized to prevent infinite loops)
   const currentFilters = useMemo(() => ({
@@ -113,6 +124,50 @@ function ProductsPageContent() {
     }
   }, [currentFilters]);
 
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setLoadingCategories(true);
+      try {
+        const res = await fetch('/api/categories');
+        if (res.ok) {
+          const data = await res.json();
+          const list =
+            (Array.isArray(data?.categories) && data.categories) ||
+            (Array.isArray(data?.data) && data.data) ||
+            (Array.isArray(data?.results) && data.results) ||
+            [];
+          setCategories(list);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Fallback: derive categories from products if API returns empty
+  useEffect(() => {
+    if (categories.length === 0 && productsData.products.length > 0) {
+      const derived = new Map<string, Category>();
+      productsData.products.forEach((product) => {
+        if (product.category?.id && product.category?.name) {
+          derived.set(product.category.id, {
+            id: String(product.category.id),
+            name: product.category.name,
+            slug: product.category.slug || String(product.category.id),
+          });
+        }
+      });
+      if (derived.size > 0) {
+        setCategories(Array.from(derived.values()));
+      }
+    }
+  }, [categories.length, productsData.products]);
+
 
   // Fetch products when filters change
   useEffect(() => {
@@ -132,6 +187,22 @@ function ProductsPageContent() {
 
     router.replace(`/products?${params.toString()}`, { scroll: false });
   };
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
+
+  const handleCategorySelect = (categoryId?: string) => {
+    updateURL({
+      ...currentFilters,
+      categoryId,
+      page: 1,
+    });
+  };
+
 
   // Handle page change
   const handlePageChange = (page: number) => {
@@ -156,86 +227,149 @@ function ProductsPageContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-2 sm:px-3 md:px-4 pt-0 pb-4 sm:pb-6 md:pb-8">
-        <div className="-mt-2 sm:-mt-4 md:-mt-6">
+      <header className="sticky top-0 z-40 bg-white shadow-sm">
+        <div className="px-4 sm:px-6 border-b border-gray-200">
+          <div className="max-w-[1440px] mx-auto">
+            <div className="flex items-center justify-between h-14 sm:h-16">
+            <button
+              onClick={handleBack}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Kembali"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </button>
+            <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex-1 text-center">
+              Categories
+            </h1>
+            <Link
+              href="/cart"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Cart"
+            >
+              <ShoppingCart className="w-5 h-5 text-gray-700" />
+              {itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {itemCount > 99 ? '99+' : itemCount}
+                </span>
+              )}
+            </Link>
+          </div>
+          </div>
+        </div>
+        <div className="border-t border-gray-200 bg-white overflow-x-auto min-h-[52px]">
+          <div className="inline-flex gap-6 sm:gap-8 py-3 min-h-[52px] items-center min-w-full">
+            <span className="flex-shrink-0 w-2 sm:w-3"></span>
+            <span
+              onClick={() => handleCategorySelect(undefined)}
+              className={`flex-shrink-0 text-sm sm:text-base cursor-pointer whitespace-nowrap relative pb-1 select-none ${
+                !currentFilters.categoryId
+                  ? 'text-blue-600 font-semibold'
+                  : 'text-gray-700'
+              }`}
+            >
+              All
+              {!currentFilters.categoryId && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500"></div>
+              )}
+            </span>
+            {loadingCategories ? (
+              <span className="flex-shrink-0 text-xs text-gray-500">Loading...</span>
+            ) : categories.length === 0 ? (
+              <span className="flex-shrink-0 text-xs text-gray-400">No categories</span>
+            ) : (
+              categories.map((category) => (
+                <span
+                  key={category.id}
+                  onClick={() => handleCategorySelect(category.id)}
+                  className={`flex-shrink-0 text-sm sm:text-base cursor-pointer whitespace-nowrap relative pb-1 select-none ${
+                    currentFilters.categoryId === category.id
+                      ? 'text-blue-600 font-semibold'
+                      : 'text-gray-700'
+                  }`}
+                >
+                  {category.name}
+                  {currentFilters.categoryId === category.id && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500"></div>
+                  )}
+                </span>
+              ))
+            )}
+            <span className="flex-shrink-0 w-2 sm:w-3"></span>
+          </div>
+        </div>
+      </header>
+      <div className="px-1 sm:px-3 pt-4 pb-4 sm:pb-6 md:pb-8">
+        <div className="max-w-[1440px] mx-auto">
           {/* Features Card - Baru Setiap Hari & Gratis Ongkir - Full Width */}
-          <div className="w-full mb-4 sm:mb-3 md:mb-2 w-screen -ml-[calc((100vw-100%)/2)]">
-            <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
-              <div className="bg-gradient-to-r from-red-50 to-red-100 border-y border-red-200 py-2 px-2 sm:px-3 md:px-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2">
-                <div className="flex items-center justify-center gap-6 sm:gap-8">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="text-xs sm:text-sm text-red-700 italic">Baru Setiap Hari</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="text-xs sm:text-sm text-red-700 italic">Gratis Ongkir</span>
-                  </div>
+          <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl py-3 px-4 mb-6 sm:mb-8">
+            <div className="flex items-center justify-center gap-6 sm:gap-8">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
+                  <Check className="w-3 h-3 text-white" />
                 </div>
+                <span className="text-xs sm:text-sm text-red-700 italic">Baru Setiap Hari</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border border-black rounded-full bg-black flex items-center justify-center">
+                  <Check className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-xs sm:text-sm text-red-700 italic">Gratis Ongkir</span>
               </div>
             </div>
           </div>
 
-        {/* Products Section - Struktur identik dengan halaman utama */}
-        {loading && productsData.products.length === 0 ? (
-          <ProductGridSkeleton count={12} />
-        ) : (
-          <div>
-               {/* Search Results Info */}
-               {urlSearchQuery && filteredProducts.length > 0 && (
-                 <div className="mb-4 text-sm text-gray-600">
-                   Menampilkan {filteredProducts.length} dari {productsData.products.length} produk
-                 </div>
-               )}
+          {/* Products Section - Struktur identik dengan halaman utama */}
+          {loading && productsData.products.length === 0 ? (
+            <ProductGridSkeleton count={12} />
+          ) : (
+            <div>
+              {/* Search Results Info */}
+              {urlSearchQuery && filteredProducts.length > 0 && (
+                <div className="mb-4 text-sm text-gray-600">
+                  Menampilkan {filteredProducts.length} dari {productsData.products.length} produk
+                </div>
+              )}
 
-               {/* No search results */}
-               {urlSearchQuery && filteredProducts.length === 0 && productsData.products.length > 0 ? (
-                 <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
-                   <h2 className="text-xl font-semibold text-gray-900 mb-2">Tidak ada hasil</h2>
-                   <p className="text-gray-600 mb-6">
-                     Tidak ada produk yang cocok dengan "{urlSearchQuery}"
-                   </p>
-                 </div>
-               ) : filteredProducts.length > 0 ? (
-                 <>
-                   {/* Products Grid - Full Width Edge-to-Edge */}
-                   <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] mb-2 sm:mb-6 md:mb-8">
-                     <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
-                       <div className="px-2 sm:px-2.5 md:px-3 pb-2 sm:pb-3 md:pb-4">
-                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2">
-                         {filteredProducts.map((product) => (
-                           <ProductCard
-                             key={product.id}
-                             product={product}
-                           />
-                         ))}
-                         </div>
-                       </div>
-                     </div>
-                   </div>
+              {/* No search results */}
+              {urlSearchQuery && filteredProducts.length === 0 && productsData.products.length > 0 ? (
+                <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Tidak ada hasil</h2>
+                  <p className="text-gray-600 mb-6">
+                    Tidak ada produk yang cocok dengan "{urlSearchQuery}"
+                  </p>
+                </div>
+              ) : filteredProducts.length > 0 ? (
+                <>
+                  {/* Products Grid */}
+                  <div className="mb-6 sm:mb-8 w-screen -ml-[calc((100vw-100%)/2)] sm:w-auto sm:ml-0">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0 sm:gap-2 md:gap-3">
+                      {filteredProducts.map((product) => (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                        />
+                      ))}
+                    </div>
+                  </div>
 
-                   {/* Pagination - only show when not searching */}
-                   {!urlSearchQuery && productsData.pagination.totalPages > 1 && (
-                     <div className="mt-8">
-                       <Pagination
-                         currentPage={productsData.pagination.page}
-                         totalPages={productsData.pagination.totalPages}
-                         onPageChange={handlePageChange}
-                       />
-                     </div>
-                   )}
-                 </>
-               ) : !loading && !urlSearchQuery ? (
-                 <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-                   <p className="text-gray-600">No products available</p>
-                 </div>
-               ) : null}
-          </div>
-        )}
+                  {/* Pagination - only show when not searching */}
+                  {!urlSearchQuery && productsData.pagination.totalPages > 1 && (
+                    <div className="mt-8">
+                      <Pagination
+                        currentPage={productsData.pagination.page}
+                        totalPages={productsData.pagination.totalPages}
+                        onPageChange={handlePageChange}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : !loading && !urlSearchQuery ? (
+                <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                  <p className="text-gray-600">No products available</p>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -11,8 +11,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import { Home, Grid3x3, ShoppingCart, User } from 'lucide-react';
-import { useCart } from '@/contexts/CartContext';
+import { Home, Grid3x3, Bell, User } from 'lucide-react';
 
 function ShopLayoutContent({
   children,
@@ -20,16 +19,15 @@ function ShopLayoutContent({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { itemCount } = useCart();
   
   const hideFooter = pathname === '/' || pathname === '/dashboard' || pathname === '/orders' || pathname === '/products' || pathname === '/notifications' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname === '/cart' || pathname === '/checkout' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/') || pathname?.startsWith('/checkout/');
-  const hideHeader = pathname === '/dashboard' || pathname === '/settings' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/');
+  const hideHeader = pathname === '/dashboard' || pathname === '/settings' || pathname === '/notifications' || pathname === '/orders' || pathname?.startsWith('/orders/') || pathname === '/products' || pathname?.startsWith('/products/') || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname?.startsWith('/settings/');
   const hideBottomNav = pathname === '/orders' || pathname === '/activities' || pathname === '/favorite' || pathname === '/last-viewed' || pathname === '/buy-again' || pathname === '/settings' || pathname?.startsWith('/orders/') || pathname?.startsWith('/products/') || pathname?.startsWith('/settings/') || pathname?.startsWith('/checkout/');
 
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/';
     if (path === '/products') return pathname === '/products' || pathname?.startsWith('/products?');
-    if (path === '/cart') return pathname === '/cart';
+    if (path === '/notifications') return pathname === '/notifications';
     if (path === '/profile') return pathname === '/profile' || pathname === '/dashboard';
     return false;
   };
@@ -95,31 +93,26 @@ function ShopLayoutContent({
                 }`}>Categories</span>
               </Link>
               
-              {/* Cart */}
+              {/* Notifications */}
               <Link 
-                href="/cart" 
+                href="/notifications" 
                 className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative group transition-all min-h-[44px] touch-manipulation"
               >
-                {isActive('/cart') && (
+                {isActive('/notifications') && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></div>
                 )}
                 <div className={`p-2 sm:p-2.5 rounded-xl relative transition-all duration-300 ${
-                  isActive('/cart')
+                  isActive('/notifications')
                     ? 'bg-blue-100 scale-110' 
                     : 'group-active:bg-gray-100 group-active:scale-95'
                 }`}>
-                  <ShoppingCart className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
-                    isActive('/cart') ? 'text-blue-600' : 'text-gray-600'
+                  <Bell className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                    isActive('/notifications') ? 'text-blue-600' : 'text-gray-600'
                   }`} />
-                  {itemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] sm:text-[10px] font-bold rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center shadow-lg">
-                      {itemCount > 99 ? '99+' : itemCount}
-                    </span>
-                  )}
                 </div>
                 <span className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 transition-colors ${
-                  isActive('/cart') ? 'text-blue-600' : 'text-gray-600'
-                }`}>Cart</span>
+                  isActive('/notifications') ? 'text-blue-600' : 'text-gray-600'
+                }`}>Notifications</span>
               </Link>
               
               {/* Profile */}

@@ -68,8 +68,6 @@ export default function AdminProductsPage() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
-  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
-  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -438,235 +436,21 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      {/* Filters Card */}
+      {/* Search Bar Only - Clean & Simple */}
       <div className="admin-filter-card">
-        <div className="admin-card-header">
-          <div className="flex items-center gap-2">
-            <div className="bg-purple-100 rounded-lg p-1.5">
-              <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
-            </div>
-            <h2 className="text-base sm:text-lg font-bold text-gray-900">Filters & Search</h2>
-          </div>
-        </div>
         <div className="p-4 sm:p-6">
-          <form onSubmit={handleSearch} className="space-y-4">
-            {/* Filters Grid - 3 Columns on All Devices */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-              {/* Search Input */}
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
-                  <span className="hidden sm:inline">Search Products</span>
-                  <span className="sm:hidden">Search</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute left-2 sm:left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                    <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
-                  </div>
-                  <Input
-                    type="text"
-                    placeholder="Search..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-8 sm:pl-10 md:pl-12 border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-xs sm:text-sm md:text-base py-2 sm:py-2.5"
-                  />
-                </div>
+          <form onSubmit={handleSearch}>
+            <div className="relative">
+              <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <Search className="w-5 h-5" />
               </div>
-
-              {/* Category Filter */}
-              <div className="relative z-30">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
-                  Category
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCategoryDropdownOpen(!categoryDropdownOpen);
-                    setStatusDropdownOpen(false);
-                  }}
-                  className="w-full px-2 sm:px-3 py-2 sm:py-2.5 border border-gray-300 rounded-lg sm:rounded-xl bg-white text-gray-900 text-xs sm:text-sm md:text-base hover:border-purple-300 transition-colors flex items-center justify-between gap-2"
-                >
-                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-                    <FolderTree className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 shrink-0" />
-                    <span className="truncate">
-                      {categoryFilter 
-                        ? categories.find(c => c.id === categoryFilter)?.name || 'All'
-                        : 'All'
-                      }
-                    </span>
-                  </div>
-                  <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 shrink-0 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {categoryDropdownOpen && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-40" 
-                      onClick={() => setCategoryDropdownOpen(false)}
-                    ></div>
-                    <div 
-                      className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-2xl"
-                      style={{
-                        maxHeight: '9rem', // 3 items: ~3rem per item (py-2.5 + text height)
-                        overflowY: 'auto',
-                        WebkitOverflowScrolling: 'touch',
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: '#cbd5e1 #f1f5f9',
-                        overscrollBehavior: 'contain'
-                      }}
-                      onWheel={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onTouchMove={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <div className="py-1">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCategoryFilter('');
-                            setCurrentPage(1);
-                            setCategoryDropdownOpen(false);
-                          }}
-                          className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-purple-50 active:bg-purple-100 transition-colors touch-manipulation ${
-                            categoryFilter === '' ? 'bg-purple-50 text-purple-600' : 'text-gray-900'
-                          }`}
-                        >
-                          <FolderTree className="w-4 h-4 text-orange-500 shrink-0" />
-                          <span>All</span>
-                        </button>
-                        {categories.map((cat) => (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCategoryFilter(cat.id);
-                              setCurrentPage(1);
-                              setCategoryDropdownOpen(false);
-                            }}
-                            className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-purple-50 active:bg-purple-100 transition-colors touch-manipulation ${
-                              categoryFilter === cat.id ? 'bg-purple-50 text-purple-600' : 'text-gray-900'
-                            }`}
-                          >
-                            <FolderTree className="w-4 h-4 text-orange-500 shrink-0" />
-                            <span className="truncate">{cat.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Status Filter */}
-              <div className="relative">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
-                  Status
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusDropdownOpen(!statusDropdownOpen);
-                    setCategoryDropdownOpen(false);
-                  }}
-                  className="w-full px-2 sm:px-3 py-2 sm:py-2.5 border border-gray-300 rounded-lg sm:rounded-xl bg-white text-gray-900 text-xs sm:text-sm md:text-base hover:border-purple-300 transition-colors flex items-center justify-between gap-2"
-                >
-                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-                    {statusFilter === 'active' ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 shrink-0" />
-                    ) : statusFilter === 'inactive' ? (
-                      <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500 shrink-0" />
-                    ) : (
-                      <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
-                    )}
-                    <span className="truncate">
-                      {statusFilter === 'active' ? 'Active' : statusFilter === 'inactive' ? 'Inactive' : 'All'}
-                    </span>
-                  </div>
-                  <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 shrink-0 transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {statusDropdownOpen && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-10" 
-                      onClick={() => setStatusDropdownOpen(false)}
-                    ></div>
-                    <div 
-                      className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-2xl"
-                      style={{
-                        maxHeight: '9rem', // 3 items: ~3rem per item (py-2.5 + text height)
-                        overflowY: 'auto',
-                        WebkitOverflowScrolling: 'touch',
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: '#cbd5e1 #f1f5f9',
-                        overscrollBehavior: 'contain'
-                      }}
-                      onWheel={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onTouchMove={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStatusFilter('');
-                          setCurrentPage(1);
-                          setStatusDropdownOpen(false);
-                        }}
-                        className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-purple-50 active:bg-purple-100 transition-colors touch-manipulation ${
-                          statusFilter === '' ? 'bg-purple-50 text-purple-600' : 'text-gray-900'
-                        }`}
-                      >
-                        <Filter className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span>All</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStatusFilter('active');
-                          setCurrentPage(1);
-                          setStatusDropdownOpen(false);
-                        }}
-                        className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-green-50 active:bg-green-100 transition-colors touch-manipulation ${
-                          statusFilter === 'active' ? 'bg-green-50 text-green-600' : 'text-gray-900'
-                        }`}
-                      >
-                        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                        <span>Active</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStatusFilter('inactive');
-                          setCurrentPage(1);
-                          setStatusDropdownOpen(false);
-                        }}
-                        className={`w-full px-3 py-2.5 text-left text-xs sm:text-sm flex items-center gap-2 hover:bg-red-50 active:bg-red-100 transition-colors touch-manipulation ${
-                          statusFilter === 'inactive' ? 'bg-red-50 text-red-600' : 'text-gray-900'
-                        }`}
-                      >
-                        <XCircle className="w-4 h-4 text-red-500 shrink-0" />
-                        <span>Inactive</span>
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Apply Button - Full Width on Mobile */}
-            <div>
-              <Button 
-                type="submit" 
-                variant="primary" 
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 py-2.5 sm:py-3"
-              >
-                <Filter className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                <span className="text-sm sm:text-base">Apply Filters</span>
-              </Button>
+              <Input
+                type="text"
+                placeholder="Search products by name, SKU, or brand..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-11 sm:pl-12 pr-4 border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base py-3 sm:py-3.5 w-full"
+              />
             </div>
           </form>
         </div>

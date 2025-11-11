@@ -14,8 +14,9 @@ interface Product {
   price: string;
   salePrice?: string | null;
   imageUrl?: string | null;
-  images?: string[];
-  stock: number;
+  images?: string[] | Array<{ imageUrl: string; altText?: string | null }>;
+  stock?: number;
+  stockQuantity?: number;
   category?: {
     id: string;
     name: string;
@@ -61,13 +62,13 @@ export function ProductGrid({
   }
 
   const gridColsClass = {
-    2: 'grid-cols-1 sm:grid-cols-2',
-    3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-    4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+    2: 'grid-cols-2',
+    3: 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3',
+    4: 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
   };
 
   return (
-    <div className={`grid ${gridColsClass[columns]} gap-6`}>
+    <div className={`grid ${gridColsClass[columns]} gap-0 sm:gap-2 md:gap-3`}>
       {products.map((product) => (
         <ProductCard
           key={product.id}

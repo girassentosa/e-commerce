@@ -5,12 +5,11 @@
  * Redesigned sesuai spec: Rating di atas, social proof, hover zoom, dll
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, ShoppingCart, Star, Flame } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { useCart } from '@/contexts/CartContext';
+import { ShoppingCart, Star, Flame } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useWishlist } from '@/contexts/WishlistContext';
 
 interface ProductCardProps {
@@ -22,8 +21,9 @@ interface ProductCardProps {
     price: string;
     salePrice?: string | null;
     imageUrl?: string | null;
-    images?: string[];
-    stock: number;
+    images?: string[] | Array<{ imageUrl: string; altText?: string | null }>;
+    stock?: number;
+    stockQuantity?: number;
     category?: {
       id: string;
       name: string;
@@ -38,11 +38,15 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const [imageError, setImageError] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const { addItem: addToCart } = useCart();
+  const router = useRouter();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist();
   
   const isWishlisted = isInWishlist(product.id);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTapRef = useRef<number>(0);
+
+  // Support both 'stock' and 'stockQuantity' property names
+  const stockCount = product.stock ?? product.stockQuantity ?? 0;
 
   // Calculate discount percentage
   const discountPercentage = product.salePrice
@@ -55,17 +59,7 @@ export function ProductCard({ product }: ProductCardProps) {
   // Social proof - sold count (mock data, bisa diganti dengan real data)
   const soldCount = product.reviewCount ? Math.max(product.reviewCount * 3, 10) : Math.floor(Math.random() * 100) + 10;
 
-  const handleAddToCart = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (product.stock > 0) {
-      await addToCart(product.id, 1);
-    }
-  };
-
-  const handleToggleWishlist = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const toggleWishlist = async () => {
     if (isWishlisted) {
       await removeFromWishlist(product.id);
     } else {
@@ -73,33 +67,83 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   };
 
+  const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapRef.current;
+
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
+
+    if (timeSinceLastTap > 0 && timeSinceLastTap < 260) {
+      lastTapRef.current = 0;
+      void toggleWishlist();
+      return;
+    }
+
+    lastTapRef.current = now;
+    clickTimeoutRef.current = setTimeout(() => {
+      router.push(`/products/${product.slug}`);
+      lastTapRef.current = 0;
+      clickTimeoutRef.current = null;
+    }, 260);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const ratingNum = typeof product.rating === 'string' ? parseFloat(product.rating) : (product.rating || 0);
 
   return (
     <div 
-      className="group relative bg-white rounded-xl overflow-hidden border border-gray-200 hover:border-blue-300 hover:scale-[1.02] hover:shadow-md transition-all duration-200 p-3"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="relative bg-white overflow-hidden border-0 rounded-none sm:rounded-xl sm:border sm:border-gray-200"
     >
       {/* Product Link Wrapper */}
-      <Link href={`/products/${product.slug}`} className="block">
+      <Link
+        href={`/products/${product.slug}`}
+        className="block"
+        onClick={handleCardClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            router.push(`/products/${product.slug}`);
+          }
+        }}
+      >
         
         {/* ==================== IMAGE SECTION ==================== */}
-        <div className="relative aspect-square overflow-hidden bg-gray-50 rounded-lg mb-3">
+        <div className="relative aspect-square overflow-hidden bg-gray-50 rounded-none sm:rounded-t-xl">
           {(() => {
-            const imageUrl = product.imageUrl || product.images?.[0];
+            // Extract imageUrl from different formats
+            let imageUrl = product.imageUrl;
+            if (!imageUrl && product.images && product.images.length > 0) {
+              const firstImage = product.images[0];
+              imageUrl = typeof firstImage === 'string' 
+                ? firstImage 
+                : (firstImage as { imageUrl: string }).imageUrl;
+            }
+            
             const hasValidImage = 
               typeof imageUrl === 'string' && 
               imageUrl.trim() !== '' && 
               !imageError;
             
-            return hasValidImage ? (
+            return hasValidImage && imageUrl ? (
               <Image
-                src={imageUrl}
+                src={imageUrl as string}
                 alt={product.name}
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                className="object-cover group-hover:scale-110 transition-transform duration-300"
+                className="object-cover"
                 onError={() => setImageError(true)}
               />
             ) : (
@@ -120,17 +164,17 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
 
           {/* Low Stock Badge */}
-          {product.stock > 0 && product.stock <= 10 && (
+          {stockCount > 0 && stockCount <= 10 && (
             <div 
               className="absolute top-2 left-2 z-10 bg-orange-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow-sm" 
               style={{ marginTop: hasDiscount ? '32px' : '0' }}
             >
-              Only {product.stock} left
+              Only {stockCount} left
             </div>
           )}
 
           {/* Out of Stock Overlay */}
-          {product.stock === 0 && (
+          {stockCount === 0 && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10 rounded-lg">
               <div className="bg-white px-3 py-1.5 rounded shadow-md">
                 <span className="text-gray-900 font-semibold text-sm">Out of Stock</span>
@@ -138,37 +182,11 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
-          {/* Wishlist Button - Always Visible */}
-          <button
-            onClick={handleToggleWishlist}
-            className={`absolute top-2 right-2 z-10 p-2 rounded-full shadow-md transition-all ${
-              isWishlisted
-                ? 'bg-red-500 text-white'
-                : 'bg-white text-gray-600 hover:bg-red-50 hover:text-red-500'
-            }`}
-            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-          >
-            <Heart className="w-4 h-4" fill={isWishlisted ? 'currentColor' : 'none'} />
-          </button>
-
-          {/* Add to Cart Button - Hover Overlay (Optional, bisa dihapus kalau mau di bawah aja) */}
-          <div className={`absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent transition-opacity duration-200 ${
-            isHovered && product.stock > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}>
-            <Button
-              onClick={handleAddToCart}
-              disabled={product.stock === 0}
-              className="w-full bg-white text-gray-900 hover:bg-blue-600 hover:text-white font-semibold py-2 text-xs transition-colors shadow-md"
-              size="sm"
-            >
-              <ShoppingCart className="w-3.5 h-3.5 mr-1" />
-              Add to Cart
-            </Button>
-          </div>
+          {/* No add-to-cart overlay on card per homepage spec */}
         </div>
 
         {/* ==================== CONTENT SECTION ==================== */}
-        <div className="space-y-2">
+        <div className="p-4 space-y-2 sm:p-4">
           
           {/* Rating & Review Count - DI ATAS NAMA */}
           {ratingNum > 0 && (
@@ -197,7 +215,7 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
 
           {/* Product Name - Max 2 Lines */}
-          <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight min-h-[2.5rem] group-hover:text-blue-600 transition-colors">
+          <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight min-h-[2.5rem]">
             {product.name}
           </h3>
 

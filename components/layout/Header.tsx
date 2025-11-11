@@ -7,7 +7,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { 
@@ -34,7 +34,6 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch categories
   useEffect(() => {
@@ -59,15 +58,17 @@ export default function Header() {
     setSearchQuery(urlSearch);
   }, [searchParams]);
 
+  const isHomepage = pathname === '/';
 
+  // Handle search submit
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      router.push('/products');
     }
   };
-
-  const isHomepage = pathname === '/';
 
   return (
     <>
@@ -79,9 +80,9 @@ export default function Header() {
           <div className="flex items-center justify-center gap-2">
             <Truck className="w-4 h-4" />
             <span>Free shipping for orders over $500</span>
-          </div>
-        </div>
-      </div>
+              </div>
+              </div>
+            </div>
 
       {/* ========================================
           MAIN HEADER (Sticky)
@@ -93,43 +94,45 @@ export default function Header() {
             : 'shadow-sm'
         }`}
       >
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-4 md:px-6">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8">
           {/* Main Header Row */}
-          <div className="flex items-center h-14 sm:h-16 md:h-20 gap-3 sm:gap-3 md:gap-4">
+          <div className="flex items-center h-16 sm:h-16 md:h-20 gap-3 sm:gap-4 md:gap-5">
             
-            {/* Center: Search Bar - Simple, No Pop/Card, Responsive with proper spacing */}
-            <div className="flex-1 min-w-0 max-w-[calc(100%-64px)] sm:max-w-none">
-              <form onSubmit={handleSearch} className="w-full">
-                <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5">
-                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-gray-500 flex-shrink-0" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search products..."
-                    className="flex-1 min-w-0 bg-transparent border-none outline-none text-xs sm:text-sm md:text-base text-gray-900 placeholder-gray-500"
-                  />
-                </div>
-              </form>
+            {/* Search Icon - Static (Outside Card) */}
+            <div className="flex-shrink-0">
+              <Search className="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5 text-gray-500" />
             </div>
 
-            {/* Right: Cart */}
-            <div className="flex items-center flex-shrink-0 w-12 sm:w-auto">
-              {/* Cart */}
-              <Link
-                href="/cart"
-                className="relative p-2 sm:p-2 md:p-3 rounded-lg transition-colors group"
-              >
-                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-700 group-hover:text-blue-600 transition-colors" />
-                {itemCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-red-500 text-white text-[9px] sm:text-xs font-bold rounded-full h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 flex items-center justify-center shadow-lg">
+            {/* Search Bar - Full Width (No hover, no focus effects) */}
+            <form onSubmit={handleSearch} className="flex-1">
+                <input
+                id="header-search-input"
+                  type="text"
+                  value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="w-full px-4 sm:px-5 md:px-6 py-2.5 sm:py-2.5 md:py-3 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl text-sm sm:text-base text-gray-900 placeholder-gray-400 focus:outline-none"
+                style={{
+                  WebkitTextFillColor: '#111827', // Explicit color for iOS
+                  color: '#111827', // Explicit color for iOS
+                }}
+              />
+            </form>
+
+                {/* Cart Icon */}
+            <Link
+              href="/cart"
+              className="flex-shrink-0 relative p-2 sm:p-2.5 md:p-3 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors group"
+              aria-label="Shopping cart"
+            >
+              <ShoppingCart className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-700 group-hover:text-blue-600 transition-colors" />
+              {itemCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-red-500 text-white text-[10px] sm:text-xs font-bold rounded-full h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 flex items-center justify-center shadow-lg">
                     {itemCount > 99 ? '99+' : itemCount}
-                  </span>
-                )}
-              </Link>
-            </div>
-          </div>
+                </span>
+              )}
+            </Link>
+        </div>
 
           {/* ========================================
               CATEGORY NAVIGATION BAR
@@ -145,7 +148,7 @@ export default function Header() {
                 }`}
               >
                 All Products
-              </Link>
+                </Link>
               {categories.slice(0, 10).map((category) => (
                 <Link
                   key={category.id}
@@ -167,7 +170,7 @@ export default function Header() {
               )}
             </nav>
           </div>
-        </div>
+                </div>
 
       </header>
     </>
