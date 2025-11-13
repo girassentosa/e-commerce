@@ -161,13 +161,16 @@ model Cart {
 }
 
 model CartItem {
-  id        String   @id @default(cuid())
-  cartId    String   @map("cart_id")
-  productId String   @map("product_id")
-  variantId String?  @map("variant_id")
-  quantity  Int
-  price     Decimal  @db.Decimal(10, 2)
-  addedAt   DateTime @default(now()) @map("added_at")
+  id              String   @id @default(cuid())
+  cartId          String   @map("cart_id")
+  productId       String   @map("product_id")
+  variantId       String?  @map("variant_id")
+  selectedColor   String?  @map("selected_color")
+  selectedSize    String?  @map("selected_size")
+  selectedImageUrl String? @map("selected_image_url")
+  quantity        Int
+  price           Decimal  @db.Decimal(10, 2)
+  addedAt         DateTime @default(now()) @map("added_at")
 
   // Relations
   cart    Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
@@ -229,14 +232,17 @@ enum PaymentStatus {
 }
 
 model OrderItem {
-  id          String  @id @default(cuid())
-  orderId     String  @map("order_id")
-  productId   String  @map("product_id")
-  variantId   String? @map("variant_id")
-  productName String  @map("product_name")
-  quantity    Int
-  price       Decimal @db.Decimal(10, 2)
-  total       Decimal @db.Decimal(10, 2)
+  id              String  @id @default(cuid())
+  orderId         String  @map("order_id")
+  productId       String  @map("product_id")
+  variantId       String? @map("variant_id")
+  selectedColor   String? @map("selected_color")
+  selectedSize    String? @map("selected_size")
+  selectedImageUrl String? @map("selected_image_url")
+  productName     String  @map("product_name")
+  quantity        Int
+  price           Decimal @db.Decimal(10, 2)
+  total           Decimal @db.Decimal(10, 2)
 
   // Relations
   order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)

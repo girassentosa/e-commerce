@@ -9,7 +9,99 @@ import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
 import { ArrowLeft, MapPin, CreditCard, Package } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { formatCurrency } from '@/lib/utils';
+
+interface ShippingAddress {
+  id: string;
+  fullName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+const formatPhone = (phone: string) => {
+  if (phone.startsWith('+62')) {
+    return `(+62) ${phone.substring(3).trim()}`;
+  }
+  return phone;
+};
+
+const formatAddress = (address: ShippingAddress) => {
+  const parts = [
+    address.addressLine1,
+    address.addressLine2,
+    address.city,
+    address.state,
+    address.postalCode,
+    address.country,
+  ].filter(Boolean);
+  return parts.join(', ');
+};
+
+const paymentMethodMap: Record<string, { label: string; description: string }> = {
+  COD: {
+    label: 'Bayar di Tempat (COD)',
+    description: 'Pembayaran dilakukan saat pesanan diterima.',
+  },
+  VIRTUAL_ACCOUNT: {
+    label: 'Virtual Account',
+    description: 'Pembayaran melalui Virtual Account bank yang tersedia.',
+  },
+  QRIS: {
+    label: 'QRIS',
+    description: 'Pembayaran instan menggunakan QR Indonesia Standard.',
+  },
+};
+
+// Helper function to format color and size labels (same as checkout)
+const toTitleCase = (value: string) =>
+  value
+    .split(/[\s-]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+
+const colorLabelMap: Record<string, string> = {
+  hitam: 'Hitam',
+  putih: 'Putih',
+  'biru-navy': 'Biru Navy',
+  'merah-maroon': 'Merah Maroon',
+};
+
+const getVariantLabels = (
+  variant: { name: string; value: string } | null,
+  selectedColor?: string | null,
+  selectedSize?: string | null
+) => {
+  let colorLabel: string | null = null;
+  let sizeLabel: string | null = null;
+
+  // First priority: use selectedColor and selectedSize from OrderItem
+  if (selectedColor) {
+    const colorValue = selectedColor.toLowerCase();
+    colorLabel = colorLabelMap[colorValue] ?? toTitleCase(selectedColor);
+  }
+
+  if (selectedSize) {
+    sizeLabel = selectedSize.toUpperCase();
+  }
+
+  // Second priority: use the stored variant
+  if (!colorLabel && !sizeLabel && variant) {
+    if (variant.name === 'Color' || variant.name.toLowerCase() === 'color') {
+      const colorValue = variant.value.toLowerCase();
+      colorLabel = colorLabelMap[colorValue] ?? toTitleCase(variant.value);
+    } else if (variant.name === 'Size' || variant.name.toLowerCase() === 'size') {
+      sizeLabel = variant.value.toUpperCase();
+    }
+  }
+
+  return { colorLabel, sizeLabel };
+};
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -30,153 +122,249 @@ export default function OrderDetailPage() {
     }
   }, [status, orderNumber, fetchOrderDetail]);
 
+  const handleBack = () => {
+    // Always redirect to orders page (profile orders page)
+    router.push('/orders');
+  };
+
   const handleCancel = async () => {
-    if (confirm('Are you sure you want to cancel this order?')) {
+    if (confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) {
       await cancelOrder(orderNumber);
     }
   };
 
   if (loading || !currentOrder) {
     return (
-      <div className="flex justify-center"><Loader size="lg" /></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader size="lg" />
+      </div>
     );
   }
 
   const order = currentOrder;
   const address = order.shippingAddress[0];
   const canCancel = ['PENDING', 'PROCESSING'].includes(order.status);
+  const currencyCode = 'USD';
+
+  // Calculate payment breakdown (matching checkout structure)
+  const subtotalPesanan = parseFloat(order.subtotal);
+  const subtotalPengiriman = parseFloat(order.shippingCost);
+  const biayaLayanan = 2000; // Fixed service fee
+  const totalDiskonPengiriman = 0;
+  const voucherDiskon = parseFloat(order.discount);
+  const totalPembayaran = parseFloat(order.total);
+
+  const paymentInfo = order.paymentMethod ? paymentMethodMap[order.paymentMethod] : null;
+  const paymentLabel = paymentInfo?.label ?? order.paymentMethod ?? 'Tidak diketahui';
+  const paymentDescription = paymentInfo?.description ?? '';
 
   return (
-    <div>
-      <Link href="/orders" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4">
-        <ArrowLeft className="w-4 h-4 mr-1" />
-        Back to Orders
-      </Link>
-
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Order #{order.orderNumber}</h1>
-          <p className="text-gray-600 mt-1">
-            Placed on {new Date(order.createdAt).toLocaleString()}
-          </p>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <header className="sticky top-0 z-40 bg-white shadow-sm">
+        <div className="px-4 sm:px-6 border-b border-gray-200">
+          <div className="max-w-[1440px] mx-auto">
+            <div className="flex items-center justify-between h-14 sm:h-16">
+              <button
+                onClick={handleBack}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Kembali"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex-1 text-center">
+                Detail Pesanan
+              </h1>
+              <div className="min-h-[44px] min-w-[44px]" />
+            </div>
+          </div>
         </div>
-        <StatusBadge status={order.status} size="lg" />
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Order Items */}
-          <div className="bg-white border rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Order Items
-            </h2>
+      <main className="flex-1 overflow-y-auto pb-10">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-6 space-y-4">
+          {/* Order Info Card */}
+          <section className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm px-5 py-5 sm:px-6 sm:py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <h2 className="!text-sm font-semibold text-gray-900">Nomor Pesanan</h2>
+                <p className="mt-1 text-sm text-gray-600">{order.orderNumber}</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Dibuat pada {new Date(order.createdAt).toLocaleString('id-ID')}
+                </p>
+              </div>
+              <div className="ml-4 flex-shrink-0">
+                <StatusBadge status={order.status} size="lg" />
+              </div>
+            </div>
+          </section>
+
+          {/* Order Items Card */}
+          <section className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm px-4 py-4 sm:px-5 sm:py-5">
+            <h2 className="!text-sm font-semibold text-gray-900 mb-3">Produk yang Dipesan</h2>
             <div className="space-y-4">
               {order.items.map((item) => {
-                const imageUrl = item.product.images[0]?.imageUrl;
+                // Use selectedImageUrl if available, otherwise fallback to first product image
+                const imageUrl = item.selectedImageUrl || item.product.images?.[0]?.imageUrl;
+                const unitPrice = parseFloat(item.price);
+                const itemTotal = parseFloat(item.total);
+                
+                // Get variant labels using selectedColor and selectedSize from OrderItem
+                const { colorLabel, sizeLabel } = getVariantLabels(
+                  item.variant,
+                  item.selectedColor,
+                  item.selectedSize
+                );
+                const variantText = colorLabel && sizeLabel
+                  ? `${colorLabel}, ${sizeLabel}`
+                  : colorLabel ?? sizeLabel ?? '';
+
                 return (
-                  <div key={item.id} className="flex gap-4 border-b pb-4 last:border-0">
-                    {imageUrl && (
-                      <div className="w-20 h-20 bg-gray-100 rounded flex-shrink-0">
+                  <div key={item.id} className="flex items-start gap-3">
+                    <div className="relative h-16 w-16 rounded-lg border border-gray-100 bg-gray-100 flex-shrink-0 overflow-hidden sm:h-18 sm:w-18">
+                      {imageUrl ? (
                         <Image
                           src={imageUrl}
                           alt={item.productName}
-                          width={80}
-                          height={80}
-                          className="w-full h-full object-cover rounded"
+                          fill
+                          className="object-cover"
+                          sizes="72px"
                         />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <Link href={`/products/${item.product.slug}`} className="font-semibold hover:text-blue-600">
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center px-2 text-center text-[11px] font-medium text-gray-400">
+                          Tidak ada gambar
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <p className="text-sm font-semibold text-gray-900 truncate" title={item.productName}>
                         {item.productName}
-                      </Link>
-                      <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                      <p className="text-sm text-gray-600">Price: ${parseFloat(item.price).toFixed(2)}</p>
-                      <p className="text-sm font-bold mt-1">Total: ${parseFloat(item.total).toFixed(2)}</p>
+                      </p>
+                      {variantText && (
+                        <p
+                          className="text-xs font-medium text-gray-700 truncate mt-0.5"
+                          title={variantText}
+                        >
+                          {variantText}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-end gap-2">
+                          <span className="text-base font-bold text-blue-600">
+                            {formatCurrency(unitPrice, currencyCode)}
+                          </span>
+                          <span className="text-xs text-gray-500">x{item.quantity}</span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(itemTotal, currencyCode)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </section>
 
-          {/* Shipping Address */}
+          {/* Shipping Address Card */}
           {address && (
-            <div className="bg-white border rounded-lg p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                Shipping Address
-              </h2>
-              <div className="text-gray-700">
-                <p className="font-semibold">{address.fullName}</p>
-                <p>{address.phone}</p>
-                <p className="mt-2">{address.addressLine1}</p>
-                {address.addressLine2 && <p>{address.addressLine2}</p>}
-                <p>{address.city}, {address.state} {address.postalCode}</p>
-                <p>{address.country}</p>
+            <section className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm px-5 py-5 sm:px-6 sm:py-6 flex gap-2 items-start">
+              <div className="p-1 text-blue-600 flex-shrink-0">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <h2 className="!text-sm font-semibold text-gray-900">Alamat Pengiriman</h2>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-sm font-semibold text-gray-900">{address.fullName}</span>
+                  <span className="text-[11px] font-medium text-gray-500">{formatPhone(address.phone)}</span>
+                </div>
+                <p className="mt-2 text-sm text-gray-600 leading-relaxed">{formatAddress(address)}</p>
+              </div>
+            </section>
+          )}
+
+          {/* Payment Method Card */}
+          <section className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm px-4 py-4 sm:px-5 sm:py-5 flex items-start">
+            <div className="flex-1 min-w-0">
+              <h2 className="!text-sm font-semibold text-gray-900 truncate">Metode Pembayaran</h2>
+              <p className="mt-1 text-sm font-medium text-gray-800 truncate" title={paymentLabel}>
+                {paymentLabel}
+              </p>
+              {paymentDescription && (
+                <p className="mt-1 text-xs text-gray-500 truncate" title={paymentDescription}>
+                  {paymentDescription}
+                </p>
+              )}
+              <div className="mt-2">
+                <StatusBadge status={order.paymentStatus as any} size="sm" />
               </div>
             </div>
-          )}
-        </div>
+          </section>
 
-        <div className="lg:col-span-1 space-y-6">
-          {/* Order Summary */}
-          <div className="bg-gray-50 border rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-4">Order Summary</h2>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal</span>
-                <span>${parseFloat(order.subtotal).toFixed(2)}</span>
+          {/* Payment Breakdown Card */}
+          <section className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm px-4 py-4 sm:px-5 sm:py-5">
+            <h2 className="!text-sm font-semibold text-gray-900">Rincian Pembayaran</h2>
+            <div className="space-y-3 mt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Subtotal pesanan</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {formatCurrency(subtotalPesanan, currencyCode)}
+                </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Tax</span>
-                <span>${parseFloat(order.tax).toFixed(2)}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Subtotal pengiriman</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {formatCurrency(subtotalPengiriman, currencyCode)}
+                </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Shipping</span>
-                <span>{parseFloat(order.shippingCost) === 0 ? 'FREE' : `$${parseFloat(order.shippingCost).toFixed(2)}`}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Biaya layanan</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {formatCurrency(biayaLayanan, currencyCode)}
+                </span>
               </div>
-              {parseFloat(order.discount) > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
-                  <span>Discount</span>
-                  <span>-${parseFloat(order.discount).toFixed(2)}</span>
+              {totalDiskonPengiriman > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Total diskon pengiriman</span>
+                  <span className="text-sm font-medium text-red-500">
+                    -{formatCurrency(totalDiskonPengiriman, currencyCode)}
+                  </span>
                 </div>
               )}
-              <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                <span>Total</span>
-                <span>${parseFloat(order.total).toFixed(2)}</span>
+              {voucherDiskon > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Voucher diskon</span>
+                  <span className="text-sm font-medium text-red-500">
+                    -{formatCurrency(voucherDiskon, currencyCode)}
+                  </span>
+                </div>
+              )}
+              <div className="border-t border-gray-200 pt-3 mt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">Total pembayaran</span>
+                  <span className="text-sm font-bold text-blue-600">
+                    {formatCurrency(totalPembayaran, currencyCode)}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Payment Info */}
-          <div className="bg-white border rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <CreditCard className="w-5 h-5" />
-              Payment
-            </h2>
-            <p className="text-gray-700">
-              <strong>Method:</strong> {order.paymentMethod}
-            </p>
-            <p className="text-gray-700 mt-2">
-              <strong>Status:</strong> <StatusBadge status={order.paymentStatus as any} size="sm" />
-            </p>
-          </div>
-
-          {/* Actions */}
+          {/* Cancel Order Button */}
           {canCancel && (
-            <Button
-              variant="outline"
-              className="w-full border-red-300 text-red-600 hover:bg-red-50"
-              onClick={handleCancel}
-            >
-              Cancel Order
-            </Button>
+            <section className="-mx-4 sm:-mx-6 px-4 sm:px-6">
+              <Button
+                variant="outline"
+                className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                onClick={handleCancel}
+              >
+                Batalkan Pesanan
+              </Button>
+            </section>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
-

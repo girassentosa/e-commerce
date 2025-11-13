@@ -288,7 +288,8 @@ function OrdersPageContent() {
 
                 <div className="flex gap-2 mb-3">
                   {order.items.slice(0, 3).map((item) => {
-                    const imageUrl = item.product.images[0]?.imageUrl;
+                    // Use selectedImageUrl if available, otherwise fallback to first product image
+                    const imageUrl = item.selectedImageUrl || item.product.images?.[0]?.imageUrl;
                     return imageUrl ? (
                       <div key={item.id} className="w-16 h-16 bg-gray-100 rounded">
                         <Image

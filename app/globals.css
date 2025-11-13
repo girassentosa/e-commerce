@@ -1107,3 +1107,36 @@ textarea {
 .admin-settings-tabs-container::-webkit-scrollbar-thumb:hover {
   background-color: #94a3b8;
 }
+
+/* Color selector buttons - keep flat without hover/active shadows */
+.color-option-btn,
+.color-option-btn:hover,
+.color-option-btn:active,
+.color-option-btn:focus,
+.color-option-btn:focus-visible {
+  transform: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* Option selector buttons - keep flat without hover/active shadows */
+.option-flat-btn,
+.option-flat-btn:hover,
+.option-flat-btn:active,
+.option-flat-btn:focus,
+.option-flat-btn:focus-visible {
+  transform: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* Icon button - keep flat without hover/active shadows */
+.icon-flat-btn,
+.icon-flat-btn:hover,
+.icon-flat-btn:active,
+.icon-flat-btn:focus,
+.icon-flat-btn:focus-visible {
+  transform: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}

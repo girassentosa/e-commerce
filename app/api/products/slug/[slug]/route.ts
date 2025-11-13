@@ -113,6 +113,7 @@ export async function GET(
       rating: ratingAverage.toString(),
       reviewCount: _count.reviews,
       stock: stockQuantity,
+      salesCount: product.salesCount, // Add salesCount for real-time sold count
     };
 
     return NextResponse.json({

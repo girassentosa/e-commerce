@@ -44,6 +44,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const isWishlisted = isInWishlist(product.id);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTapRef = useRef<number>(0);
+  
 
   // Support both 'stock' and 'stockQuantity' property names
   const stockCount = product.stock ?? product.stockQuantity ?? 0;
@@ -92,6 +93,7 @@ export function ProductCard({ product }: ProductCardProps) {
       clickTimeoutRef.current = null;
     }, 260);
   };
+
 
   useEffect(() => {
     return () => {

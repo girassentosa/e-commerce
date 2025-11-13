@@ -17,6 +17,9 @@ interface OrderItem {
   quantity: number;
   price: string;
   total: string;
+  selectedColor?: string | null;
+  selectedSize?: string | null;
+  selectedImageUrl?: string | null;
   product: {
     id: string;
     name: string;

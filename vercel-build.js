@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+import { execSync } from 'node:child_process';
 
 try {
   console.log('Generating Prisma Client...');

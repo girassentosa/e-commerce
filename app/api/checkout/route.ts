@@ -153,6 +153,9 @@ export async function POST(request: NextRequest) {
             create: cart.items.map((item) => ({
               productId: item.productId,
               variantId: item.variantId,
+              selectedColor: item.selectedColor || null,
+              selectedSize: item.selectedSize || null,
+              selectedImageUrl: item.selectedImageUrl || null,
               productName: item.product.name,
               quantity: item.quantity,
               price: item.product.salePrice || item.product.price,

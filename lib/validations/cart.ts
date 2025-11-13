@@ -17,6 +17,9 @@ export const addToCartSchema = z.object({
     .max(99, 'Maximum quantity is 99')
     .default(1),
   variantId: z.string().optional(),
+  color: z.string().optional(),
+  size: z.string().optional(),
+  imageUrl: z.string().optional(),
 });
 
 /**

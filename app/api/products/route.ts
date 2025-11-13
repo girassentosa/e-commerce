@@ -119,6 +119,13 @@ export async function GET(request: NextRequest) {
               altText: true,
             },
           },
+          variants: {
+            select: {
+              id: true,
+              name: true,
+              value: true,
+            },
+          },
           _count: {
             select: {
               reviews: true,
@@ -132,12 +139,17 @@ export async function GET(request: NextRequest) {
     // Transform products to include imageUrl and images array for frontend compatibility
     const transformedProducts = products.map((product) => {
       const primaryImage = product.images && product.images.length > 0 ? product.images[0] : null;
-      const { images: originalImages, _count, price: originalPrice, salePrice: originalSalePrice, ratingAverage, stockQuantity, ...rest } = product;
+      const { images: originalImages, variants: originalVariants, _count, price: originalPrice, salePrice: originalSalePrice, ratingAverage, stockQuantity, ...rest } = product;
       
       return {
         ...rest,
         imageUrl: primaryImage?.imageUrl || null, // Add imageUrl at root level
         images: (originalImages || []).map((img) => img.imageUrl).filter((url): url is string => Boolean(url)), // Transform to array of URLs, filter out null/undefined
+        variants: (originalVariants || []).map((v) => ({
+          id: v.id,
+          name: v.name,
+          value: v.value,
+        })), // Include variants
         price: originalPrice.toString(),
         salePrice: originalSalePrice?.toString() || null,
         rating: ratingAverage.toString(),

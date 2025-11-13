@@ -23,12 +23,18 @@ interface CartProduct {
   price: string;
   salePrice: string | null;
   stockQuantity: number;
+  brand?: string | null;
   category: {
     id: string;
     name: string;
     slug: string;
   };
   images: CartImage[];
+  variants?: Array<{
+    id: string;
+    name: string;
+    value: string;
+  }>;
 }
 
 interface CartVariant {
@@ -48,6 +54,9 @@ export interface CartItem {
   addedAt: string;
   product: CartProduct;
   variant: CartVariant | null;
+  selectedColor?: string | null;
+  selectedSize?: string | null;
+  selectedImageUrl?: string | null;
 }
 
 interface CartContextType {
@@ -55,8 +64,10 @@ interface CartContextType {
   itemCount: number;
   subtotal: string;
   loading: boolean;
+  selectedItems: Set<string>;
+  setSelectedItems: (items: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
   fetchCart: () => Promise<void>;
-  addItem: (productId: string, quantity?: number, variantId?: string) => Promise<void>;
+  addItem: (productId: string, quantity?: number, variantId?: string, color?: string, size?: string, imageUrl?: string) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -71,6 +82,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [itemCount, setItemCount] = useState(0);
   const [subtotal, setSubtotal] = useState('0.00');
   const [loading, setLoading] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   // Fetch cart count only (lightweight, fast)
   const fetchCartCount = useCallback(async () => {
@@ -118,7 +130,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [status]);
 
   // Add item to cart
-  const addItem = useCallback(async (productId: string, quantity = 1, variantId?: string) => {
+  const addItem = useCallback(async (productId: string, quantity = 1, variantId?: string, color?: string, size?: string, imageUrl?: string) => {
     if (status !== 'authenticated') {
       toast.error('Please login to add items to cart');
       return;
@@ -128,7 +140,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch('/api/cart', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, quantity, variantId }),
+        body: JSON.stringify({ productId, quantity, variantId, color, size, imageUrl }),
       });
 
       const data = await response.json();
@@ -249,6 +261,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         itemCount,
         subtotal,
         loading,
+        selectedItems,
+        setSelectedItems,
         fetchCart,
         addItem,
         updateQuantity,

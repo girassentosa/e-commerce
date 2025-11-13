@@ -22,11 +22,11 @@ interface OrderSummary {
 interface CheckoutContextType {
   step: number;
   addressId: string | null;
-  paymentMethod: 'COD' | 'CREDIT_CARD' | 'BANK_TRANSFER' | null;
+  paymentMethod: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null;
   orderSummary: OrderSummary | null;
   loading: boolean;
   setAddressId: (id: string) => void;
-  setPaymentMethod: (method: 'COD' | 'CREDIT_CARD' | 'BANK_TRANSFER') => void;
+  setPaymentMethod: (method: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null) => void;
   validateCart: () => Promise<boolean>;
   calculateTotals: (addressId: string) => Promise<void>;
   createOrder: (notes?: string) => Promise<string | null>;
@@ -43,7 +43,7 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
   const [step, setStep] = useState(1);
   const [addressId, setAddressId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'CREDIT_CARD' | 'BANK_TRANSFER' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null>(null);
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
   const [loading, setLoading] = useState(false);
 

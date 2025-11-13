@@ -51,6 +51,13 @@ export async function GET() {
                     altText: true,
                   },
                 },
+                variants: {
+                  select: {
+                    id: true,
+                    name: true,
+                    value: true,
+                  },
+                },
               },
             },
             variant: true,
@@ -61,7 +68,7 @@ export async function GET() {
 
     // If no cart exists, create empty one
     if (!cart) {
-      cart = await prisma.cart.create({
+      const newCart = await prisma.cart.create({
         data: {
           userId: session.user.id,
         },
@@ -86,6 +93,13 @@ export async function GET() {
                       altText: true,
                     },
                   },
+                  variants: {
+                    select: {
+                      id: true,
+                      name: true,
+                      value: true,
+                    },
+                  },
                 },
               },
               variant: true,
@@ -93,6 +107,7 @@ export async function GET() {
           },
         },
       });
+      cart = newCart;
     }
 
     // Calculate totals
@@ -103,10 +118,22 @@ export async function GET() {
 
     const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
+    // Add metadata (selectedColor, selectedSize, selectedImageUrl) to each cart item
+    // These are now stored directly in the database, so we can use them directly
+    const itemsWithMetadata = cart.items.map((item) => ({
+      ...item,
+      selectedColor: item.selectedColor || null,
+      selectedSize: item.selectedSize || null,
+      selectedImageUrl: item.selectedImageUrl || null,
+    }));
+
     return NextResponse.json({
       success: true,
       data: {
-        cart,
+        cart: {
+          ...cart,
+          items: itemsWithMetadata,
+        },
         subtotal: subtotal.toFixed(2),
         itemCount,
       },
@@ -142,6 +169,9 @@ export async function POST(request: NextRequest) {
     // Check if product exists and is active
     const product = await prisma.product.findUnique({
       where: { id: validatedData.productId },
+      include: {
+        variants: true,
+      },
     });
 
     if (!product || !product.isActive) {
@@ -151,8 +181,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check stock availability
-    if (product.stockQuantity < validatedData.quantity) {
+    // Find variant if color and size provided (and variantId not provided)
+    let variantId: string | null = validatedData.variantId || null;
+    if (!variantId && (validatedData.color || validatedData.size)) {
+      // Try to find both color and size variants separately
+      let colorVariantId: string | null = null;
+      let sizeVariantId: string | null = null;
+
+      if (validatedData.color) {
+        const colorVariant = await prisma.productVariant.findFirst({
+          where: {
+            productId: product.id,
+            name: 'Color',
+            value: { contains: validatedData.color, mode: 'insensitive' as const },
+          },
+        });
+        if (colorVariant) {
+          colorVariantId = colorVariant.id;
+        }
+      }
+
+      if (validatedData.size) {
+        const sizeVariant = await prisma.productVariant.findFirst({
+          where: {
+            productId: product.id,
+            name: 'Size',
+            value: { contains: validatedData.size, mode: 'insensitive' as const },
+          },
+        });
+        if (sizeVariant) {
+          sizeVariantId = sizeVariant.id;
+        }
+      }
+
+      // Use color variant first, then size variant, then null
+      // But we also need to store the selected size somehow
+      // Since we can't store both in database, we'll use color variant and store size in response
+      variantId = colorVariantId || sizeVariantId || null;
+    }
+
+    // Check stock availability (use variant stock if variant exists)
+    const stockToCheck = variantId
+      ? product.variants.find((v) => v.id === variantId)?.stockQuantity ?? product.stockQuantity
+      : product.stockQuantity;
+
+    if (stockToCheck < validatedData.quantity) {
       return NextResponse.json(
         { success: false, error: 'Insufficient stock' },
         { status: 400 }
@@ -175,7 +248,7 @@ export async function POST(request: NextRequest) {
       where: {
         cartId: cart.id,
         productId: validatedData.productId,
-        variantId: validatedData.variantId || null,
+        variantId: variantId || null,
       },
     });
 
@@ -195,7 +268,12 @@ export async function POST(request: NextRequest) {
 
       cartItem = await prisma.cartItem.update({
         where: { id: existingItem.id },
-        data: { quantity: newQuantity },
+        data: {
+          quantity: newQuantity,
+          selectedColor: validatedData.color || existingItem.selectedColor || null,
+          selectedSize: validatedData.size || existingItem.selectedSize || null,
+          selectedImageUrl: validatedData.imageUrl || existingItem.selectedImageUrl || null,
+        },
         include: {
           product: {
             include: {
@@ -221,7 +299,10 @@ export async function POST(request: NextRequest) {
         data: {
           cartId: cart.id,
           productId: validatedData.productId,
-          variantId: validatedData.variantId,
+          variantId: variantId,
+          selectedColor: validatedData.color || null,
+          selectedSize: validatedData.size || null,
+          selectedImageUrl: validatedData.imageUrl || null,
           quantity: validatedData.quantity,
           price: product.salePrice || product.price,
         },
@@ -246,10 +327,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // selectedColor and selectedSize are now stored in database, so they're already in cartItem
+    const responseData = cartItem;
+
     return NextResponse.json({
       success: true,
       message: 'Item added to cart',
-      data: cartItem,
+      data: responseData,
     });
   } catch (error) {
     // Validation error
@@ -266,7 +350,11 @@ export async function POST(request: NextRequest) {
 
     console.error('Error adding to cart:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to add item to cart' },
+      { 
+        success: false, 
+        error: 'Failed to add item to cart',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
