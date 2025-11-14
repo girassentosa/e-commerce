@@ -155,6 +155,7 @@ export interface Order {
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentMethod?: string | null;
+  paymentChannel?: string | null;
   transactionId?: string | null;
   subtotal: number | string;
   tax: number | string;
@@ -165,9 +166,32 @@ export interface Order {
   notes?: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  paidAt?: Date | string | null;
   items?: OrderItem[];
   shippingAddress?: ShippingAddress[];
   user?: User;
+  paymentTransactions?: PaymentTransaction[];
+}
+
+export interface PaymentTransaction {
+  id: string;
+  orderId: string;
+  provider: string;
+  paymentType: string;
+  channel?: string | null;
+  amount: number | string;
+  status: PaymentStatus;
+  transactionId?: string | null;
+  vaNumber?: string | null;
+  vaBank?: string | null;
+  qrString?: string | null;
+  qrImageUrl?: string | null;
+  paymentUrl?: string | null;
+  instructions?: string | null;
+  expiresAt?: Date | string | null;
+  rawResponse?: Record<string, any> | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 // ===================================

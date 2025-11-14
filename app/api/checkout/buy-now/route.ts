@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { buyNowCheckoutSchema } from '@/lib/validations/checkout';
+import { createPaymentIntent } from '@/lib/payments';
 import { z } from 'zod';
 
 /**
@@ -150,7 +151,45 @@ export async function POST(request: NextRequest) {
     const shippingCost = subtotalPengiriman;
     const discount = totalDiskonPengiriman + voucherDiskon;
     const tax = 0; // No tax for now (matching frontend)
-    const total = subtotal + shippingCost + biayaLayanan - discount;
+    const total = Math.round((subtotal + shippingCost + biayaLayanan - discount) * 100) / 100; // Round to 2 decimals
+
+    // Prepare items for Midtrans (must include shipping and service fee as separate items)
+    // Include brand in product name for professional display in payment
+    const productName = product.brand 
+      ? `${product.brand} - ${product.name}`
+      : product.name;
+    
+    const itemsForPayment = [
+      {
+        id: product.id,
+        name: productName,
+        price: unitPrice,
+        quantity: validatedData.quantity,
+      },
+    ];
+    
+    // Add shipping as a separate item if > 0
+    if (shippingCost > 0) {
+      itemsForPayment.push({
+        id: 'SHIPPING',
+        name: 'Shipping Cost',
+        price: Math.round(shippingCost), // Round to integer for Midtrans
+        quantity: 1,
+      });
+    }
+    
+    // Add service fee as a separate item if > 0
+    if (biayaLayanan > 0) {
+      itemsForPayment.push({
+        id: 'SERVICE_FEE',
+        name: 'Service Fee',
+        price: Math.round(biayaLayanan), // Round to integer for Midtrans (Rupiah)
+        quantity: 1,
+      });
+    }
+    
+    // Recalculate total from rounded items to ensure consistency
+    const roundedTotal = itemsForPayment.reduce((sum, item) => sum + Math.round(item.price) * item.quantity, 0);
 
     // Generate unique order number
     let orderNumber: string;
@@ -175,6 +214,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const userFullName = session.user.firstName && session.user.lastName
+      ? `${session.user.firstName} ${session.user.lastName}`
+      : session.user.firstName || session.user.lastName || '';
+    const customerFullName = address.fullName || userFullName || '';
+    const [customerFirstName, ...customerRest] = customerFullName.trim().split(' ');
+    const customerLastName = customerRest.join(' ') || null;
+
+    let paymentIntent;
+    try {
+      paymentIntent = await createPaymentIntent({
+        method: validatedData.paymentMethod,
+        orderNumber: orderNumber!,
+        amount: roundedTotal, // Use rounded total to ensure consistency with Midtrans
+        channel: validatedData.paymentChannel || null,
+        customer: {
+          firstName: customerFirstName || null,
+          lastName: customerLastName,
+          email: session.user.email || '',
+          phone: address.phone,
+        },
+        items: itemsForPayment.map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        shipping: {
+          fullName: address.fullName,
+          phone: address.phone,
+          addressLine1: address.addressLine1,
+          addressLine2: address.addressLine2,
+          city: address.city,
+          state: address.state,
+          postalCode: address.postalCode,
+          country: address.country,
+        },
+      });
+    } catch (paymentError: any) {
+      console.error('Payment intent creation error:', paymentError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: paymentError.message || 'Failed to initialize payment',
+        },
+        { status: 400 }
+      );
+    }
+
     // Create order with items in transaction
     const order = await prisma.$transaction(async (tx) => {
       // Create order
@@ -185,11 +272,13 @@ export async function POST(request: NextRequest) {
           status: 'PENDING',
           paymentStatus: 'PENDING',
           paymentMethod: validatedData.paymentMethod,
+          paymentChannel: validatedData.paymentMethod === 'VIRTUAL_ACCOUNT' ? validatedData.paymentChannel : null,
+          transactionId: paymentIntent.transactionId || null,
           subtotal,
           tax,
           shippingCost,
           discount,
-          total,
+          total: roundedTotal, // Use rounded total for consistency
           notes: validatedData.notes || null,
           // Create order item
           items: {
@@ -224,6 +313,27 @@ export async function POST(request: NextRequest) {
         include: {
           items: true,
           shippingAddress: true,
+          paymentTransactions: true,
+        },
+      });
+
+      await tx.paymentTransaction.create({
+        data: {
+          orderId: newOrder.id,
+          provider: paymentIntent.provider,
+          paymentType: paymentIntent.paymentType,
+          channel: paymentIntent.channel,
+          amount: total,
+          status: paymentIntent.status,
+          transactionId: paymentIntent.transactionId,
+          vaNumber: paymentIntent.vaNumber,
+          vaBank: paymentIntent.vaBank,
+          qrString: paymentIntent.qrString,
+          qrImageUrl: paymentIntent.qrImageUrl,
+          paymentUrl: paymentIntent.paymentUrl,
+          instructions: paymentIntent.instructions,
+          expiresAt: paymentIntent.expiresAt ? new Date(paymentIntent.expiresAt) : null,
+          rawResponse: paymentIntent.rawResponse || undefined,
         },
       });
 
@@ -267,10 +377,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // Validation error
     if (error instanceof z.ZodError) {
+      const firstError = error.issues[0];
+      const errorMessage = firstError?.message || 'Validation failed';
       return NextResponse.json(
         {
           success: false,
-          error: 'Validation failed',
+          error: errorMessage,
           details: error.issues,
         },
         { status: 400 }
@@ -278,8 +390,21 @@ export async function POST(request: NextRequest) {
     }
 
     console.error('Error creating buy now order:', error);
+    
+    // Provide more specific error message
+    let errorMessage = 'Failed to create order';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      // Log full error for debugging
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Failed to create order' },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }

@@ -7,101 +7,17 @@ import { useOrder } from '@/contexts/OrderContext';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { Loader } from '@/components/ui/Loader';
-import { ArrowLeft, MapPin, CreditCard, Package } from 'lucide-react';
+import { ArrowLeft, MapPin, CreditCard, Package, Download } from 'lucide-react';
 import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
-
-interface ShippingAddress {
-  id: string;
-  fullName: string;
-  phone: string;
-  addressLine1: string;
-  addressLine2: string | null;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-}
-
-const formatPhone = (phone: string) => {
-  if (phone.startsWith('+62')) {
-    return `(+62) ${phone.substring(3).trim()}`;
-  }
-  return phone;
-};
-
-const formatAddress = (address: ShippingAddress) => {
-  const parts = [
-    address.addressLine1,
-    address.addressLine2,
-    address.city,
-    address.state,
-    address.postalCode,
-    address.country,
-  ].filter(Boolean);
-  return parts.join(', ');
-};
-
-const paymentMethodMap: Record<string, { label: string; description: string }> = {
-  COD: {
-    label: 'Bayar di Tempat (COD)',
-    description: 'Pembayaran dilakukan saat pesanan diterima.',
-  },
-  VIRTUAL_ACCOUNT: {
-    label: 'Virtual Account',
-    description: 'Pembayaran melalui Virtual Account bank yang tersedia.',
-  },
-  QRIS: {
-    label: 'QRIS',
-    description: 'Pembayaran instan menggunakan QR Indonesia Standard.',
-  },
-};
-
-// Helper function to format color and size labels (same as checkout)
-const toTitleCase = (value: string) =>
-  value
-    .split(/[\s-]+/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-
-const colorLabelMap: Record<string, string> = {
-  hitam: 'Hitam',
-  putih: 'Putih',
-  'biru-navy': 'Biru Navy',
-  'merah-maroon': 'Merah Maroon',
-};
-
-const getVariantLabels = (
-  variant: { name: string; value: string } | null,
-  selectedColor?: string | null,
-  selectedSize?: string | null
-) => {
-  let colorLabel: string | null = null;
-  let sizeLabel: string | null = null;
-
-  // First priority: use selectedColor and selectedSize from OrderItem
-  if (selectedColor) {
-    const colorValue = selectedColor.toLowerCase();
-    colorLabel = colorLabelMap[colorValue] ?? toTitleCase(selectedColor);
-  }
-
-  if (selectedSize) {
-    sizeLabel = selectedSize.toUpperCase();
-  }
-
-  // Second priority: use the stored variant
-  if (!colorLabel && !sizeLabel && variant) {
-    if (variant.name === 'Color' || variant.name.toLowerCase() === 'color') {
-      const colorValue = variant.value.toLowerCase();
-      colorLabel = colorLabelMap[colorValue] ?? toTitleCase(variant.value);
-    } else if (variant.name === 'Size' || variant.name.toLowerCase() === 'size') {
-      sizeLabel = variant.value.toUpperCase();
-    }
-  }
-
-  return { colorLabel, sizeLabel };
-};
+import {
+  formatPhoneDisplay,
+  formatShippingAddress,
+  getPaymentMethodDisplay,
+  getVariantLabels,
+  getCurrencyLocale,
+} from '@/lib/order-helpers';
+import toast from 'react-hot-toast';
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -133,6 +49,39 @@ export default function OrderDetailPage() {
     }
   };
 
+  const handleDownloadQR = async (qrString: string | null | undefined, qrImageUrl: string | null | undefined, orderNumber: string) => {
+    try {
+      let downloadUrl: string;
+      
+      // Prefer qrString to generate QR code (more reliable and valid)
+      if (qrString) {
+        downloadUrl = `/api/qr/generate?string=${encodeURIComponent(qrString)}`;
+      } else if (qrImageUrl) {
+        // Fallback to download from URL
+        downloadUrl = `/api/qr/download?url=${encodeURIComponent(qrImageUrl)}`;
+      } else {
+        throw new Error('QR code data not available');
+      }
+      
+      // Create a temporary anchor element and trigger download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `QRIS-${orderNumber}.png`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(link);
+      }, 100);
+      
+      toast.success('QR code berhasil diunduh');
+    } catch (error) {
+      console.error('Error downloading QR code:', error);
+      toast.error('Gagal mengunduh QR code. Silakan klik kanan pada gambar QR code dan pilih "Simpan gambar sebagai".');
+    }
+  };
+
   if (loading || !currentOrder) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -144,19 +93,43 @@ export default function OrderDetailPage() {
   const order = currentOrder;
   const address = order.shippingAddress[0];
   const canCancel = ['PENDING', 'PROCESSING'].includes(order.status);
-  const currencyCode = 'USD';
+  const currencyLocale = getCurrencyLocale(order.currency);
 
-  // Calculate payment breakdown (matching checkout structure)
+  const formatPrice = (value: number | string) => formatCurrency(value, order.currency, currencyLocale);
+
+  // Calculate payment breakdown mengikuti data backend
   const subtotalPesanan = parseFloat(order.subtotal);
-  const subtotalPengiriman = parseFloat(order.shippingCost);
-  const biayaLayanan = 2000; // Fixed service fee
-  const totalDiskonPengiriman = 0;
+  const biayaPengiriman = parseFloat(order.shippingCost);
+  const pajak = parseFloat(order.tax);
   const voucherDiskon = parseFloat(order.discount);
   const totalPembayaran = parseFloat(order.total);
 
-  const paymentInfo = order.paymentMethod ? paymentMethodMap[order.paymentMethod] : null;
-  const paymentLabel = paymentInfo?.label ?? order.paymentMethod ?? 'Tidak diketahui';
-  const paymentDescription = paymentInfo?.description ?? '';
+  const paymentMeta = getPaymentMethodDisplay(order.paymentMethod, 'id-ID');
+  const paymentLabel = paymentMeta.label;
+  const paymentDescription = paymentMeta.description;
+  const paymentInstruction = order.paymentTransactions?.[0] ?? null;
+
+  const formatDateTime = (value: string) =>
+    new Date(value).toLocaleString('id-ID', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+  const handleCopy = async (value: string) => {
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard) {
+        throw new Error('Clipboard tidak tersedia');
+      }
+      await navigator.clipboard.writeText(value);
+      toast.success('Disalin ke clipboard');
+    } catch (error) {
+      console.error('Copy failed:', error);
+      toast.error('Gagal menyalin');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -250,12 +223,12 @@ export default function OrderDetailPage() {
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-end gap-2">
                           <span className="text-base font-bold text-blue-600">
-                            {formatCurrency(unitPrice, currencyCode)}
+                          {formatPrice(unitPrice)}
                           </span>
                           <span className="text-xs text-gray-500">x{item.quantity}</span>
                         </div>
                         <span className="text-sm font-semibold text-gray-900">
-                          {formatCurrency(itemTotal, currencyCode)}
+                        {formatPrice(itemTotal)}
                         </span>
                       </div>
                     </div>
@@ -277,9 +250,13 @@ export default function OrderDetailPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
                   <span className="text-sm font-semibold text-gray-900">{address.fullName}</span>
-                  <span className="text-[11px] font-medium text-gray-500">{formatPhone(address.phone)}</span>
+                  <span className="text-[11px] font-medium text-gray-500">
+                    {formatPhoneDisplay(address.phone)}
+                  </span>
                 </div>
-                <p className="mt-2 text-sm text-gray-600 leading-relaxed">{formatAddress(address)}</p>
+                <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+                  {formatShippingAddress(address)}
+                </p>
               </div>
             </section>
           )}
@@ -302,6 +279,85 @@ export default function OrderDetailPage() {
             </div>
           </section>
 
+          {paymentInstruction && (
+            <section className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm px-4 py-4 sm:px-5 sm:py-5">
+              <h2 className="!text-sm font-semibold text-gray-900">Instruksi Pembayaran</h2>
+              <div className="mt-3 space-y-3 text-sm text-gray-700">
+                {paymentInstruction.provider === 'OFFLINE' ? (
+                  <p>{paymentInstruction.instructions || 'Bayar langsung kepada kurir saat pesanan diterima.'}</p>
+                ) : paymentInstruction.paymentType === 'bank_transfer' ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span>Bank</span>
+                      <span className="font-semibold">{paymentInstruction.vaBank || '-'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Nomor Virtual Account</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-base">
+                          {paymentInstruction.vaNumber || '-'}
+                        </span>
+                        {paymentInstruction.vaNumber && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(paymentInstruction.vaNumber!)}
+                            className="text-xs font-semibold text-blue-600 border border-blue-200 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                          >
+                            Salin
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : paymentInstruction.paymentType === 'qris' ? (
+                  <div className="flex flex-col items-center gap-3">
+                    {paymentInstruction.qrImageUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <img
+                          src={paymentInstruction.qrImageUrl}
+                          alt="QRIS"
+                          className="w-40 h-40 rounded-lg border border-gray-200 object-cover"
+                        />
+                        <Button
+                          onClick={() => handleDownloadQR(paymentInstruction.qrString, paymentInstruction.qrImageUrl, order.orderNumber)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          Unduh QR Code
+                        </Button>
+                      </div>
+                    ) : paymentInstruction.qrString ? (
+                      <p className="text-xs break-all text-center">{paymentInstruction.qrString}</p>
+                    ) : null}
+                    <p className="text-xs text-gray-500 text-center">
+                      Scan QR ini menggunakan aplikasi bank atau e-wallet Anda untuk menyelesaikan pembayaran.
+                    </p>
+                    {paymentInstruction.paymentUrl && (
+                      <a
+                        href={paymentInstruction.paymentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 text-xs font-medium underline"
+                      >
+                        Buka di aplikasi pembayaran
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p>{paymentInstruction.instructions || 'Ikuti petunjuk pembayaran sesuai metode yang dipilih.'}</p>
+                )}
+
+                {paymentInstruction.expiresAt && (
+                  <p className="text-xs text-gray-500">
+                    Berlaku hingga {formatDateTime(paymentInstruction.expiresAt)}
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* Payment Breakdown Card */}
           <section className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm px-4 py-4 sm:px-5 sm:py-5">
             <h2 className="!text-sm font-semibold text-gray-900">Rincian Pembayaran</h2>
@@ -309,26 +365,20 @@ export default function OrderDetailPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Subtotal pesanan</span>
                 <span className="text-sm font-medium text-gray-900">
-                  {formatCurrency(subtotalPesanan, currencyCode)}
+                  {formatPrice(subtotalPesanan)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Subtotal pengiriman</span>
                 <span className="text-sm font-medium text-gray-900">
-                  {formatCurrency(subtotalPengiriman, currencyCode)}
+                  {formatPrice(biayaPengiriman)}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Biaya layanan</span>
-                <span className="text-sm font-medium text-gray-900">
-                  {formatCurrency(biayaLayanan, currencyCode)}
-                </span>
-              </div>
-              {totalDiskonPengiriman > 0 && (
+              {pajak > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Total diskon pengiriman</span>
-                  <span className="text-sm font-medium text-red-500">
-                    -{formatCurrency(totalDiskonPengiriman, currencyCode)}
+                  <span className="text-sm text-gray-600">Pajak</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {formatPrice(pajak)}
                   </span>
                 </div>
               )}
@@ -336,7 +386,7 @@ export default function OrderDetailPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Voucher diskon</span>
                   <span className="text-sm font-medium text-red-500">
-                    -{formatCurrency(voucherDiskon, currencyCode)}
+                    -{formatPrice(voucherDiskon)}
                   </span>
                 </div>
               )}
@@ -344,7 +394,7 @@ export default function OrderDetailPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-gray-900">Total pembayaran</span>
                   <span className="text-sm font-bold text-blue-600">
-                    {formatCurrency(totalPembayaran, currencyCode)}
+                    {formatPrice(totalPembayaran)}
                   </span>
                 </div>
               </div>

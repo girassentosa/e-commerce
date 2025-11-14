@@ -10,6 +10,7 @@ import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { Loader } from '@/components/ui/Loader';
+import { PaymentModal } from '@/components/checkout/PaymentModal';
 
 interface ShippingAddress {
   id: string;
@@ -42,7 +43,7 @@ interface CheckoutProduct {
 function CheckoutPageContent() {
   const router = useRouter();
   const { status } = useSession();
-  const { addressId, setAddressId, paymentMethod } = useCheckout();
+  const { addressId, setAddressId, paymentMethod, paymentChannel } = useCheckout();
   const { items: cartItems, subtotal: cartSubtotal, selectedItems } = useCart();
   const [selectedAddress, setSelectedAddress] = useState<ShippingAddress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +59,8 @@ function CheckoutPageContent() {
   const [productLoading, setProductLoading] = useState(false);
   const [productError, setProductError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentOrderNumber, setPaymentOrderNumber] = useState<string | null>(null);
 
   // Fetch selected address or default address
   useEffect(() => {
@@ -327,7 +330,10 @@ function CheckoutPageContent() {
     },
   };
   const selectedPaymentInfo = paymentMethod ? paymentMethodMap[paymentMethod] : null;
-  const paymentLabel = selectedPaymentInfo?.label ?? 'Belum ada metode pembayaran';
+  let paymentLabel = selectedPaymentInfo?.label ?? 'Belum ada metode pembayaran';
+  if (paymentMethod === 'VIRTUAL_ACCOUNT' && paymentChannel) {
+    paymentLabel = `${paymentLabel} • ${paymentChannel}`;
+  }
   const paymentDescription =
     selectedPaymentInfo?.description ?? 'Silakan pilih metode pembayaran sebelum melanjutkan.';
   const handleSelectPayment = () => {
@@ -335,11 +341,13 @@ function CheckoutPageContent() {
   };
 
   const handleCreateOrder = async () => {
-    if (!addressId || !paymentMethod) {
+    if (!addressId || !paymentMethod || (paymentMethod === 'VIRTUAL_ACCOUNT' && !paymentChannel)) {
       if (!addressId) {
         toast.error('Silakan pilih alamat pengiriman terlebih dahulu');
       } else if (!paymentMethod) {
         toast.error('Silakan pilih metode pembayaran terlebih dahulu');
+      } else if (!paymentChannel) {
+        toast.error('Silakan pilih bank virtual account');
       }
       return;
     }
@@ -361,46 +369,68 @@ function CheckoutPageContent() {
     try {
       let response;
       if (isBuyNowFlow) {
+        const buyNowBody: any = {
+          addressId,
+          paymentMethod,
+          productId: productIdParam,
+          quantity: safeQuantity,
+        };
+        if (colorParam) buyNowBody.color = colorParam;
+        if (sizeParam) buyNowBody.size = sizeParam;
+        if (productImageUrl) buyNowBody.imageUrl = productImageUrl;
+        if (paymentChannel) buyNowBody.paymentChannel = paymentChannel;
+
         response = await fetch('/api/checkout/buy-now', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            addressId,
-            paymentMethod,
-            productId: productIdParam,
-            quantity: safeQuantity,
-            color: colorParam || undefined,
-            size: sizeParam || undefined,
-            imageUrl: productImageUrl || undefined,
-          }),
+          body: JSON.stringify(buyNowBody),
         });
       } else {
+        const checkoutBody: any = {
+          addressId,
+          paymentMethod,
+        };
+        if (paymentChannel) checkoutBody.paymentChannel = paymentChannel;
+
         response = await fetch('/api/checkout', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            addressId,
-            paymentMethod,
-          }),
+          body: JSON.stringify(checkoutBody),
         });
       }
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Gagal membuat pesanan');
+        // Tampilkan detail error jika ada
+        let errorMessage = data.error || 'Gagal membuat pesanan';
+        if (data.details && Array.isArray(data.details) && data.details.length > 0) {
+          const firstError = data.details[0];
+          errorMessage = firstError.message || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
-      toast.success('Pesanan berhasil dibuat!');
-      
-      // Redirect to success page
+      // Check payment method to determine next step
       if (data.data?.orderNumber) {
-        router.push(`/checkout/success?order=${data.data.orderNumber}`);
+        const orderPaymentMethod = data.data?.paymentMethod;
+        
+        // For COD, redirect to success page immediately
+        if (orderPaymentMethod === 'COD') {
+          toast.success('Pesanan berhasil dibuat!');
+          router.push(`/checkout/success?order=${data.data.orderNumber}`);
+        } else {
+          // For QRIS/VA, show payment modal
+          // Payment modal will be shown via state
+          setShowPaymentModal(true);
+          setPaymentOrderNumber(data.data.orderNumber);
+        }
       } else {
+        toast.success('Pesanan berhasil dibuat!');
         router.push('/orders');
       }
     } catch (error) {
@@ -413,9 +443,10 @@ function CheckoutPageContent() {
 
   const canSubmitOrder =
     ((isBuyNowFlow && !!productDetails && !productLoading && !productError) ||
-     (!isBuyNowFlow && selectedCartItems.length > 0)) &&
+      (!isBuyNowFlow && selectedCartItems.length > 0)) &&
     !!addressId &&
     !!paymentMethod &&
+    !(paymentMethod === 'VIRTUAL_ACCOUNT' && !paymentChannel) &&
     !isSubmitting;
 
   // Payment breakdown calculations (same for both flows)
@@ -907,6 +938,24 @@ function CheckoutPageContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Payment Modal for QRIS/VA */}
+      {showPaymentModal && paymentOrderNumber && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          orderNumber={paymentOrderNumber}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setPaymentOrderNumber(null);
+            router.push(`/orders/${paymentOrderNumber}`);
+          }}
+          onPaymentSuccess={() => {
+            setShowPaymentModal(false);
+            setPaymentOrderNumber(null);
+            router.push(`/orders/${paymentOrderNumber}`);
+          }}
+        />
       )}
     </div>
   );

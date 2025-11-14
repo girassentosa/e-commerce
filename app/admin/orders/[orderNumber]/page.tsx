@@ -15,10 +15,19 @@ import {
   Calendar,
   Save,
   CheckCircle,
+  Download,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils';
+import {
+  formatPhoneDisplay,
+  formatShippingAddress,
+  getPaymentMethodDisplay,
+  getVariantLabels,
+  getCurrencyLocale,
+} from '@/lib/order-helpers';
 
 interface OrderItem {
   id: string;
@@ -26,6 +35,9 @@ interface OrderItem {
   quantity: number;
   price: string;
   total: string;
+  selectedColor?: string | null;
+  selectedSize?: string | null;
+  selectedImageUrl?: string | null;
   product: {
     id: string;
     name: string;
@@ -61,6 +73,7 @@ interface Order {
   status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
   paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
   paymentMethod: string | null;
+  paymentChannel?: string | null;
   transactionId: string | null;
   subtotal: string;
   tax: string;
@@ -71,6 +84,7 @@ interface Order {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  paidAt?: string | null;
   user: {
     id: string;
     email: string;
@@ -80,6 +94,24 @@ interface Order {
   };
   items: OrderItem[];
   shippingAddress: ShippingAddress[];
+  paymentTransactions?: PaymentTransaction[];
+}
+
+interface PaymentTransaction {
+  id: string;
+  provider: string;
+  paymentType: string;
+  channel?: string | null;
+  amount: string;
+  status: Order['paymentStatus'];
+  transactionId?: string | null;
+  vaNumber?: string | null;
+  vaBank?: string | null;
+  qrString?: string | null;
+  qrImageUrl?: string | null;
+  paymentUrl?: string | null;
+  instructions?: string | null;
+  expiresAt?: string | null;
 }
 
 export default function AdminOrderDetailPage() {
@@ -186,13 +218,6 @@ export default function AdminOrderDetailPage() {
     }
   };
 
-  const formatCurrency = (amount: string, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-    }).format(parseFloat(amount));
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
@@ -222,6 +247,25 @@ export default function AdminOrderDetailPage() {
   }
 
   const address = order.shippingAddress[0];
+  const currencyLocale = getCurrencyLocale(order.currency);
+  const formatPrice = (value: string | number) =>
+    formatCurrencyUtil(value, order.currency, currencyLocale);
+  const paymentMeta = getPaymentMethodDisplay(order.paymentMethod, 'en-US');
+  const paymentInstruction = order.paymentTransactions?.[0] ?? null;
+  const isOfflinePayment = paymentInstruction?.provider === 'OFFLINE';
+
+  const handleCopy = async (value: string) => {
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard) {
+        throw new Error('Clipboard not available');
+      }
+      await navigator.clipboard.writeText(value);
+      toast.success('Copied to clipboard');
+    } catch (error) {
+      console.error('Copy failed:', error);
+      toast.error('Failed to copy');
+    }
+  };
 
   return (
     <div className="p-8">
@@ -262,7 +306,16 @@ export default function AdminOrderDetailPage() {
             </h2>
             <div className="space-y-4">
               {order.items.map((item) => {
-                const imageUrl = item.product.images[0]?.imageUrl;
+                const imageUrl = item.selectedImageUrl || item.product.images[0]?.imageUrl;
+                const { colorLabel, sizeLabel } = getVariantLabels(
+                  item.variant,
+                  item.selectedColor,
+                  item.selectedSize
+                );
+                const variantText =
+                  colorLabel && sizeLabel
+                    ? `${colorLabel}, ${sizeLabel}`
+                    : colorLabel ?? sizeLabel ?? '';
                 return (
                   <div
                     key={item.id}
@@ -290,6 +343,9 @@ export default function AdminOrderDetailPage() {
                       >
                         {item.productName}
                       </Link>
+                      {variantText && (
+                        <p className="text-sm text-gray-600 mt-1">{variantText}</p>
+                      )}
                       {item.variant && (
                         <p className="text-sm text-gray-600 mt-1">
                           {item.variant.name}: {item.variant.value}
@@ -303,7 +359,7 @@ export default function AdminOrderDetailPage() {
                           Quantity: <span className="font-medium">{item.quantity}</span>
                         </p>
                         <p className="text-sm font-semibold text-gray-900">
-                          {formatCurrency(item.total, order.currency)}
+                          {formatPrice(item.total)}
                         </p>
                       </div>
                     </div>
@@ -322,13 +378,8 @@ export default function AdminOrderDetailPage() {
               </h2>
               <div className="text-gray-700 space-y-1">
                 <p className="font-semibold text-gray-900">{address.fullName}</p>
-                <p>{address.phone}</p>
-                <p className="mt-2">{address.addressLine1}</p>
-                {address.addressLine2 && <p>{address.addressLine2}</p>}
-                <p>
-                  {address.city}, {address.state} {address.postalCode}
-                </p>
-                <p>{address.country}</p>
+                <p>{formatPhoneDisplay(address.phone)}</p>
+                <p className="mt-2">{formatShippingAddress(address)}</p>
               </div>
             </div>
           )}
@@ -359,7 +410,7 @@ export default function AdminOrderDetailPage() {
                     href={`tel:${order.user.phone}`}
                     className="text-indigo-600 hover:text-indigo-800"
                   >
-                    {order.user.phone}
+                    {formatPhoneDisplay(order.user.phone)}
                   </a>
                 </p>
               )}
@@ -375,32 +426,158 @@ export default function AdminOrderDetailPage() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">{formatCurrency(order.subtotal, order.currency)}</span>
+                <span className="font-medium">{formatPrice(order.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Tax</span>
-                <span className="font-medium">{formatCurrency(order.tax, order.currency)}</span>
+                <span className="font-medium">{formatPrice(order.tax)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Shipping</span>
                 <span className="font-medium">
                   {parseFloat(order.shippingCost) === 0
                     ? 'FREE'
-                    : formatCurrency(order.shippingCost, order.currency)}
+                    : formatPrice(order.shippingCost)}
                 </span>
               </div>
               {parseFloat(order.discount) > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Discount</span>
-                  <span>-{formatCurrency(order.discount, order.currency)}</span>
+                  <span>-{formatPrice(order.discount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-300">
                 <span>Total</span>
-                <span>{formatCurrency(order.total, order.currency)}</span>
+                <span>{formatPrice(order.total)}</span>
               </div>
             </div>
           </div>
+
+          {paymentInstruction && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-bold mb-4">Payment Instructions</h2>
+              <div className="space-y-3 text-sm text-gray-700">
+                <div className="flex justify-between">
+                  <span>Provider</span>
+                  <span className="font-semibold">{paymentInstruction.provider}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Channel</span>
+                  <span className="font-semibold">
+                    {paymentInstruction.channel || paymentInstruction.paymentType}
+                  </span>
+                </div>
+                {paymentInstruction.transactionId && (
+                  <div className="flex justify-between">
+                    <span>Transaction ID</span>
+                    <span className="font-semibold">{paymentInstruction.transactionId}</span>
+                  </div>
+                )}
+
+                {paymentInstruction.paymentType === 'bank_transfer' && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>Bank</span>
+                      <span className="font-semibold">{paymentInstruction.vaBank || '-'}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-2">
+                      <span>VA Number</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-base">
+                          {paymentInstruction.vaNumber || '-'}
+                        </span>
+                        {paymentInstruction.vaNumber && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(paymentInstruction.vaNumber!)}
+                            className="text-xs font-semibold text-blue-600 border border-blue-200 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                          >
+                            Copy
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {paymentInstruction.paymentType === 'qris' && (
+                  <div className="flex flex-col items-center gap-3">
+                    {paymentInstruction.qrImageUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <img
+                          src={paymentInstruction.qrImageUrl}
+                          alt="QRIS"
+                          className="w-40 h-40 rounded-lg border border-gray-200 object-cover"
+                        />
+                        <Button
+                          onClick={() => {
+                            try {
+                              let downloadUrl: string;
+                              
+                              // Prefer qrString to generate QR code (more reliable and valid)
+                              if (paymentInstruction.qrString) {
+                                downloadUrl = `/api/qr/generate?string=${encodeURIComponent(paymentInstruction.qrString)}`;
+                              } else if (paymentInstruction.qrImageUrl) {
+                                // Fallback to download from URL
+                                downloadUrl = `/api/qr/download?url=${encodeURIComponent(paymentInstruction.qrImageUrl)}`;
+                              } else {
+                                throw new Error('QR code data not available');
+                              }
+                              
+                              // Create a temporary anchor element and trigger download
+                              const link = document.createElement('a');
+                              link.href = downloadUrl;
+                              link.download = `QRIS-${order.orderNumber}.png`;
+                              document.body.appendChild(link);
+                              link.click();
+                              
+                              // Cleanup
+                              setTimeout(() => {
+                                document.body.removeChild(link);
+                              }, 100);
+                              
+                              toast.success('QR code downloaded successfully');
+                            } catch (error) {
+                              console.error('Error downloading QR code:', error);
+                              toast.error('Failed to download QR code. Please try right-clicking the QR code and saving it manually.');
+                            }
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download QR Code
+                        </Button>
+                      </div>
+                    ) : null}
+                    {paymentInstruction.qrString && (
+                      <p className="text-xs break-all text-center">{paymentInstruction.qrString}</p>
+                    )}
+                    {paymentInstruction.paymentUrl && (
+                      <a
+                        href={paymentInstruction.paymentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 text-xs font-medium underline"
+                      >
+                        Open payment URL
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {paymentInstruction.instructions && (
+                  <p className="text-xs text-gray-500">{paymentInstruction.instructions}</p>
+                )}
+                {paymentInstruction.expiresAt && (
+                  <p className="text-xs text-gray-500">
+                    Expires at {formatDate(paymentInstruction.expiresAt)}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Update Order Status */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -465,64 +642,81 @@ export default function AdminOrderDetailPage() {
               <CreditCard className="w-5 h-5" />
               Update Payment Status
             </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Payment Status
-                </label>
-                <select
-                  value={paymentStatus}
-                  onChange={(e) =>
-                    setPaymentStatus(e.target.value as Order['paymentStatus'])
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            {isOfflinePayment ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Status
+                  </label>
+                  <select
+                    value={paymentStatus}
+                    onChange={(e) =>
+                      setPaymentStatus(e.target.value as Order['paymentStatus'])
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="PENDING">Pending</option>
+                    <option value="PAID">Paid</option>
+                    <option value="FAILED">Failed</option>
+                    <option value="REFUNDED">Refunded</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Transaction ID (Optional)
+                  </label>
+                  <Input
+                    type="text"
+                    value={transactionId}
+                    onChange={(e) => setTransactionId(e.target.value)}
+                    placeholder="Enter transaction ID..."
+                  />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    <strong>Payment Method:</strong> {paymentMeta.label}
+                  </p>
+                  {paymentMeta.description && (
+                    <p className="text-sm text-gray-600 mb-2">{paymentMeta.description}</p>
+                  )}
+                  {order.transactionId && (
+                    <p className="text-sm text-gray-600">
+                      <strong>Current Transaction ID:</strong> {order.transactionId}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={handleUpdatePaymentStatus}
+                  disabled={updating}
+                  className="w-full"
                 >
-                  <option value="PENDING">Pending</option>
-                  <option value="PAID">Paid</option>
-                  <option value="FAILED">Failed</option>
-                  <option value="REFUNDED">Refunded</option>
-                </select>
+                  {updating ? (
+                    <>
+                      <Loader size="sm" className="mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Update Payment Status
+                    </>
+                  )}
+                </Button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Transaction ID (Optional)
-                </label>
-                <Input
-                  type="text"
-                  value={transactionId}
-                  onChange={(e) => setTransactionId(e.target.value)}
-                  placeholder="Enter transaction ID..."
-                />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-2">
-                  <strong>Payment Method:</strong> {order.paymentMethod || 'N/A'}
+            ) : (
+              <div className="text-sm text-gray-600 space-y-2">
+                <p>
+                  Pembayaran ini dikelola otomatis oleh gateway ({paymentInstruction?.provider}). Status akan
+                  ter-update realtime ketika gateway mengirim notifikasi.
                 </p>
                 {order.transactionId && (
-                  <p className="text-sm text-gray-600">
-                    <strong>Current Transaction ID:</strong> {order.transactionId}
+                  <p>
+                    <strong>Transaction ID:</strong> {order.transactionId}
                   </p>
                 )}
               </div>
-              <Button
-                variant="primary"
-                onClick={handleUpdatePaymentStatus}
-                disabled={updating}
-                className="w-full"
-              >
-                {updating ? (
-                  <>
-                    <Loader size="sm" className="mr-2" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Update Payment Status
-                  </>
-                )}
-              </Button>
-            </div>
+            )}
           </div>
 
           {/* Order Information */}

@@ -193,6 +193,7 @@ model Order {
   status        OrderStatus   @default(PENDING)
   paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
   paymentMethod String?       @map("payment_method")
+  paymentChannel String?      @map("payment_channel")
   transactionId String?       @map("transaction_id")
   subtotal      Decimal       @db.Decimal(10, 2)
   tax           Decimal       @default(0) @db.Decimal(10, 2)
@@ -203,11 +204,13 @@ model Order {
   notes         String?       @db.Text
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
+  paidAt        DateTime?     @map("paid_at")
 
   // Relations
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   items           OrderItem[]
   shippingAddress ShippingAddress[]
+  paymentTransactions PaymentTransaction[]
 
   @@index([userId])
   @@index([orderNumber])
@@ -275,6 +278,33 @@ model ShippingAddress {
   @@index([orderId])
   @@index([userId])
   @@map("shipping_addresses")
+}
+
+model PaymentTransaction {
+  id             String        @id @default(cuid())
+  orderId        String        @map("order_id")
+  provider       String
+  paymentType    String        @map("payment_type")
+  channel        String?
+  amount         Decimal       @db.Decimal(10, 2)
+  status         PaymentStatus @default(PENDING)
+  transactionId  String?       @map("transaction_id")
+  vaNumber       String?       @map("va_number")
+  vaBank         String?       @map("va_bank")
+  qrString       String?       @map("qr_string")
+  qrImageUrl     String?       @map("qr_image_url")
+  paymentUrl     String?       @map("payment_url")
+  instructions   String?       @map("instructions") @db.Text
+  expiresAt      DateTime?     @map("expires_at")
+  rawResponse    Json?         @map("raw_response")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("payment_transactions")
 }
 
 // ===================================

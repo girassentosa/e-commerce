@@ -8,7 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
-const virtualAccountBanks = ['BCA', 'Mandiri', 'BNI', 'BRI', 'BSI'];
+const virtualAccountBanks = ['BCA', 'MANDIRI', 'BNI', 'BRI', 'BSI', 'PERMATA'];
 
 interface CheckoutProduct {
   id: string;
@@ -21,10 +21,9 @@ interface CheckoutProduct {
 function SelectPaymentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { paymentMethod, setPaymentMethod } = useCheckout();
+  const { paymentMethod, paymentChannel, setPaymentMethod, setPaymentChannel } = useCheckout();
   const { items, subtotal: cartSubtotal } = useCart();
   const [isVirtualAccountExpanded, setIsVirtualAccountExpanded] = useState(false);
-  const [selectedVirtualAccountBank, setSelectedVirtualAccountBank] = useState<string | null>(null);
   
   // For buy-now flow
   const flow = searchParams.get('flow');
@@ -50,8 +49,8 @@ function SelectPaymentPageContent() {
       return;
     }
     setPaymentMethod('COD');
+    setPaymentChannel(null);
     setIsVirtualAccountExpanded(false);
-    setSelectedVirtualAccountBank(null);
     toast.success('Metode pembayaran COD dipilih');
   };
 
@@ -63,20 +62,20 @@ function SelectPaymentPageContent() {
       return;
     }
     setPaymentMethod('QRIS');
+    setPaymentChannel(null);
     setIsVirtualAccountExpanded(false);
-    setSelectedVirtualAccountBank(null);
     toast.success('Metode pembayaran QRIS dipilih');
   };
 
   const handleSelectVirtualAccount = (bank: string) => {
-    if (paymentMethod === 'VIRTUAL_ACCOUNT' && selectedVirtualAccountBank === bank) {
+    if (paymentMethod === 'VIRTUAL_ACCOUNT' && paymentChannel === bank) {
       setPaymentMethod(null);
-      setSelectedVirtualAccountBank(null);
+      setPaymentChannel(null);
       toast.success('Metode pembayaran dibatalkan');
       return;
     }
     setPaymentMethod('VIRTUAL_ACCOUNT');
-    setSelectedVirtualAccountBank(bank);
+    setPaymentChannel(bank);
     toast.success(`Virtual Account ${bank} dipilih`);
   };
 
@@ -277,7 +276,7 @@ function SelectPaymentPageContent() {
                   <div className="space-y-2">
                     {virtualAccountBanks.map((bank) => {
                       const isSelected =
-                        paymentMethod === 'VIRTUAL_ACCOUNT' && selectedVirtualAccountBank === bank;
+                        paymentMethod === 'VIRTUAL_ACCOUNT' && paymentChannel === bank;
 
                       return (
                         <button

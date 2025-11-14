@@ -50,6 +50,7 @@ export interface Order {
   status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
   paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
   paymentMethod: string | null;
+  currency: string;
   subtotal: string;
   tax: string;
   shippingCost: string;
@@ -58,8 +59,30 @@ export interface Order {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  paymentChannel?: string | null;
+  paidAt?: string | null;
   items: OrderItem[];
   shippingAddress: ShippingAddress[];
+  paymentTransactions?: PaymentTransaction[];
+}
+
+interface PaymentTransaction {
+  id: string;
+  provider: string;
+  paymentType: string;
+  channel?: string | null;
+  amount: string;
+  status: Order['paymentStatus'];
+  transactionId?: string | null;
+  vaNumber?: string | null;
+  vaBank?: string | null;
+  qrString?: string | null;
+  qrImageUrl?: string | null;
+  paymentUrl?: string | null;
+  instructions?: string | null;
+  expiresAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Pagination {

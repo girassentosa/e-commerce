@@ -23,10 +23,12 @@ interface CheckoutContextType {
   step: number;
   addressId: string | null;
   paymentMethod: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null;
+  paymentChannel: string | null;
   orderSummary: OrderSummary | null;
   loading: boolean;
   setAddressId: (id: string) => void;
   setPaymentMethod: (method: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null) => void;
+  setPaymentChannel: (channel: string | null) => void;
   validateCart: () => Promise<boolean>;
   calculateTotals: (addressId: string) => Promise<void>;
   createOrder: (notes?: string) => Promise<string | null>;
@@ -43,7 +45,8 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
   const [step, setStep] = useState(1);
   const [addressId, setAddressId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null>(null);
+  const [paymentMethodState, setPaymentMethodState] = useState<'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null>(null);
+  const [paymentChannel, setPaymentChannelState] = useState<string | null>(null);
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -111,7 +114,7 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
 
   // Create order
   const createOrder = useCallback(async (notes?: string): Promise<string | null> => {
-    if (!addressId || !paymentMethod) {
+    if (!addressId || !paymentMethodState) {
       toast.error('Please complete all checkout steps');
       return null;
     }
@@ -123,7 +126,8 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           addressId,
-          paymentMethod,
+          paymentMethod: paymentMethodState,
+          paymentChannel,
           notes,
         }),
       });
@@ -144,7 +148,7 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [addressId, paymentMethod]);
+  }, [addressId, paymentMethodState, paymentChannel]);
 
   // Step navigation
   const nextStep = useCallback(() => {
@@ -159,8 +163,20 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
   const reset = useCallback(() => {
     setStep(1);
     setAddressId(null);
-    setPaymentMethod(null);
+    setPaymentMethodState(null);
+    setPaymentChannelState(null);
     setOrderSummary(null);
+  }, []);
+
+  const handleSetPaymentMethod = useCallback((method: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null) => {
+    setPaymentMethodState(method);
+    if (method !== 'VIRTUAL_ACCOUNT') {
+      setPaymentChannelState(null);
+    }
+  }, []);
+
+  const handleSetPaymentChannel = useCallback((channel: string | null) => {
+    setPaymentChannelState(channel);
   }, []);
 
   return (
@@ -168,11 +184,13 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
       value={{
         step,
         addressId,
-        paymentMethod,
+        paymentMethod: paymentMethodState,
+        paymentChannel,
         orderSummary,
         loading,
         setAddressId,
-        setPaymentMethod,
+        setPaymentMethod: handleSetPaymentMethod,
+        setPaymentChannel: handleSetPaymentChannel,
         validateCart,
         calculateTotals,
         createOrder,
