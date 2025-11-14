@@ -70,7 +70,14 @@ function getMidtransServerKey() {
   if (!key) {
     throw new Error('MIDTRANS_SERVER_KEY is not configured');
   }
-  return key;
+  // Trim whitespace and log first/last few characters for debugging (without exposing full key)
+  const trimmedKey = key.trim();
+  if (trimmedKey.length < 10) {
+    console.error('MIDTRANS_SERVER_KEY appears to be too short. Make sure you copied the full Server Key.');
+  }
+  // Log first 4 and last 4 characters for debugging (safe to log)
+  console.log('Midtrans Server Key loaded:', trimmedKey.substring(0, 4) + '...' + trimmedKey.substring(trimmedKey.length - 4));
+  return trimmedKey;
 }
 
 export function isMidtransConfigured() {
@@ -221,6 +228,9 @@ export async function createMidtransCharge(
   const authHeader = Buffer.from(`${serverKey}:`).toString('base64');
   const baseUrl = getMidtransBaseUrl();
   const url = `${baseUrl}/v2/charge`;
+  
+  // Log base URL for debugging
+  console.log('Midtrans Base URL:', baseUrl);
 
   const paymentType = mapPaymentType(input);
 
