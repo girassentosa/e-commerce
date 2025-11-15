@@ -34,13 +34,16 @@ export function StarRating({
 
   const handleClick = (value: number) => {
     if (interactive && onRatingChange) {
-      onRatingChange(value);
-    }
-  };
-
-  const handleMouseEnter = (value: number) => {
-    if (interactive) {
-      // Optional: Add hover effect
+      // Logika: 
+      // - Jika rating saat ini = value yang diklik, toggle off bintang tersebut (set ke value - 1, min 0)
+      // - Jika rating saat ini != value yang diklik, set ke value tersebut
+      if (rating === value) {
+        // Toggle off: set ke value - 1 (bintang yang diklik mati)
+        onRatingChange(Math.max(0, value - 1));
+      } else {
+        // Set ke rating yang diklik
+        onRatingChange(value);
+      }
     }
   };
 
@@ -56,23 +59,30 @@ export function StarRating({
               key={starValue}
               type="button"
               onClick={() => handleClick(starValue)}
-              onMouseEnter={() => handleMouseEnter(starValue)}
               disabled={!interactive}
               className={`
                 ${sizeClasses[size]}
-                ${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-default'}
+                ${interactive ? 'cursor-pointer' : 'cursor-default'}
                 ${isFilled ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
+                star-rating-button
               `}
+              style={{ 
+                transform: 'none !important',
+                width: size === 'sm' ? '1rem' : size === 'md' ? '1.25rem' : '1.5rem',
+                height: size === 'sm' ? '1rem' : size === 'md' ? '1.25rem' : '1.5rem',
+                minWidth: size === 'sm' ? '1rem' : size === 'md' ? '1.25rem' : '1.5rem',
+                minHeight: size === 'sm' ? '1rem' : size === 'md' ? '1.25rem' : '1.5rem',
+              }}
               aria-label={`${starValue} star${starValue !== 1 ? 's' : ''}`}
             >
-              <Star className="w-full h-full" />
+              <Star className="w-full h-full" style={{ width: '100%', height: '100%' }} />
             </button>
           );
         })}
       </div>
       {showLabel && (
         <span className="text-sm text-gray-600 ml-2">
-          {rating.toFixed(1)} / {maxRating}
+          {rating.toFixed(1)} / {maxRating.toFixed(1)}
         </span>
       )}
     </div>

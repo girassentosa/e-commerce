@@ -17,6 +17,7 @@ interface BuyAgainProduct {
   id: string;
   name: string;
   slug: string;
+  description?: string | null;
   price: string;
   salePrice: string | null;
   stockQuantity: number;
@@ -26,6 +27,10 @@ interface BuyAgainProduct {
     slug: string;
   };
   images: BuyAgainImage[];
+  brand?: string | null;
+  rating?: string | number | null;
+  reviewCount?: number;
+  isFeatured?: boolean;
 }
 
 export interface BuyAgainItem {

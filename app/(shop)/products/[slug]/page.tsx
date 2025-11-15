@@ -33,6 +33,7 @@ import { useSession } from 'next-auth/react';
 import { ProductCard } from '@/components/products/ProductCard';
 import { useRef } from 'react';
 import { SwipeGesture } from '@/components/mobile/SwipeGesture';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Product {
   id: string;
@@ -63,9 +64,17 @@ interface Product {
 interface Review {
   id: string;
   rating: number;
-  comment: string;
+  title?: string | null;
+  comment: string | null;
   userName: string;
   createdAt: string;
+  images?: string[] | null;
+  user?: {
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string;
+    avatarUrl?: string | null;
+  };
 }
 
 function ProductDetailPageContent() {
@@ -76,6 +85,7 @@ function ProductDetailPageContent() {
   const { addItem: addToCart, itemCount } = useCart();
   const { refreshLastViewed } = useLastViewed();
   const { data: session } = useSession();
+  const { formatPrice } = useCurrency();
   const slug = params?.slug || '';
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -144,6 +154,44 @@ function ProductDetailPageContent() {
 
       fetchProduct();
   }, [slug, session?.user?.id]);
+
+  // Fetch reviews when product is loaded
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!product?.id) return;
+      
+      try {
+        const response = await fetch(`/api/products/${product.id}/reviews?limit=50`);
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          // Transform review data to match Review interface
+          const transformedReviews = data.data.map((review: any) => ({
+            id: review.id,
+            rating: review.rating,
+            title: review.title,
+            comment: review.comment,
+            userName: review.user 
+              ? `${review.user.firstName || ''} ${review.user.lastName || ''}`.trim() || review.user.email
+              : 'Anonymous',
+            createdAt: review.createdAt,
+            images: review.images,
+            user: review.user ? {
+              firstName: review.user.firstName,
+              lastName: review.user.lastName,
+              email: review.user.email,
+              avatarUrl: review.user.avatarUrl,
+            } : undefined,
+          }));
+          setReviews(transformedReviews);
+        }
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+      }
+    };
+
+    fetchReviews();
+  }, [product?.id]);
 
   // Observe sentinel untuk toggle header (solid saat sentinel terlihat di viewport)
   useEffect(() => {
@@ -614,11 +662,11 @@ function ProductDetailPageContent() {
               <div className="mb-4">
                 <div className="flex items-baseline gap-2 mb-1 flex-wrap">
                   <span className="text-3xl font-bold text-blue-600">
-                    ${parseFloat(displayPrice).toFixed(2)}
+                    {formatPrice(displayPrice)}
                   </span>
                   {hasDiscount && (
                     <span className="text-lg text-gray-400 line-through">
-                      ${parseFloat(product.price).toFixed(2)}
+                      {formatPrice(product.price)}
                     </span>
                   )}
                   {/* Sold Count & Love Icon */}
@@ -631,7 +679,7 @@ function ProductDetailPageContent() {
                 </div>
                 {hasDiscount && (
                   <p className="text-xs text-green-600 font-semibold">
-                    You save ${(parseFloat(product.price) - parseFloat(product.salePrice!)).toFixed(2)} ({discountPercentage}% off)
+                    You save {formatPrice(parseFloat(product.price) - parseFloat(product.salePrice!))} ({discountPercentage}% off)
                   </p>
                 )}
               </div>
@@ -769,12 +817,39 @@ function ProductDetailPageContent() {
                         <div className="space-y-4">
                           {reviews.map((review) => (
                             <div key={review.id} className="border-b border-gray-200 pb-4">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="flex items-center gap-1">
+                              {/* User Info with Avatar */}
+                              <div className="flex items-center gap-3 mb-2">
+                                {review.user?.avatarUrl ? (
+                                  <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border border-gray-200">
+                                    <Image
+                                      src={review.user.avatarUrl}
+                                      alt={review.userName}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                                    {review.userName.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-gray-900 truncate">{review.userName}</span>
+                                    <span className="text-xs text-gray-500 flex-shrink-0">
+                                      {new Date(review.createdAt).toLocaleDateString('id-ID', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                      })}
+                                    </span>
+                                  </div>
+                                  {/* Rating Stars - Below Name */}
+                                  <div className="flex items-center gap-1 mt-1">
                                   {[...Array(5)].map((_, i) => (
                                     <Star
                                       key={i}
-                                      className={`w-4 h-4 ${
+                                        className={`w-3.5 h-3.5 ${
                                         i < review.rating
                                           ? 'text-yellow-400 fill-yellow-400'
                                           : 'text-gray-300'
@@ -782,12 +857,30 @@ function ProductDetailPageContent() {
                                     />
                                   ))}
                                 </div>
-                                <span className="text-sm font-semibold">{review.userName}</span>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(review.createdAt).toLocaleDateString()}
-                                </span>
                               </div>
-                              <p className="text-sm text-gray-700">{review.comment}</p>
+                              </div>
+                              
+                              {/* Review Content */}
+                              {review.title && (
+                                <p className="text-sm font-medium text-gray-900 mb-1">{review.title}</p>
+                              )}
+                              {review.comment && (
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{review.comment}</p>
+                              )}
+                              {review.images && Array.isArray(review.images) && review.images.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2 mt-3">
+                                  {review.images.map((imgUrl: string, idx: number) => (
+                                    <div key={idx} className="aspect-square relative rounded-lg overflow-hidden border border-gray-300">
+                                      <Image
+                                        src={imgUrl}
+                                        alt={`Review photo ${idx + 1}`}
+                                        fill
+                                        className="object-cover"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -855,7 +948,7 @@ function ProductDetailPageContent() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 leading-snug truncate">{product.name}</p>
                   <div className="flex items-center gap-3 mt-1">
-                    <p className="text-base font-bold text-blue-600">${totalPrice.toFixed(2)}</p>
+                    <p className="text-base font-bold text-blue-600">{formatPrice(totalPrice)}</p>
                     <span className="text-xs font-semibold text-gray-500">Qty: {quantity}</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">{product.stock > 0 ? `Stok: ${product.stock}` : 'Stok habis'}</p>

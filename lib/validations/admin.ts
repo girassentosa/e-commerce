@@ -20,8 +20,7 @@ export const productSchema = z.object({
   brand: z.string().optional(),
   isFeatured: z.boolean().default(false),
   isActive: z.boolean().default(true),
-  metaTitle: z.string().max(150).optional(),
-  metaDescription: z.string().max(300).optional(),
+  specifications: z.record(z.string(), z.string()).optional(),
   images: z
     .array(
       z.object({

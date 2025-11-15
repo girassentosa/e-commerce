@@ -26,6 +26,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useAdminHeader } from '@/contexts/AdminHeaderContext';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Product {
   id: string;
@@ -52,6 +53,7 @@ interface Product {
 export default function AdminProductsPage() {
   const router = useRouter();
   const { setHeader } = useAdminHeader();
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     setHeader(Package, 'Products');
@@ -316,15 +318,15 @@ export default function AdminProductsPage() {
           {product.salePrice ? (
             <>
               <p className="text-xs text-gray-400 line-through">
-                ${parseFloat(product.price).toFixed(2)}
+                {formatPrice(product.price)}
               </p>
               <p className="font-bold text-base text-green-600">
-                ${parseFloat(product.salePrice).toFixed(2)}
+                {formatPrice(product.salePrice)}
               </p>
             </>
           ) : (
             <p className="font-bold text-base text-gray-900">
-              ${parseFloat(product.price).toFixed(2)}
+              {formatPrice(product.price)}
             </p>
           )}
         </div>

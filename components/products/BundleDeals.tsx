@@ -7,6 +7,7 @@
  */
 
 import { Check, Gift, Tag, TrendingUp } from 'lucide-react';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface BundleDeal {
   id: string;
@@ -30,6 +31,8 @@ export function BundleDeals({
   onSelectDeal,
   selectedQuantity = 1,
 }: BundleDealsProps) {
+  const { formatPrice } = useCurrency();
+  
   // Default bundle deals if none provided
   const defaultDeals: BundleDeal[] = [
     {
@@ -124,21 +127,21 @@ export function BundleDeals({
               {/* Price */}
               <div className="space-y-0.5">
                 <p className="text-lg font-bold text-purple-600">
-                  ${deal.pricePerItem.toFixed(2)}
+                  {formatPrice(deal.pricePerItem)}
                   <span className="text-xs text-gray-500 font-normal">/ea</span>
                 </p>
                 <p className="text-xs text-gray-500 line-through">
-                  ${productPrice.toFixed(2)} each
+                  {formatPrice(productPrice)} each
                 </p>
               </div>
 
               {/* Savings */}
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <p className="text-xs font-semibold text-green-600">
-                  💰 Save ${deal.savings.toFixed(2)}
+                  💰 Save {formatPrice(deal.savings)}
                 </p>
                 <p className="text-[10px] text-gray-500">
-                  Total: ${deal.totalPrice.toFixed(2)}
+                  Total: {formatPrice(deal.totalPrice)}
                 </p>
               </div>
 

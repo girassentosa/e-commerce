@@ -21,6 +21,7 @@ import {
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useAdminHeader } from '@/contexts/AdminHeaderContext';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface DashboardStats {
   totalSales: number;
@@ -54,11 +55,19 @@ const getStatusBadge = (status: string) => {
   const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800', icon: Clock };
   const Icon = config.icon;
 
+  const statusLabels: Record<string, string> = {
+    PENDING: 'Menunggu',
+    PROCESSING: 'Dikemas',
+    SHIPPED: 'Dikirim',
+    DELIVERED: 'Selesai',
+    CANCELLED: 'Dibatalkan',
+  };
+
   return (
     <span className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
       <Icon className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
-      <span className="hidden sm:inline">{status}</span>
-      <span className="sm:hidden text-[10px] leading-tight">{status.substring(0, 3)}</span>
+      <span className="hidden sm:inline">{statusLabels[status] || status}</span>
+      <span className="sm:hidden text-[10px] leading-tight">{(statusLabels[status] || status).substring(0, 3)}</span>
     </span>
   );
 };
@@ -67,6 +76,7 @@ export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { setHeader } = useAdminHeader();
+  const { formatPrice } = useCurrency();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -155,7 +165,7 @@ export default function AdminDashboard() {
           </div>
           <div>
             <p className="text-xs sm:text-sm font-medium text-emerald-700 mb-1">Total Sales</p>
-            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1 break-words">${stats.totalSales.toLocaleString()}</p>
+            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1 break-words">{formatPrice(stats.totalSales)}</p>
             <p className="text-xs text-emerald-600">Last 30 days</p>
           </div>
         </div>
@@ -291,7 +301,7 @@ export default function AdminDashboard() {
                             <div className="text-right">
                               <p className="text-xs sm:text-sm text-gray-500 mb-0.5">Total</p>
                               <p className="font-bold text-lg sm:text-xl md:text-2xl text-gray-900 group-hover:text-emerald-600 transition-colors">
-                                ${parseFloat(order.total).toFixed(2)}
+                                {formatPrice(order.total)}
                               </p>
                             </div>
                             <div className="text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

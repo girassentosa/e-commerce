@@ -47,6 +47,11 @@ export async function GET(request: NextRequest) {
                     imageUrl: true,
                   },
                 },
+                _count: {
+                  select: {
+                    reviews: true,
+                  },
+                },
               },
             },
           },
@@ -96,6 +101,7 @@ export async function GET(request: NextRequest) {
         id: item.product.id,
         name: item.product.name,
         slug: item.product.slug,
+        description: item.product.description || null,
         price: item.product.price.toString(),
         salePrice: item.product.salePrice?.toString() || null,
         stockQuantity: item.product.stockQuantity,
@@ -103,6 +109,10 @@ export async function GET(request: NextRequest) {
         images: item.product.images.map((img: any) => ({
           imageUrl: img.imageUrl,
         })),
+        brand: item.product.brand || null,
+        rating: item.product.ratingAverage?.toString() || null,
+        reviewCount: item.product._count?.reviews || 0,
+        isFeatured: item.product.isFeatured || false,
       },
     }));
 

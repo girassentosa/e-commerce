@@ -16,6 +16,7 @@ import { FilterSidebar } from '@/components/products/FilterSidebar';
 import { FilterModal } from '@/components/products/FilterModal';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useCurrency } from '@/hooks/useCurrency';
 import { 
   ShieldCheck, 
   Truck, 
@@ -63,6 +64,7 @@ function HomePageContent() {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { formatPrice } = useCurrency();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -294,11 +296,11 @@ function HomePageContent() {
 
                 <div className="flex items-baseline gap-3 mb-6">
                   <span className="text-3xl sm:text-4xl font-bold text-blue-600">
-                    ${parseFloat(featuredProduct.salePrice || featuredProduct.price).toFixed(2)}
+                    {formatPrice(featuredProduct.salePrice || featuredProduct.price)}
                   </span>
                   {featuredProduct.salePrice && (
                     <span className="text-lg text-gray-400 line-through">
-                      ${parseFloat(featuredProduct.price).toFixed(2)}
+                      {formatPrice(featuredProduct.price)}
                     </span>
                   )}
             </div>

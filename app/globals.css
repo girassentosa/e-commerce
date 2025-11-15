@@ -838,7 +838,7 @@ header.shadow-on-scroll {
    ============================================ */
 
 /* Thumb-friendly touch targets - min 44px */
-button,
+button:not(.star-rating-button),
 a,
 input[type="button"],
 input[type="submit"],
@@ -848,6 +848,13 @@ input[type="submit"],
   min-width: 44px;
   touch-action: manipulation; /* Disable double-tap zoom */
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Star rating button exception - allow smaller size */
+button.star-rating-button {
+  min-height: auto !important;
+  min-width: auto !important;
+  padding: 0 !important;
 }
 
 /* Small buttons exception (with padding) */
@@ -955,6 +962,13 @@ button,
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Review labels - ensure font-semibold is applied */
+.review-label,
+label[class*="font-semibold"],
+span[class*="font-semibold"].block {
+  font-weight: 600 !important;
 }
 
 /* Prevent text selection on mobile (optional, remove if not needed) */

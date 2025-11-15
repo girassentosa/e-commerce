@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/Input';
 import { ImageUploader } from '@/components/admin/ImageUploader';
 import { Loader } from '@/components/ui/Loader';
 import { productSchema, ProductFormData } from '@/lib/validations/admin';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Category {
   id: string;
@@ -20,6 +21,7 @@ export default function EditProductPage() {
   const params = useParams();
   const router = useRouter();
   const productId = params?.id as string;
+  const { currency } = useCurrency();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -42,10 +44,10 @@ export default function EditProductPage() {
     brand: '',
     isFeatured: false,
     isActive: true,
-    metaTitle: '',
-    metaDescription: '',
+    specifications: {},
     images: [],
   });
+  const [specifications, setSpecifications] = useState<string[]>([]);
 
   // Hide AdminHeader and AdminSidebar dengan CSS - HARUS dipanggil sebelum conditional return
   useEffect(() => {
@@ -151,6 +153,11 @@ export default function EditProductPage() {
       originalImagesRef.current = productImages;
       currentImagesRef.current = productImages;
       
+      // Load specifications - convert object to "Key, Value" format
+      const productSpecs = product.specifications as Record<string, string> || {};
+      const specsArray = Object.entries(productSpecs).map(([key, value]) => `${key}, ${value}`);
+      setSpecifications(specsArray);
+
       setFormData({
         categoryId: product.categoryId,
         name: product.name,
@@ -165,8 +172,7 @@ export default function EditProductPage() {
         brand: product.brand || '',
         isFeatured: product.isFeatured,
         isActive: product.isActive,
-        metaTitle: product.metaTitle || '',
-        metaDescription: product.metaDescription || '',
+        specifications: productSpecs,
         images: productImages,
       });
     } catch (error: any) {
@@ -414,7 +420,7 @@ export default function EditProductPage() {
                 <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Regular Price * ($)
+                    Regular Price * ({currency})
                   </label>
                   <Input
                     type="number"
@@ -429,7 +435,7 @@ export default function EditProductPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sale Price ($)
+                    Sale Price ({currency})
                   </label>
                   <Input
                     type="number"
@@ -505,39 +511,83 @@ export default function EditProductPage() {
               </div>
             </div>
 
-            {/* SEO */}
+            {/* Specifications */}
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <div className="admin-card-header">
-                <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900">SEO (Optional)</h2>
+                <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900">Specifications (Optional)</h2>
               </div>
               <div className="p-6">
-                <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Meta Title
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.metaTitle}
-                    onChange={(e) => handleChange('metaTitle', e.target.value)}
-                    placeholder="SEO title (max 150 chars)"
-                    maxLength={150}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Meta Description
-                  </label>
-                  <textarea
-                    value={formData.metaDescription}
-                    onChange={(e) => handleChange('metaDescription', e.target.value)}
-                    placeholder="SEO description (max 300 chars)"
-                    maxLength={300}
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+                <div className="space-y-3">
+                  {specifications.map((spec, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <Input
+                        type="text"
+                        value={spec}
+                        onChange={(e) => {
+                          const newSpecs = [...specifications];
+                          newSpecs[index] = e.target.value;
+                          setSpecifications(newSpecs);
+                          // Parse "Key, Value" format and update formData specifications
+                          const specsObj: Record<string, string> = {};
+                          newSpecs.forEach(s => {
+                            const trimmed = s.trim();
+                            if (trimmed) {
+                              const commaIndex = trimmed.indexOf(',');
+                              if (commaIndex > 0) {
+                                const key = trimmed.substring(0, commaIndex).trim();
+                                const value = trimmed.substring(commaIndex + 1).trim();
+                                if (key && value) {
+                                  specsObj[key] = value;
+                                }
+                              }
+                            }
+                          });
+                          handleChange('specifications', specsObj);
+                        }}
+                        placeholder="Brand, Apple"
+                        className="flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newSpecs = specifications.filter((_, i) => i !== index);
+                          setSpecifications(newSpecs);
+                          // Update formData specifications
+                          const specsObj: Record<string, string> = {};
+                          newSpecs.forEach(s => {
+                            const trimmed = s.trim();
+                            if (trimmed) {
+                              const commaIndex = trimmed.indexOf(',');
+                              if (commaIndex > 0) {
+                                const key = trimmed.substring(0, commaIndex).trim();
+                                const value = trimmed.substring(commaIndex + 1).trim();
+                                if (key && value) {
+                                  specsObj[key] = value;
+                                }
+                              }
+                            }
+                          });
+                          handleChange('specifications', specsObj);
+                        }}
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                        aria-label="Remove specification"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSpecifications([...specifications, '']);
+                    }}
+                    className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors text-sm font-medium"
+                  >
+                    + Add Specification
+                  </button>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Format: <span className="font-mono">Key, Value</span> (contoh: Brand, Apple)
+                  </p>
                 </div>
               </div>
             </div>

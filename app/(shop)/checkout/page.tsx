@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react';
 import { ArrowLeft, MapPin, ChevronRight } from 'lucide-react';
 import { useCheckout } from '@/contexts/CheckoutContext';
 import { useCart } from '@/contexts/CartContext';
-import { formatCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import toast from 'react-hot-toast';
 import { Loader } from '@/components/ui/Loader';
 import { PaymentModal } from '@/components/checkout/PaymentModal';
@@ -45,6 +45,7 @@ function CheckoutPageContent() {
   const { status } = useSession();
   const { addressId, setAddressId, paymentMethod, paymentChannel } = useCheckout();
   const { items: cartItems, subtotal: cartSubtotal, selectedItems } = useCart();
+  const { formatPrice } = useCurrency();
   const [selectedAddress, setSelectedAddress] = useState<ShippingAddress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const searchParams = useSearchParams();
@@ -309,8 +310,6 @@ function CheckoutPageContent() {
   const subtotal = isBuyNowFlow ? buyNowSubtotal : cartSubtotalValue;
   const discountTotal = isBuyNowFlow ? buyNowDiscountTotal : cartDiscountTotal;
   const hasAnyDiscount = discountTotal > 0;
-
-  const currencyCode = 'USD';
   const brandLabel = productDetails?.brand?.trim() || productDetails?.name || null;
   const paymentMethodMap: Record<
     NonNullable<typeof paymentMethod>,
@@ -599,11 +598,11 @@ function CheckoutPageContent() {
                           <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 w-[calc(100%+1rem+1rem)] -ml-4 -mr-4 pl-4 pr-4 sm:w-[calc(100%+1.25rem+1.25rem)] sm:-ml-5 sm:-mr-5 sm:pl-5 sm:pr-5">
                             <div className="flex items-end gap-2 whitespace-nowrap">
                               <span className="text-base font-bold text-blue-600">
-                                {formatCurrency(effectivePrice, currencyCode)}
+                                {formatPrice(effectivePrice)}
                               </span>
                               {hasDiscount && (
                                 <span className="text-xs text-gray-400 line-through">
-                                  {formatCurrency(basePrice, currencyCode)}
+                                  {formatPrice(basePrice)}
                                 </span>
                               )}
                             </div>
@@ -661,26 +660,26 @@ function CheckoutPageContent() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Subtotal pesanan</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatCurrency(subtotalPesanan, currencyCode)}
+                    {formatPrice(subtotalPesanan)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Subtotal pengiriman</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatCurrency(subtotalPengiriman, currencyCode)}
+                    {formatPrice(subtotalPengiriman)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Biaya layanan</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatCurrency(biayaLayanan, currencyCode)}
+                    {formatPrice(biayaLayanan)}
                   </span>
                 </div>
                 {totalDiskonPengiriman > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Total diskon pengiriman</span>
                     <span className="text-sm font-medium text-red-500">
-                      -{formatCurrency(totalDiskonPengiriman, currencyCode)}
+                      -{formatPrice(totalDiskonPengiriman)}
                     </span>
                   </div>
                 )}
@@ -688,7 +687,7 @@ function CheckoutPageContent() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Voucher diskon</span>
                     <span className="text-sm font-medium text-red-500">
-                      -{formatCurrency(voucherDiskon, currencyCode)}
+                      -{formatPrice(voucherDiskon)}
                     </span>
                   </div>
                 )}
@@ -696,7 +695,7 @@ function CheckoutPageContent() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-gray-900">Total pembayaran</span>
                     <span className="text-sm font-bold text-blue-600">
-                      {formatCurrency(totalPembayaran, currencyCode)}
+                      {formatPrice(totalPembayaran)}
                     </span>
                   </div>
                 </div>
@@ -831,11 +830,11 @@ function CheckoutPageContent() {
                                   <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 w-[calc(100%+1rem+1rem)] -ml-4 -mr-4 pl-4 pr-4 sm:w-[calc(100%+1.25rem+1.25rem)] sm:-ml-5 sm:-mr-5 sm:pl-5 sm:pr-5">
                                     <div className="flex items-end gap-2 whitespace-nowrap">
                                       <span className="text-base font-bold text-blue-600">
-                                        {formatCurrency(effectivePrice, currencyCode)}
+                                        {formatPrice(effectivePrice)}
                                       </span>
                                       {hasDiscount && (
                                         <span className="text-xs text-gray-400 line-through">
-                                          {formatCurrency(basePrice, currencyCode)}
+                                          {formatPrice(basePrice)}
                                         </span>
                                       )}
                                     </div>
@@ -863,26 +862,26 @@ function CheckoutPageContent() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Subtotal pesanan</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {formatCurrency(subtotalPesanan, currencyCode)}
+                      {formatPrice(subtotalPesanan)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Subtotal pengiriman</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {formatCurrency(subtotalPengiriman, currencyCode)}
+                      {formatPrice(subtotalPengiriman)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Biaya layanan</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {formatCurrency(biayaLayanan, currencyCode)}
+                      {formatPrice(biayaLayanan)}
                     </span>
                   </div>
                   {totalDiskonPengiriman > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Total diskon pengiriman</span>
                       <span className="text-sm font-medium text-red-500">
-                        -{formatCurrency(totalDiskonPengiriman, currencyCode)}
+                        -{formatPrice(totalDiskonPengiriman)}
                       </span>
                     </div>
                   )}
@@ -890,7 +889,7 @@ function CheckoutPageContent() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Voucher diskon</span>
                       <span className="text-sm font-medium text-red-500">
-                        -{formatCurrency(voucherDiskon, currencyCode)}
+                        -{formatPrice(voucherDiskon)}
                       </span>
                     </div>
                   )}
@@ -898,7 +897,7 @@ function CheckoutPageContent() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-semibold text-gray-900">Total pembayaran</span>
                       <span className="text-sm font-bold text-blue-600">
-                        {formatCurrency(totalPembayaran, currencyCode)}
+                        {formatPrice(totalPembayaran)}
                       </span>
                     </div>
           </div>
@@ -915,11 +914,11 @@ function CheckoutPageContent() {
             <div className="flex items-center justify-end gap-3">
               <div className="flex flex-col items-end leading-tight">
                 <span className="text-base font-bold text-gray-900">
-                  {formatCurrency(totalPembayaran, currencyCode)}
+                  {formatPrice(totalPembayaran)}
                 </span>
                 {hasAnyDiscount && discountTotal > 0 && (
                   <span className="text-[11px] font-semibold text-red-500">
-                    Hemat {formatCurrency(discountTotal, currencyCode)}
+                    Hemat {formatPrice(discountTotal)}
                   </span>
                 )}
               </div>

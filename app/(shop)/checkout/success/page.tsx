@@ -10,7 +10,7 @@ import { ArrowLeft, Check, ChevronRight } from 'lucide-react';
 import { useCheckout } from '@/contexts/CheckoutContext';
 import { useCart } from '@/contexts/CartContext';
 import { Loader } from '@/components/ui/Loader';
-import { formatCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface OrderItem {
   id: string;
@@ -150,7 +150,7 @@ function SuccessContent() {
     router.push('/');
   };
 
-  const currencyCode = 'USD';
+  const { formatPrice } = useCurrency();
 
   if (!orderNumber) {
     return null;
@@ -329,7 +329,7 @@ function SuccessContent() {
                             <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 w-[calc(100%+1rem+1rem)] -ml-4 -mr-4 pl-4 pr-4 sm:w-[calc(100%+1.25rem+1.25rem)] sm:-ml-5 sm:-mr-5 sm:pl-5 sm:pr-5">
                               <div className="flex items-end gap-2 whitespace-nowrap">
                                 <span className="text-base font-bold text-blue-600">
-                                  {formatCurrency(unitPrice, currencyCode)}
+                                  {formatPrice(unitPrice)}
                                 </span>
                               </div>
                               <span className="text-xs font-semibold text-gray-500 whitespace-nowrap justify-self-end -mr-2 sm:mr-0">

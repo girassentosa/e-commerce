@@ -10,12 +10,14 @@ import { Loader } from '@/components/ui/Loader';
 import { Package, ChevronRight, ArrowLeft, Search } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useCurrency } from '@/hooks/useCurrency';
 
 function OrdersPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status } = useSession();
   const { orders, loading, pagination, fetchOrders } = useOrder();
+  const { formatPrice } = useCurrency();
   
   // Get search query from URL (managed by Header component)
   const searchQuery = searchParams.get('search') || '';
@@ -310,7 +312,7 @@ function OrdersPageContent() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <p className="text-lg font-bold">${parseFloat(order.total).toFixed(2)}</p>
+                  <p className="text-lg font-bold">{formatPrice(order.total)}</p>
                   <ChevronRight className="w-5 h-5 text-gray-400" />
                 </div>
                     </div>

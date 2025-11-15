@@ -19,6 +19,7 @@ const createReviewSchema = z.object({
   title: z.string().optional(),
   comment: z.string().optional(),
   orderId: z.string().optional(),
+  images: z.array(z.string().url()).max(3).optional(),
 });
 
 /**
@@ -101,9 +102,15 @@ export async function GET(
       prisma.review.count({ where }),
     ]);
 
+    // Parse images JSON field for each review
+    const reviewsWithImages = reviews.map(review => ({
+      ...review,
+      images: review.images ? (typeof review.images === 'string' ? JSON.parse(review.images) : review.images) : null,
+    }));
+
     return NextResponse.json({
       success: true,
-      data: reviews,
+      data: reviewsWithImages,
       pagination: buildPaginationMeta(page, limit, total),
     });
   } catch (error) {
@@ -149,7 +156,10 @@ export async function POST(
       );
     }
 
-    const { rating, title, comment, orderId } = validationResult.data;
+    const { rating, title, comment, orderId, images } = validationResult.data;
+
+    // Debug: Log title to ensure it's being received
+    console.log('Review title received:', title);
 
     // Check if product exists
     const product = await prisma.product.findUnique({
@@ -200,14 +210,19 @@ export async function POST(
     }
 
     // Create review
+    // Ensure title is saved correctly (empty string becomes null)
+    const reviewTitle = title && title.trim().length > 0 ? title.trim() : null;
+    console.log('Review title to save:', reviewTitle);
+    
     const review = await prisma.review.create({
       data: {
         productId,
         userId: session.user.id,
         rating,
-        title: title || null,
+        title: reviewTitle,
         comment: comment || null,
         orderId: orderId || null,
+        ...(images && images.length > 0 ? { images } : {}),
         isVerifiedPurchase,
       },
       include: {
@@ -241,10 +256,16 @@ export async function POST(
       },
     });
 
+    // Parse images JSON field
+    const reviewWithImages = {
+      ...review,
+      images: review.images ? (typeof review.images === 'string' ? JSON.parse(review.images) : review.images) : null,
+    };
+
     return NextResponse.json({
       success: true,
       message: 'Review created successfully',
-      data: review,
+      data: reviewWithImages,
     });
   } catch (error) {
     console.error('Error creating review:', error);

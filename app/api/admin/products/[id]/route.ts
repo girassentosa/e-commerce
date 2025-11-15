@@ -135,8 +135,11 @@ export async function PUT(
           ...(body.brand !== undefined && { brand: body.brand }),
           ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
           ...(body.isActive !== undefined && { isActive: body.isActive }),
-          ...(body.metaTitle !== undefined && { metaTitle: body.metaTitle }),
-          ...(body.metaDescription !== undefined && { metaDescription: body.metaDescription }),
+          ...(body.specifications !== undefined && { 
+            specifications: body.specifications && Object.keys(body.specifications).length > 0 
+              ? body.specifications 
+              : null 
+          }),
         },
       });
 

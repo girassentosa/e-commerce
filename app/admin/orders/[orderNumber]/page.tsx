@@ -25,14 +25,13 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { formatCurrency as formatCurrencyUtil } from '@/lib/utils';
 import {
   formatPhoneDisplay,
   formatShippingAddress,
   getPaymentMethodDisplay,
   getVariantLabels,
-  getCurrencyLocale,
 } from '@/lib/order-helpers';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface OrderItem {
   id: string;
@@ -124,6 +123,7 @@ export default function AdminOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const orderNumber = params?.orderNumber as string;
+  const { formatPrice, currency } = useCurrency();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -230,7 +230,7 @@ export default function AdminOrderDetailPage() {
         throw new Error(data.error || 'Failed to update order status');
       }
 
-      toast.success('Order status updated successfully');
+      toast.success('Status pesanan berhasil diperbarui');
       fetchOrder();
     } catch (error: any) {
       console.error('Error updating order status:', error);
@@ -260,7 +260,7 @@ export default function AdminOrderDetailPage() {
         throw new Error(data.error || 'Failed to update payment status');
       }
 
-      toast.success('Payment status updated successfully');
+      toast.success('Status pembayaran berhasil diperbarui');
       fetchOrder();
     } catch (error: any) {
       console.error('Error updating payment status:', error);
@@ -323,9 +323,6 @@ export default function AdminOrderDetailPage() {
   }
 
   const address = order.shippingAddress[0];
-  const currencyLocale = getCurrencyLocale(order.currency);
-  const formatPrice = (value: string | number) =>
-    formatCurrencyUtil(value, order.currency, currencyLocale);
   const paymentMeta = getPaymentMethodDisplay(order.paymentMethod, 'en-US');
   const paymentInstruction = order.paymentTransactions?.[0] ?? null;
   const isOfflinePayment = paymentInstruction?.provider === 'OFFLINE';
@@ -703,12 +700,12 @@ export default function AdminOrderDetailPage() {
                       onChange={(e) => setStatus(e.target.value as Order['status'])}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
-                      <option value="PENDING">Pending</option>
-                      <option value="PROCESSING">Processing</option>
-                      <option value="SHIPPED">Shipped</option>
-                      <option value="DELIVERED">Delivered</option>
-                      <option value="CANCELLED">Cancelled</option>
-                      <option value="REFUNDED">Refunded</option>
+                      <option value="PENDING">Menunggu</option>
+                      <option value="PROCESSING">Dikemas</option>
+                      <option value="SHIPPED">Dikirim</option>
+                      <option value="DELIVERED">Selesai</option>
+                      <option value="CANCELLED">Dibatalkan</option>
+                      <option value="REFUNDED">Dikembalikan</option>
                     </select>
                   </div>
                   <div>
@@ -765,10 +762,10 @@ export default function AdminOrderDetailPage() {
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       >
-                        <option value="PENDING">Pending</option>
-                        <option value="PAID">Paid</option>
-                        <option value="FAILED">Failed</option>
-                        <option value="REFUNDED">Refunded</option>
+                        <option value="PENDING">Menunggu</option>
+                        <option value="PAID">Lunas</option>
+                        <option value="FAILED">Gagal</option>
+                        <option value="REFUNDED">Dikembalikan</option>
                       </select>
                     </div>
                     <div>
@@ -830,7 +827,7 @@ export default function AdminOrderDetailPage() {
                 )}
                 <div className="flex justify-between">
                   <span className="font-semibold">Currency:</span>
-                  <span>{order.currency}</span>
+                  <span>{currency}</span>
                 </div>
               </div>
             </div>
@@ -882,7 +879,7 @@ export default function AdminOrderDetailPage() {
                   <div>
                     <span className="text-sm font-medium text-gray-600">Total Pembayaran</span>
                     <p className="text-xs text-gray-500 mt-1">
-                      {order.items.length} item{order.items.length > 1 ? 's' : ''} • {order.currency}
+                      {order.items.length} item{order.items.length > 1 ? 's' : ''} • {currency}
                     </p>
                   </div>
                   <span className="text-lg font-bold text-blue-600">{formatPrice(order.total)}</span>

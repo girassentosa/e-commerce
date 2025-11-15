@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Pagination } from '@/components/ui/Pagination';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
   Search,
   Filter,
@@ -54,6 +55,7 @@ interface Order {
 export default function AdminOrdersPage() {
   const router = useRouter();
   const { setHeader } = useAdminHeader();
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     setHeader(ShoppingBag, 'Orders');
@@ -132,13 +134,6 @@ export default function AdminOrdersPage() {
     });
   };
 
-  const formatCurrency = (amount: string, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-    }).format(parseFloat(amount));
-  };
-
   const getCustomerName = (order: Order) => {
     if (order.user.firstName && order.user.lastName) {
       return `${order.user.firstName} ${order.user.lastName}`;
@@ -185,7 +180,7 @@ export default function AdminOrdersPage() {
       label: 'Total',
       render: (order: Order) => (
         <div className="font-semibold text-gray-900">
-          {formatCurrency(order.total, order.currency)}
+          {formatPrice(order.total)}
         </div>
       ),
     },
@@ -305,12 +300,12 @@ export default function AdminOrdersPage() {
                       <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
                     )}
                     <span className="truncate">
-                      {statusFilter === 'PENDING' ? 'Pending' : 
-                       statusFilter === 'PROCESSING' ? 'Processing' : 
-                       statusFilter === 'SHIPPED' ? 'Shipped' : 
-                       statusFilter === 'DELIVERED' ? 'Delivered' : 
-                       statusFilter === 'CANCELLED' ? 'Cancelled' : 
-                       statusFilter === 'REFUNDED' ? 'Refunded' : 
+                      {statusFilter === 'PENDING' ? 'Menunggu' : 
+                       statusFilter === 'PROCESSING' ? 'Dikemas' : 
+                       statusFilter === 'SHIPPED' ? 'Dikirim' : 
+                       statusFilter === 'DELIVERED' ? 'Selesai' : 
+                       statusFilter === 'CANCELLED' ? 'Dibatalkan' : 
+                       statusFilter === 'REFUNDED' ? 'Dikembalikan' : 
                        'All'}
                     </span>
                   </div>
@@ -475,10 +470,10 @@ export default function AdminOrdersPage() {
                       <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
                     )}
                     <span className="truncate">
-                      {paymentStatusFilter === 'PENDING' ? 'Pending' : 
-                       paymentStatusFilter === 'PAID' ? 'Paid' : 
-                       paymentStatusFilter === 'FAILED' ? 'Failed' : 
-                       paymentStatusFilter === 'REFUNDED' ? 'Refunded' : 
+                      {paymentStatusFilter === 'PENDING' ? 'Menunggu' : 
+                       paymentStatusFilter === 'PAID' ? 'Lunas' :
+                       paymentStatusFilter === 'FAILED' ? 'Gagal' :
+                       paymentStatusFilter === 'REFUNDED' ? 'Dikembalikan' :
                        'All'}
                     </span>
                   </div>

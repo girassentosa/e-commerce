@@ -13,7 +13,7 @@ import { useCart } from '@/contexts/CartContext';
 import { Loader } from '@/components/ui/Loader';
 import { Badge } from '@/components/ui/Badge';
 import { ArrowLeft, Minus, Plus, Trash2, ShoppingBag, Check } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 // Helper function to format color and size labels (same as checkout)
 const toTitleCase = (str: string) =>
@@ -90,6 +90,7 @@ export default function CartPage() {
   const router = useRouter();
   const { status } = useSession();
   const { items, itemCount, subtotal, loading, updateQuantity, removeItem, clearCart, selectedItems, setSelectedItems } = useCart();
+  const { formatPrice } = useCurrency();
   const [updatingItem, setUpdatingItem] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
@@ -153,8 +154,6 @@ export default function CartPage() {
     router.push('/checkout');
   };
 
-  const currencyCode = 'USD';
-  
   // Calculate total discount and subtotal only from selected items
   const selectedItemsArray = items.filter(item => selectedItems.has(item.id));
   
@@ -451,11 +450,11 @@ export default function CartPage() {
                                     {/* Price */}
                                     <div className="flex items-end gap-2 whitespace-nowrap">
                                       <span className="text-base font-bold text-blue-600">
-                                        {formatCurrency(effectivePrice, currencyCode)}
+                                        {formatPrice(effectivePrice)}
                                       </span>
                                       {hasDiscount && (
                                         <span className="text-xs text-gray-400 line-through">
-                                          {formatCurrency(basePrice, currencyCode)}
+                                          {formatPrice(basePrice)}
                                         </span>
                                       )}
                                     </div>
@@ -485,18 +484,18 @@ export default function CartPage() {
             {selectedItems.size > 0 ? (
               <div className="flex flex-col items-end leading-tight">
                 <span className="text-base font-bold text-gray-900">
-                  {formatCurrency(totalPembayaran, currencyCode)}
+                  {formatPrice(totalPembayaran)}
                 </span>
                 {hasDiscount && discountTotal > 0 && (
                   <span className="text-[11px] font-semibold text-red-500">
-                    Hemat {formatCurrency(discountTotal, currencyCode)}
+                    Hemat {formatPrice(discountTotal)}
                   </span>
                 )}
               </div>
             ) : (
               <div className="flex flex-col items-end leading-tight">
                 <span className="text-base font-bold text-gray-400">
-                  {formatCurrency(0, currencyCode)}
+                  {formatPrice(0)}
                 </span>
               </div>
             )}

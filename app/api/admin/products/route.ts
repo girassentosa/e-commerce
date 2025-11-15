@@ -205,8 +205,9 @@ export async function POST(request: NextRequest) {
         brand,
         isFeatured: isFeatured || false,
         isActive: isActive !== undefined ? isActive : true,
-        metaTitle: body.metaTitle || null,
-        metaDescription: body.metaDescription || null,
+        specifications: body.specifications && Object.keys(body.specifications).length > 0 
+          ? body.specifications 
+          : null,
         images: images?.length
           ? {
               create: images.map((img: any, index: number) => ({

@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { ShoppingCart, Star, Flame } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWishlist } from '@/contexts/WishlistContext';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface ProductCardProps {
   product: {
@@ -40,6 +41,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const [imageError, setImageError] = useState(false);
   const router = useRouter();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist();
+  const { formatPrice } = useCurrency();
   
   const isWishlisted = isInWishlist(product.id);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -231,11 +233,11 @@ export function ProductCard({ product }: ProductCardProps) {
           {/* Price Display */}
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-lg font-bold text-blue-600">
-              ${parseFloat(displayPrice).toFixed(2)}
+              {formatPrice(displayPrice)}
             </span>
             {hasDiscount && (
               <span className="text-sm text-gray-400 line-through">
-                ${parseFloat(product.price).toFixed(2)}
+                {formatPrice(product.price)}
               </span>
             )}
           </div>

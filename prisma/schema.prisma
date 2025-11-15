@@ -90,6 +90,7 @@ model Product {
   ratingCount       Int      @default(0) @map("rating_count")
   metaTitle         String?  @map("meta_title")
   metaDescription   String?  @map("meta_description") @db.Text
+  specifications    Json?    // Key-value pairs for product specifications
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -319,6 +320,7 @@ model Review {
   rating             Int // 1-5
   title              String?
   comment            String?  @db.Text
+  images             Json?    // Array of image URLs
   isVerifiedPurchase Boolean  @default(false) @map("is_verified_purchase")
   helpfulCount       Int      @default(0) @map("helpful_count")
   createdAt          DateTime @default(now()) @map("created_at")

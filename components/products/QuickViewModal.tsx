@@ -11,6 +11,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { X, ShoppingCart, Heart, Star, Plus, Minus, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Product {
   id: string;
@@ -48,6 +49,7 @@ export function QuickViewModal({
   onToggleWishlist,
   isWishlisted = false,
 }: QuickViewModalProps) {
+  const { formatPrice } = useCurrency();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -223,11 +225,11 @@ export function QuickViewModal({
               {/* Price */}
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-blue-600">
-                  ${parseFloat(displayPrice).toFixed(2)}
+                  {formatPrice(displayPrice)}
                 </span>
                 {hasDiscount && (
                   <span className="text-lg text-gray-400 line-through">
-                    ${parseFloat(product.price).toFixed(2)}
+                    {formatPrice(product.price)}
                   </span>
                 )}
               </div>

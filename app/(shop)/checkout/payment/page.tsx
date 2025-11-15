@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ChevronDown, Check } from 'lucide-react';
 import { useCheckout } from '@/contexts/CheckoutContext';
 import { useCart } from '@/contexts/CartContext';
-import { formatCurrency } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import toast from 'react-hot-toast';
 
 const virtualAccountBanks = ['BCA', 'MANDIRI', 'BNI', 'BRI', 'BSI', 'PERMATA'];
@@ -23,6 +23,7 @@ function SelectPaymentPageContent() {
   const searchParams = useSearchParams();
   const { paymentMethod, paymentChannel, setPaymentMethod, setPaymentChannel } = useCheckout();
   const { items, subtotal: cartSubtotal } = useCart();
+  const { formatPrice } = useCurrency();
   const [isVirtualAccountExpanded, setIsVirtualAccountExpanded] = useState(false);
   
   // For buy-now flow
@@ -174,7 +175,6 @@ function SelectPaymentPageContent() {
   const voucherDiskon = 0; // No voucher discount for now
   const totalPembayaran =
     subtotalPesanan + subtotalPengiriman + biayaLayanan - totalDiskonPengiriman - voucherDiskon;
-  const currencyCode = 'USD';
   const hasAnyDiscount = discountTotal > 0;
 
   return (
@@ -313,11 +313,11 @@ function SelectPaymentPageContent() {
             {paymentMethod && (
               <div className="flex flex-col items-end leading-tight">
                 <span className="text-base font-bold text-gray-900">
-                  {formatCurrency(totalPembayaran, currencyCode)}
+                  {formatPrice(totalPembayaran)}
                 </span>
                 {hasAnyDiscount && discountTotal > 0 && (
                   <span className="text-[11px] font-semibold text-red-500">
-                    Hemat {formatCurrency(discountTotal, currencyCode)}
+                    Hemat {formatPrice(discountTotal)}
                   </span>
                 )}
               </div>

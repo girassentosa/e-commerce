@@ -65,11 +65,11 @@ interface SettingsData {
 }
 
 const tabs: Array<{ id: SettingCategory; label: string; icon: any }> = [
-  { id: 'general', label: 'General', icon: Store },
-  { id: 'product', label: 'Products', icon: Package },
-  { id: 'order', label: 'Orders', icon: ShoppingBag },
-  { id: 'payment', label: 'Payment', icon: CreditCard },
-  { id: 'shipping', label: 'Shipping', icon: Truck },
+  { id: 'general', label: 'Umum', icon: Store },
+  { id: 'product', label: 'Produk', icon: Package },
+  { id: 'order', label: 'Pesanan', icon: ShoppingBag },
+  { id: 'payment', label: 'Pembayaran', icon: CreditCard },
+  { id: 'shipping', label: 'Pengiriman', icon: Truck },
   { id: 'email', label: 'Email', icon: Mail },
   { id: 'seo', label: 'SEO', icon: Search },
 ];
@@ -84,7 +84,7 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<SettingsData>({});
 
   useEffect(() => {
-    setHeader(Settings, 'Settings');
+    setHeader(Settings, 'Pengaturan');
   }, [setHeader]);
 
   useEffect(() => {
@@ -109,10 +109,14 @@ export default function AdminSettingsPage() {
         throw new Error(data.error || 'Failed to fetch settings');
       }
 
-      setSettings(data.data.map || {});
+      const settingsMap = data.data.map || {};
+      console.log('[Settings] Fetched settings from API:', settingsMap);
+      console.log('[Settings] Currency value:', settingsMap.currency);
+      
+      setSettings(settingsMap);
     } catch (error: any) {
       console.error('Error fetching settings:', error);
-      toast.error(error.message || 'Failed to load settings');
+      toast.error(error.message || 'Gagal memuat pengaturan');
     } finally {
       setLoading(false);
     }
@@ -125,6 +129,10 @@ export default function AdminSettingsPage() {
   const handleSave = async () => {
     try {
       setSaving(true);
+      
+      console.log('[Settings] Saving settings:', settings);
+      console.log('[Settings] Currency to save:', settings.currency);
+      
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
         headers: {
@@ -136,13 +144,37 @@ export default function AdminSettingsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save settings');
+        throw new Error(data.error || 'Gagal menyimpan pengaturan');
       }
 
-      toast.success('Settings saved successfully!');
+      console.log('[Settings] Save response:', data);
+
+      // Verify the save by fetching again
+      const verifyResponse = await fetch('/api/admin/settings?category=general');
+      const verifyData = await verifyResponse.json();
+      console.log('[Settings] Verification - Currency in DB:', verifyData.data?.map?.currency);
+
+      // Clear client-side cache and trigger refresh
+      if (typeof window !== 'undefined') {
+        // Clear settings cache
+        const { clearSettingsCache } = await import('@/lib/settings');
+        clearSettingsCache();
+        
+        // Dispatch custom event to notify all useCurrency hooks to refresh
+        window.dispatchEvent(new Event('settingsUpdated'));
+        
+        // Small delay before reload to ensure cache is cleared
+        setTimeout(() => {
+          // Trigger page reload to refresh currency in all components
+          // This ensures all pages (homepage, products, cart) get the new currency
+          window.location.reload();
+        }, 100);
+      }
+
+      toast.success('Pengaturan berhasil disimpan!');
     } catch (error: any) {
       console.error('Error saving settings:', error);
-      toast.error(error.message || 'Failed to save settings');
+      toast.error(error.message || 'Gagal menyimpan pengaturan');
     } finally {
       setSaving(false);
     }
@@ -165,12 +197,12 @@ export default function AdminSettingsPage() {
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
           <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
             <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-            Settings
+            Pengaturan
           </h1>
         </div>
         <div className="p-6">
           <p className="text-sm text-gray-600">
-            Configure your store settings and preferences
+            Konfigurasi pengaturan dan preferensi toko Anda
           </p>
         </div>
       </div>
@@ -212,76 +244,45 @@ export default function AdminSettingsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Store className="w-5 h-5 text-gray-600" />
-                  Store Information
+                  Informasi Toko
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Store Name *
+                      Nama Toko *
                     </label>
                     <Input
                       type="text"
                       value={settings.storeName || ''}
                       onChange={(e) => handleChange('storeName', e.target.value)}
-                      placeholder="My Store"
+                      placeholder="Nama Toko Saya"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Digunakan di judul browser dan meta tag</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contact Email *
-                    </label>
-                    <Input
-                      type="email"
-                      value={settings.contactEmail || ''}
-                      onChange={(e) => handleChange('contactEmail', e.target.value)}
-                      placeholder="contact@store.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contact Phone
-                    </label>
-                    <Input
-                      type="tel"
-                      value={settings.contactPhone || ''}
-                      onChange={(e) => handleChange('contactPhone', e.target.value)}
-                      placeholder="+1234567890"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Currency
+                      Mata Uang *
                     </label>
                     <Input
                       type="text"
-                      value={settings.currency || 'IDR'}
+                      value={settings.currency || 'USD'}
                       onChange={(e) => handleChange('currency', e.target.value)}
-                      placeholder="IDR"
+                      placeholder="USD, IDR, EUR, dll."
                     />
+                    <p className="text-xs text-gray-500 mt-1">Kode mata uang (contoh: USD, IDR, EUR). Mempengaruhi semua harga produk.</p>
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Store Description
+                      Deskripsi Toko
                     </label>
                     <textarea
                       value={settings.storeDescription || ''}
                       onChange={(e) => handleChange('storeDescription', e.target.value)}
-                      placeholder="Describe your store..."
+                      placeholder="Jelaskan toko Anda..."
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Store Address
-                    </label>
-                    <textarea
-                      value={settings.storeAddress || ''}
-                      onChange={(e) => handleChange('storeAddress', e.target.value)}
-                      placeholder="Store address..."
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                    />
+                    <p className="text-xs text-gray-500 mt-1">Digunakan di meta description untuk SEO</p>
                   </div>
                 </div>
               </div>
@@ -294,12 +295,12 @@ export default function AdminSettingsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Package className="w-5 h-5 text-gray-600" />
-                  Product Management
+                  Manajemen Produk
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Default Low Stock Threshold
+                      Batas Stok Rendah Default
                     </label>
                     <Input
                       type="number"
@@ -307,11 +308,11 @@ export default function AdminSettingsPage() {
                       onChange={(e) => handleChange('defaultLowStockThreshold', parseInt(e.target.value) || 10)}
                       min="0"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Alert when stock falls below this number</p>
+                    <p className="text-xs text-gray-500 mt-1">Peringatan ketika stok turun di bawah angka ini</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Products Per Page
+                      Produk Per Halaman
                     </label>
                     <Input
                       type="number"
@@ -320,6 +321,7 @@ export default function AdminSettingsPage() {
                       min="1"
                       max="100"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Jumlah produk yang ditampilkan per halaman</p>
                   </div>
                   <div className="sm:col-span-2">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -330,7 +332,7 @@ export default function AdminSettingsPage() {
                         className="w-4 h-4 text-gray-600 rounded focus:ring-gray-500"
                       />
                       <span className="text-sm font-medium text-gray-700">
-                        Automatically hide out of stock products
+                        Sembunyikan produk yang habis secara otomatis
                       </span>
                     </label>
                   </div>
@@ -345,12 +347,12 @@ export default function AdminSettingsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-gray-600" />
-                  Order Management
+                  Manajemen Pesanan
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Auto-cancel Pending Orders (Days)
+                      Batalkan Pesanan Tertunda Otomatis (Hari)
                     </label>
                     <Input
                       type="number"
@@ -358,11 +360,11 @@ export default function AdminSettingsPage() {
                       onChange={(e) => handleChange('autoCancelPendingDays', parseInt(e.target.value) || 7)}
                       min="0"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Cancel orders after X days if unpaid</p>
+                    <p className="text-xs text-gray-500 mt-1">Batalkan pesanan setelah X hari jika belum dibayar</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Minimum Order Amount
+                      Jumlah Pesanan Minimum
                     </label>
                     <Input
                       type="number"
@@ -371,6 +373,7 @@ export default function AdminSettingsPage() {
                       min="0"
                       step="0.01"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Minimum jumlah pesanan yang diperbolehkan</p>
                   </div>
                   <div className="sm:col-span-2">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -381,7 +384,7 @@ export default function AdminSettingsPage() {
                         className="w-4 h-4 text-gray-600 rounded focus:ring-gray-500"
                       />
                       <span className="text-sm font-medium text-gray-700">
-                        Allow customers to cancel orders
+                        Izinkan pelanggan membatalkan pesanan
                       </span>
                     </label>
                   </div>
@@ -396,12 +399,12 @@ export default function AdminSettingsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <CreditCard className="w-5 h-5 text-gray-600" />
-                  Payment Configuration
+                  Konfigurasi Pembayaran
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Payment Timeout (Hours)
+                      Batas Waktu Pembayaran (Jam)
                     </label>
                     <Input
                       type="number"
@@ -409,7 +412,7 @@ export default function AdminSettingsPage() {
                       onChange={(e) => handleChange('paymentTimeoutHours', parseInt(e.target.value) || 24)}
                       min="1"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Cancel order if payment not received within this time</p>
+                    <p className="text-xs text-gray-500 mt-1">Batalkan pesanan jika pembayaran tidak diterima dalam waktu ini</p>
                   </div>
                 </div>
               </div>
@@ -422,12 +425,12 @@ export default function AdminSettingsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Truck className="w-5 h-5 text-gray-600" />
-                  Shipping Configuration
+                  Konfigurasi Pengiriman
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Free Shipping Threshold
+                      Batas Gratis Ongkir
                     </label>
                     <Input
                       type="number"
@@ -436,11 +439,11 @@ export default function AdminSettingsPage() {
                       min="0"
                       step="0.01"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Free shipping for orders above this amount</p>
+                    <p className="text-xs text-gray-500 mt-1">Gratis ongkir untuk pesanan di atas jumlah ini</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Default Shipping Cost
+                      Biaya Pengiriman Default
                     </label>
                     <Input
                       type="number"
@@ -449,6 +452,7 @@ export default function AdminSettingsPage() {
                       min="0"
                       step="0.01"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Biaya pengiriman standar yang digunakan</p>
                   </div>
                 </div>
               </div>
@@ -461,12 +465,12 @@ export default function AdminSettingsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Mail className="w-5 h-5 text-gray-600" />
-                  Email Configuration
+                  Konfigurasi Email
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      SMTP Host
+                      Host SMTP
                     </label>
                     <Input
                       type="text"
@@ -477,7 +481,7 @@ export default function AdminSettingsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      SMTP Port
+                      Port SMTP
                     </label>
                     <Input
                       type="number"
@@ -489,35 +493,35 @@ export default function AdminSettingsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      SMTP Username
+                      Username SMTP
                     </label>
                     <Input
                       type="text"
                       value={settings.smtpUser || ''}
                       onChange={(e) => handleChange('smtpUser', e.target.value)}
-                      placeholder="your-email@gmail.com"
+                      placeholder="email-anda@gmail.com"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      From Email
+                      Email Pengirim
                     </label>
                     <Input
                       type="email"
                       value={settings.fromEmail || ''}
                       onChange={(e) => handleChange('fromEmail', e.target.value)}
-                      placeholder="noreply@store.com"
+                      placeholder="noreply@toko.com"
                     />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      From Name
+                      Nama Pengirim
                     </label>
                     <Input
                       type="text"
                       value={settings.fromName || ''}
                       onChange={(e) => handleChange('fromName', e.target.value)}
-                      placeholder="My Store"
+                      placeholder="Nama Toko Saya"
                     />
                   </div>
                 </div>
@@ -531,35 +535,35 @@ export default function AdminSettingsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Search className="w-5 h-5 text-gray-600" />
-                  SEO Configuration
+                  Konfigurasi SEO
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Default Meta Title
+                      Meta Title Default
                     </label>
                     <Input
                       type="text"
                       value={settings.metaTitle || ''}
                       onChange={(e) => handleChange('metaTitle', e.target.value)}
-                      placeholder="My Store - Best Products Online"
+                      placeholder="Toko Saya - Produk Terbaik Online"
                     />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Default Meta Description
+                      Meta Description Default
                     </label>
                     <textarea
                       value={settings.metaDescription || ''}
                       onChange={(e) => handleChange('metaDescription', e.target.value)}
-                      placeholder="Shop the best products online..."
+                      placeholder="Beli produk terbaik secara online..."
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Google Analytics ID
+                      ID Google Analytics
                     </label>
                     <Input
                       type="text"
@@ -586,12 +590,12 @@ export default function AdminSettingsPage() {
           {saving ? (
             <>
               <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
-              <span className="text-sm sm:text-base">Saving...</span>
+              <span className="text-sm sm:text-base">Menyimpan...</span>
             </>
           ) : (
             <>
               <Save className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-              <span className="text-sm sm:text-base">Save Settings</span>
+              <span className="text-sm sm:text-base">Simpan Pengaturan</span>
             </>
           )}
         </Button>
