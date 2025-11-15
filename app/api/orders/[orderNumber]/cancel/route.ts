@@ -62,6 +62,17 @@ export async function PUT(
       );
     }
 
+    // CRITICAL: Jangan allow cancel jika payment sudah PAID
+    if (order.paymentStatus === 'PAID') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Cannot cancel order with PAID payment status',
+        },
+        { status: 400 }
+      );
+    }
+
     // Cancel order and restore stock in transaction
     await prisma.$transaction(async (tx) => {
       // Update order status

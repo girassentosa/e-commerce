@@ -85,7 +85,25 @@ export function isMidtransConfigured() {
 }
 
 function getMidtransBaseUrl() {
-  return process.env.MIDTRANS_BASE_URL || MIDTRANS_SANDBOX_BASE;
+  // Default to sandbox if MIDTRANS_BASE_URL is not set
+  const baseUrl = process.env.MIDTRANS_BASE_URL || MIDTRANS_SANDBOX_BASE;
+  console.log('Midtrans Base URL:', baseUrl, baseUrl.includes('sandbox') ? '(SANDBOX MODE)' : '(PRODUCTION MODE)');
+  return baseUrl;
+}
+
+function getAppBaseUrl() {
+  // Priority: NEXTAUTH_URL > APP_URL > SITE_URL > fallback to localhost
+  const baseUrl = 
+    process.env.NEXTAUTH_URL ||
+    process.env.APP_URL ||
+    process.env.SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    'http://localhost:3000';
+  
+  // Remove trailing slash
+  const cleanUrl = baseUrl.replace(/\/$/, '');
+  console.log('App Base URL for webhook:', cleanUrl);
+  return cleanUrl;
 }
 
 // Helper functions for data validation and formatting
@@ -228,11 +246,12 @@ export async function createMidtransCharge(
   const authHeader = Buffer.from(`${serverKey}:`).toString('base64');
   const baseUrl = getMidtransBaseUrl();
   const url = `${baseUrl}/v2/charge`;
-  
-  // Log base URL for debugging
-  console.log('Midtrans Base URL:', baseUrl);
 
   const paymentType = mapPaymentType(input);
+
+  // Get app base URL for webhook notification
+  const appBaseUrl = getAppBaseUrl();
+  const notificationUrl = `${appBaseUrl}/api/payments/midtrans`;
 
   // Build payload - ensure no null/undefined values that Midtrans doesn't accept
   const payload: Record<string, any> = {
@@ -242,6 +261,8 @@ export async function createMidtransCharge(
       gross_amount: grossAmount,
     },
     item_details: itemDetails,
+    // Add notification URL for webhook
+    notification_url: notificationUrl,
     customer_details: {
       first_name: customerFirstName,
       last_name: customerLastName || '',
@@ -289,9 +310,10 @@ export async function createMidtransCharge(
   if (paymentType === 'bank_transfer') {
     const bank = mapBank(input.channel);
     payload.bank_transfer = { bank };
-  } else if (paymentType === 'qris') {
-    payload.qris = { acquirer: 'gopay' };
   }
+  // For QRIS, Midtrans only needs payment_type: 'qris'
+  // No additional qris object is required for production
+  // The payment_type field is sufficient to trigger QRIS payment
 
   // Remove any null/undefined values from nested objects before sending
   const cleanedPayload = cleanPayload(payload);
@@ -311,13 +333,59 @@ export async function createMidtransCharge(
 
   const data = await response.json();
 
-  if (!response.ok) {
+  // Log full response for debugging
+  console.log('Midtrans API response:', {
+    httpStatus: response.status,
+    statusCode: data.status_code,
+    statusMessage: data.status_message,
+    hasTransactionId: !!data.transaction_id,
+    fraudStatus: data.fraud_status,
+    responseKeys: Object.keys(data),
+  });
+
+  // Check for actual errors
+  // Midtrans returns HTTP 200 even on errors, but includes status_code in body
+  // Success responses have status_code 200 or 201, OR have transaction_id with valid fraud_status
+  const hasTransactionId = !!(data.transaction_id || data.id);
+  const statusCode = data.status_code;
+  const statusMessage = (data.status_message || '').toLowerCase();
+  const fraudStatus = data.fraud_status;
+  
+  // Check if this is actually an error
+  // If we have transaction_id, it's likely a success even if status_code is not 200/201
+  // Some Midtrans responses return status_code like 201 with message "Qris transaction is created" which is success
+  const isActualError = !response.ok || (
+    !hasTransactionId && 
+    statusCode && 
+    statusCode !== 200 && 
+    statusCode !== 201
+  );
+
+  // Check for specific error indicators
+  const hasErrorIndicators = 
+    statusMessage.includes('server_key') ||
+    statusMessage.includes('unknown merchant') ||
+    statusMessage.includes('not activated') ||
+    statusMessage.includes('payment channel is not activated') ||
+    (fraudStatus && fraudStatus === 'deny') ||
+    (data.error_messages && data.error_messages.length > 0);
+
+  if (isActualError || (hasErrorIndicators && !hasTransactionId)) {
     console.error('Midtrans charge error response:', JSON.stringify(data, null, 2));
     console.error('Request payload was:', JSON.stringify(cleanedPayload, null, 2));
     
     // Handle specific error cases
-    if (data.status_message?.includes('server_key') || data.status_message?.includes('Unknown Merchant')) {
-      throw new Error('Invalid Midtrans Server Key. Please check your MIDTRANS_SERVER_KEY in .env file. Make sure you are using the correct Server Key (not Client Key) for Sandbox mode.');
+    if (statusMessage.includes('server_key') || statusMessage.includes('unknown merchant')) {
+      const baseUrl = getMidtransBaseUrl();
+      const isSandbox = baseUrl.includes('sandbox');
+      const mode = isSandbox ? 'Sandbox' : 'Production';
+      throw new Error(`Invalid Midtrans Server Key. Please check your MIDTRANS_SERVER_KEY in .env file. Make sure you are using the correct ${mode} Server Key (not Client Key). Current mode: ${mode}`);
+    }
+    
+    // Handle payment channel not activated
+    if (statusMessage.includes('not activated') || statusMessage.includes('payment channel is not activated')) {
+      const channelName = paymentType === 'qris' ? 'QRIS' : paymentType === 'bank_transfer' ? `Virtual Account (${input.channel || 'Bank Transfer'})` : paymentType;
+      throw new Error(`Metode pembayaran ${channelName} belum diaktifkan di Midtrans Dashboard. Silakan aktifkan metode pembayaran ini di https://dashboard.midtrans.com/settings/payment_methods`);
     }
     
     // Provide more detailed error message
@@ -328,6 +396,12 @@ export async function createMidtransCharge(
       : errorMessage;
     
     throw new Error(fullErrorMessage);
+  }
+
+  // Only proceed if we have a successful response (has transaction_id)
+  if (!hasTransactionId) {
+    console.error('Midtrans response missing transaction_id:', JSON.stringify(data, null, 2));
+    throw new Error('Invalid response from Midtrans: missing transaction ID');
   }
 
   return mapInstructionFromMidtrans(data, paymentType, input.channel || null);
@@ -360,6 +434,13 @@ function mapInstructionFromMidtrans(
   paymentType: string,
   channel: string | null
 ): PaymentInstructionResult {
+  console.log('mapInstructionFromMidtrans called:', {
+    paymentType,
+    channel,
+    responseKeys: Object.keys(response),
+    transactionId: response.transaction_id,
+  });
+
   const baseResult: PaymentInstructionResult = {
     provider: 'MIDTRANS',
     paymentType,
@@ -376,26 +457,127 @@ function mapInstructionFromMidtrans(
       ? 'Gunakan nomor VA Permata untuk menyelesaikan pembayaran.'
       : undefined;
 
+    const vaNumber = vaInfo?.va_number || response.permata_va_number || null;
+    const vaBank = (vaInfo?.bank || channel || '').toUpperCase() || null;
+
+    console.log('Bank transfer mapping:', {
+      vaInfo,
+      vaNumber,
+      vaBank,
+      va_numbers: response.va_numbers,
+      permata_va_number: response.permata_va_number,
+    });
+
     return {
       ...baseResult,
-      vaNumber: vaInfo?.va_number || response.permata_va_number || null,
-      vaBank: (vaInfo?.bank || channel || '').toUpperCase() || null,
+      vaNumber,
+      vaBank,
       instructions,
       expiresAt: response.expiry_time || null,
     };
   }
 
   if (paymentType === 'qris') {
-    const qrAction = Array.isArray(response.actions)
-      ? response.actions.find((action: any) => action.name === 'generate-qr-code')
-      : null;
+    // Extract QR string - try all possible field names and locations
+    let qrString = null;
+    
+    // Direct fields
+    qrString = response.qr_string 
+      || response.qr_code 
+      || response.qrString
+      || response.qrStringValue
+      || null;
+    
+    // From actions array
+    if (!qrString && Array.isArray(response.actions)) {
+      const qrAction = response.actions.find((action: any) => 
+        action.name === 'generate-qr-code' || 
+        action.name === 'qr-code' ||
+        action.name === 'qr_code' ||
+        action.name === 'qris'
+      );
+      qrString = qrAction?.qr_string 
+        || qrAction?.qrString 
+        || qrAction?.qr_code
+        || qrAction?.value
+        || null;
+    }
+    
+    // From nested objects
+    if (!qrString && response.qris) {
+      qrString = response.qris.qr_string 
+        || response.qris.qr_code 
+        || response.qris.qrString
+        || null;
+    }
+
+    // Extract QR image URL - try all possible field names and locations
+    let qrImageUrl = null;
+    
+    // Check actions array for generate-qr-code
+    if (Array.isArray(response.actions)) {
+      const qrAction = response.actions.find((action: any) => 
+        action.name === 'generate-qr-code' || 
+        action.name === 'qr-code' ||
+        action.name === 'qr_code' ||
+        action.name === 'qris' ||
+        action.method === 'GET' && action.url?.includes('qr')
+      );
+      if (qrAction) {
+        qrImageUrl = qrAction.url 
+          || qrAction.qr_url 
+          || qrAction.qrImageUrl
+          || qrAction.image_url
+          || null;
+      }
+    }
+    
+    // Direct response fields
+    if (!qrImageUrl) {
+      qrImageUrl = response.qr_url 
+        || response.qrUrl 
+        || response.qr_image_url
+        || response.qrImageUrl
+        || response.qr_code_url
+        || null;
+    }
+    
+    // From nested objects
+    if (!qrImageUrl && response.qris) {
+      qrImageUrl = response.qris.qr_url 
+        || response.qris.qrImageUrl 
+        || response.qris.image_url
+        || null;
+    }
+
+    // Extract payment URL
+    const paymentUrl = response.actions?.find((action: any) => 
+      action.name === 'deeplink-redirect' || 
+      action.name === 'deeplink_redirect' ||
+      action.name === 'redirect'
+    )?.url || null;
+
+    // Extract expiry time
+    const expiresAt = response.expiry_time 
+      || response.expiryTime 
+      || response.expires_at
+      || response.expiresAt
+      || null;
+
+    console.log('QRIS mapping result:', {
+      qrString: qrString ? `${qrString.substring(0, 30)}...` : null,
+      qrImageUrl: qrImageUrl ? 'EXISTS' : null,
+      paymentUrl: paymentUrl ? 'EXISTS' : null,
+      expiresAt,
+      actions: response.actions?.map((a: any) => ({ name: a.name, url: a.url ? 'EXISTS' : null })),
+    });
 
     return {
       ...baseResult,
-      qrString: response.qr_string || null,
-      qrImageUrl: qrAction?.url || response.qr_url || null,
-      paymentUrl: response.actions?.find((action: any) => action.name === 'deeplink-redirect')?.url || null,
-      expiresAt: response.expiry_time || null,
+      qrString,
+      qrImageUrl,
+      paymentUrl,
+      expiresAt,
     };
   }
 

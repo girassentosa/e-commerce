@@ -230,15 +230,38 @@ select {
   appearance: none;
 }
 
-/* Fix for input focus state on iOS */
-input:focus,
-textarea:focus,
+/* Placeholder styling - transparent and consistent */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important; /* gray-400 */
+  opacity: 1 !important;
+  -webkit-text-fill-color: #9ca3af !important;
+}
+
+/* Hide placeholder when input is focused (even before typing) */
+input:focus::placeholder,
+textarea:focus::placeholder {
+  opacity: 0 !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* Fix for input focus state on iOS - but not for placeholder */
+input:focus:not(:placeholder-shown),
+textarea:focus:not(:placeholder-shown),
 select:focus {
   -webkit-text-fill-color: #111827 !important;
   color: #111827 !important;
 }
 
-/* Fix autofill styling for iOS */
+/* Ensure placeholder is hidden when input has value */
+input:not(:placeholder-shown),
+textarea:not(:placeholder-shown) {
+  -webkit-text-fill-color: #111827 !important;
+  color: #111827 !important;
+}
+
+/* Fix autofill styling for iOS - but preserve placeholder */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
@@ -251,14 +274,19 @@ select:-webkit-autofill,
 select:-webkit-autofill:hover,
 select:-webkit-autofill:focus,
 select:-webkit-autofill:active {
-  -webkit-text-fill-color: #111827 !important; /* Explicit gray-900 color for iOS */
   -webkit-box-shadow: 0 0 0px 1000px white inset !important;
   box-shadow: 0 0 0px 1000px white inset !important;
   transition: background-color 5000s ease-in-out 0s;
-  color: #111827 !important; /* Explicit gray-900 color for iOS */
 }
 
-/* Dark mode autofill fix */
+/* Autofill with value - apply text color */
+input:-webkit-autofill:not(:placeholder-shown),
+textarea:-webkit-autofill:not(:placeholder-shown) {
+  -webkit-text-fill-color: #111827 !important;
+  color: #111827 !important;
+}
+
+/* Dark mode autofill fix - but preserve placeholder */
 @media (prefers-color-scheme: dark) {
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
@@ -272,9 +300,14 @@ select:-webkit-autofill:active {
   select:-webkit-autofill:hover,
   select:-webkit-autofill:focus,
   select:-webkit-autofill:active {
-    -webkit-text-fill-color: #111827 !important; /* Keep text visible even in dark mode */
     -webkit-box-shadow: 0 0 0px 1000px #0a0a0a inset !important;
     box-shadow: 0 0 0px 1000px #0a0a0a inset !important;
+  }
+  
+  /* Autofill with value - apply text color */
+  input:-webkit-autofill:not(:placeholder-shown),
+  textarea:-webkit-autofill:not(:placeholder-shown) {
+    -webkit-text-fill-color: #111827 !important;
     color: #111827 !important;
   }
 }
@@ -392,21 +425,23 @@ html {
 }
 
 /* ===== BUTTON ANIMATIONS ===== */
-button, .btn, [role="button"] {
+button:not(.admin-no-animation):not(.admin-sidebar button):not(.admin-header button):not(.admin-settings-tabs-container button),
+.btn:not(.admin-no-animation),
+[role="button"]:not(.admin-no-animation) {
   transition: all var(--transition-base);
   cursor: pointer;
 }
 
-button:not(:disabled):hover,
-.btn:not(:disabled):hover,
-[role="button"]:not(:disabled):hover {
+button:not(.admin-no-animation):not(.admin-sidebar button):not(.admin-header button):not(.admin-settings-tabs-container button):not(:disabled):hover,
+.btn:not(.admin-no-animation):not(:disabled):hover,
+[role="button"]:not(.admin-no-animation):not(:disabled):hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
-button:not(:disabled):active,
-.btn:not(:disabled):active,
-[role="button"]:not(:disabled):active {
+button:not(.admin-no-animation):not(.admin-sidebar button):not(.admin-header button):not(.admin-settings-tabs-container button):not(:disabled):active,
+.btn:not(.admin-no-animation):not(:disabled):active,
+[role="button"]:not(.admin-no-animation):not(:disabled):active {
   transform: translateY(0);
   box-shadow: var(--shadow-sm);
 }
@@ -840,6 +875,15 @@ a.small {
     min-height: 24px;
   }
 
+  /* Admin checkbox - smaller size to match text-sm labels */
+  .admin-checkbox,
+  input[type="checkbox"].admin-checkbox {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
+  }
+
   /* Larger text inputs for mobile */
   input[type="text"],
   input[type="email"],
@@ -1010,7 +1054,7 @@ textarea {
 }
 
 .admin-card-header {
-  background: linear-gradient(to right, #f9fafb, #f3f4f6);
+  background: linear-gradient(to right, #eff6ff, #dbeafe);
   padding: 1rem 1.5rem;
   border-bottom: 1px solid #e5e7eb;
 }
@@ -1106,6 +1150,55 @@ textarea {
 
 .admin-settings-tabs-container::-webkit-scrollbar-thumb:hover {
   background-color: #94a3b8;
+}
+
+/* Admin buttons - no scale/transform animations - MUST BE AFTER GLOBAL BUTTON STYLES */
+.admin-sidebar button,
+.admin-sidebar a,
+.admin-sidebar button.admin-no-animation,
+.admin-sidebar a.admin-no-animation,
+.admin-header button,
+.admin-header button.admin-no-animation,
+header button[aria-label="Toggle menu"],
+header button[aria-label="Toggle menu"].admin-no-animation,
+button[aria-label="Close sidebar"],
+button[aria-label="Close sidebar"].admin-no-animation,
+.admin-settings-tabs-container button,
+.admin-settings-tabs-container button.admin-no-animation,
+.admin-card button.admin-no-animation,
+.admin-card .admin-no-animation {
+  transform: none !important;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease !important;
+  box-shadow: none !important;
+}
+
+.admin-sidebar button:active,
+.admin-sidebar button:hover,
+.admin-sidebar button:focus,
+.admin-sidebar a:active,
+.admin-sidebar a:hover,
+.admin-sidebar a:focus,
+.admin-header button:active,
+.admin-header button:hover,
+.admin-header button:focus,
+header button[aria-label="Toggle menu"]:active,
+header button[aria-label="Toggle menu"]:hover,
+header button[aria-label="Toggle menu"]:focus,
+button[aria-label="Close sidebar"]:active,
+button[aria-label="Close sidebar"]:hover,
+button[aria-label="Close sidebar"]:focus,
+.admin-settings-tabs-container button:active,
+.admin-settings-tabs-container button:hover,
+.admin-settings-tabs-container button:focus,
+.admin-card button.admin-no-animation:active,
+.admin-card button.admin-no-animation:hover,
+.admin-card button.admin-no-animation:focus,
+.admin-card .admin-no-animation:active,
+.admin-card .admin-no-animation:hover,
+.admin-card .admin-no-animation:focus {
+  transform: none !important;
+  scale: 1 !important;
+  box-shadow: none !important;
 }
 
 /* Color selector buttons - keep flat without hover/active shadows */

@@ -231,29 +231,27 @@ export default function AdminOrdersPage() {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-            <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">Orders Management</h1>
-            <p className="text-emerald-100 text-sm sm:text-base mt-1">
-              Manage and track all customer orders • {totalCount} total orders
-            </p>
-          </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+          <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            Orders Management
+          </h1>
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-gray-600">
+            Manage and track all customer orders • {totalCount} total orders
+          </p>
         </div>
       </div>
 
       {/* Filters Card */}
       <div className="admin-filter-card">
         <div className="admin-card-header">
-          <div className="flex items-center gap-2">
-            <div className="bg-emerald-100 rounded-lg p-1.5">
-              <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
-            </div>
-            <h2 className="text-base sm:text-lg font-bold text-gray-900">Filters & Search</h2>
-          </div>
+          <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            Filters & Search
+          </h2>
         </div>
         <div className="p-4 sm:p-6">
           <form onSubmit={handleSearch} className="space-y-4">
@@ -597,7 +595,8 @@ export default function AdminOrdersPage() {
               <Button
                 type="submit"
                 variant="primary"
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 py-2.5 sm:py-3"
+                className="admin-no-animation w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white !font-normal rounded-lg sm:rounded-xl shadow-md py-2.5 sm:py-3 !transition-colors !duration-150"
+                style={{ transform: 'none', transition: 'color 0.15s ease, background-color 0.15s ease' }}
               >
                 <Filter className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 <span className="text-sm sm:text-base">Apply Filters</span>

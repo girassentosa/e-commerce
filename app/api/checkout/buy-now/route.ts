@@ -263,6 +263,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order with items in transaction
+    // Increase timeout to 10 seconds to handle longer operations
     const order = await prisma.$transaction(async (tx) => {
       // Create order
       const newOrder = await tx.order.create({
@@ -317,7 +318,66 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await tx.paymentTransaction.create({
+      // Log paymentIntent untuk debugging
+      console.log('PaymentIntent data (buy-now):', {
+        paymentType: paymentIntent.paymentType,
+        qrString: paymentIntent.qrString ? `${paymentIntent.qrString.substring(0, 30)}...` : null,
+        qrImageUrl: paymentIntent.qrImageUrl ? 'EXISTS' : null,
+        vaNumber: paymentIntent.vaNumber,
+        vaBank: paymentIntent.vaBank,
+        hasRawResponse: !!paymentIntent.rawResponse,
+      });
+
+      // Extract QR data from rawResponse if qrString/qrImageUrl is null (fallback)
+      let finalQrString = paymentIntent.qrString;
+      let finalQrImageUrl = paymentIntent.qrImageUrl;
+      
+      if ((!finalQrString || !finalQrImageUrl) && paymentIntent.rawResponse) {
+        const raw = paymentIntent.rawResponse;
+        console.log('Extracting from rawResponse (buy-now), raw keys:', Object.keys(raw));
+        
+        // Try to extract from rawResponse
+        if (!finalQrString) {
+          finalQrString = raw.qr_string 
+            || raw.qr_code 
+            || raw.qrString
+            || raw.qris?.qr_string
+            || raw.qris?.qr_code
+            || (raw.actions?.find((a: any) => a.name === 'generate-qr-code' || a.name === 'qr-code')?.qr_string)
+            || null;
+          if (finalQrString) {
+            console.log('Extracted qrString from rawResponse (buy-now)');
+          }
+        }
+        
+        if (!finalQrImageUrl) {
+          const qrAction = raw.actions?.find((action: any) => 
+            action.name === 'generate-qr-code' || 
+            action.name === 'qr-code' ||
+            action.name === 'qris'
+          );
+          finalQrImageUrl = qrAction?.url 
+            || raw.qr_url 
+            || raw.qrImageUrl
+            || raw.qris?.qr_url
+            || raw.qris?.qrImageUrl
+            || null;
+          if (finalQrImageUrl) {
+            console.log('Extracted qrImageUrl from rawResponse (buy-now)');
+          }
+        }
+      }
+
+      // Log final values before saving
+      console.log('Final payment transaction data (buy-now):', {
+        paymentType: paymentIntent.paymentType,
+        qrString: finalQrString ? `${finalQrString.substring(0, 30)}...` : null,
+        qrImageUrl: finalQrImageUrl ? 'EXISTS' : null,
+        vaNumber: paymentIntent.vaNumber,
+        vaBank: paymentIntent.vaBank,
+      });
+
+      const paymentTx = await tx.paymentTransaction.create({
         data: {
           orderId: newOrder.id,
           provider: paymentIntent.provider,
@@ -328,13 +388,22 @@ export async function POST(request: NextRequest) {
           transactionId: paymentIntent.transactionId,
           vaNumber: paymentIntent.vaNumber,
           vaBank: paymentIntent.vaBank,
-          qrString: paymentIntent.qrString,
-          qrImageUrl: paymentIntent.qrImageUrl,
+          qrString: finalQrString,
+          qrImageUrl: finalQrImageUrl,
           paymentUrl: paymentIntent.paymentUrl,
           instructions: paymentIntent.instructions,
           expiresAt: paymentIntent.expiresAt ? new Date(paymentIntent.expiresAt) : null,
           rawResponse: paymentIntent.rawResponse || undefined,
         },
+      });
+
+      console.log('Payment transaction created (buy-now):', {
+        id: paymentTx.id,
+        paymentType: paymentTx.paymentType,
+        qrString: paymentTx.qrString ? `${paymentTx.qrString.substring(0, 30)}...` : null,
+        qrImageUrl: paymentTx.qrImageUrl ? 'EXISTS' : null,
+        vaNumber: paymentTx.vaNumber,
+        vaBank: paymentTx.vaBank,
       });
 
       // Update product stock and sales count
@@ -363,7 +432,14 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return newOrder;
+      // Return order with payment transaction manually attached to avoid timeout
+      // We already have all the data we need from newOrder and paymentTx
+      return {
+        ...newOrder,
+        paymentTransactions: [paymentTx],
+      };
+    }, {
+      timeout: 10000, // 10 seconds timeout
     });
 
     return NextResponse.json({

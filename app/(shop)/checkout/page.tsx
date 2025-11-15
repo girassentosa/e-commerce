@@ -422,8 +422,8 @@ function CheckoutPageContent() {
         // For COD, redirect to success page immediately
         if (orderPaymentMethod === 'COD') {
           toast.success('Pesanan berhasil dibuat!');
-          router.push(`/checkout/success?order=${data.data.orderNumber}`);
-        } else {
+        router.push(`/checkout/success?order=${data.data.orderNumber}`);
+      } else {
           // For QRIS/VA, show payment modal
           // Payment modal will be shown via state
           setShowPaymentModal(true);
@@ -443,7 +443,7 @@ function CheckoutPageContent() {
 
   const canSubmitOrder =
     ((isBuyNowFlow && !!productDetails && !productLoading && !productError) ||
-      (!isBuyNowFlow && selectedCartItems.length > 0)) &&
+     (!isBuyNowFlow && selectedCartItems.length > 0)) &&
     !!addressId &&
     !!paymentMethod &&
     !(paymentMethod === 'VIRTUAL_ACCOUNT' && !paymentChannel) &&

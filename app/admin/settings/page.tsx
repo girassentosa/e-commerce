@@ -161,17 +161,17 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-gray-600 via-slate-600 to-gray-600 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-            <Settings className="w-6 h-6 sm:w-8 sm:h-8" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">Settings</h1>
-            <p className="text-gray-100 text-sm sm:text-base mt-1">
-              Configure your store settings and preferences
-            </p>
-          </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+          <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+            <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            Settings
+          </h1>
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-gray-600">
+            Configure your store settings and preferences
+          </p>
         </div>
       </div>
 
@@ -187,13 +187,14 @@ export default function AdminSettingsPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap flex-shrink-0
+                    admin-no-animation flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg font-normal text-sm whitespace-nowrap flex-shrink-0
                     ${
                       isActive
                         ? 'bg-gradient-to-r from-gray-600 to-slate-600 text-white shadow-md'
                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                     }
                   `}
+                  style={{ transform: 'none', transition: 'color 0.15s ease, background-color 0.15s ease' }}
                 >
                   <TabIcon className="w-4 h-4 flex-shrink-0" />
                   <span>{tab.label}</span>
@@ -209,7 +210,7 @@ export default function AdminSettingsPage() {
           {activeTab === 'general' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Store className="w-5 h-5 text-gray-600" />
                   Store Information
                 </h3>
@@ -291,7 +292,7 @@ export default function AdminSettingsPage() {
           {activeTab === 'product' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Package className="w-5 h-5 text-gray-600" />
                   Product Management
                 </h3>
@@ -342,7 +343,7 @@ export default function AdminSettingsPage() {
           {activeTab === 'order' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-gray-600" />
                   Order Management
                 </h3>
@@ -393,7 +394,7 @@ export default function AdminSettingsPage() {
           {activeTab === 'payment' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <CreditCard className="w-5 h-5 text-gray-600" />
                   Payment Configuration
                 </h3>
@@ -419,7 +420,7 @@ export default function AdminSettingsPage() {
           {activeTab === 'shipping' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Truck className="w-5 h-5 text-gray-600" />
                   Shipping Configuration
                 </h3>
@@ -458,7 +459,7 @@ export default function AdminSettingsPage() {
           {activeTab === 'email' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Mail className="w-5 h-5 text-gray-600" />
                   Email Configuration
                 </h3>
@@ -528,7 +529,7 @@ export default function AdminSettingsPage() {
           {activeTab === 'seo' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Search className="w-5 h-5 text-gray-600" />
                   SEO Configuration
                 </h3>
@@ -579,7 +580,8 @@ export default function AdminSettingsPage() {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="bg-gradient-to-r from-gray-600 to-slate-600 hover:from-gray-700 hover:to-slate-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 py-2.5 sm:py-3 px-6 sm:px-8"
+          className="bg-gradient-to-r from-gray-600 to-slate-600 hover:from-gray-700 hover:to-slate-700 text-white font-normal rounded-lg sm:rounded-xl shadow-md !transition-colors !duration-150 py-2.5 sm:py-3 px-6 sm:px-8"
+          style={{ transform: 'none' }}
         >
           {saving ? (
             <>

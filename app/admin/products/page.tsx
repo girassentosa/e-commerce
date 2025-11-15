@@ -412,32 +412,38 @@ export default function AdminProductsPage() {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-                <Package className="w-6 h-6 sm:w-8 sm:h-8" />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">Products Management</h1>
-                <p className="text-purple-100 text-sm sm:text-base mt-1">
-                  {totalCount} total products in your store
-                </p>
-              </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+          <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+            <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            Products Management
+          </h1>
+        </div>
+        <div className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-gray-600">
+                {totalCount} total products in your store
+              </p>
             </div>
+            <Link href="/admin/products/new" className="w-full sm:w-auto shrink-0">
+              <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200">
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Product
+              </Button>
+            </Link>
           </div>
-          <Link href="/admin/products/new" className="w-full sm:w-auto">
-            <Button className="w-full sm:w-auto bg-white text-purple-600 hover:bg-gray-100 font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Product
-            </Button>
-          </Link>
         </div>
       </div>
 
       {/* Search Bar Only - Clean & Simple */}
       <div className="admin-filter-card">
+        <div className="admin-card-header">
+          <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+            <Search className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            Search Products
+          </h2>
+        </div>
         <div className="p-4 sm:p-6">
           <form onSubmit={handleSearch}>
             <div className="relative">

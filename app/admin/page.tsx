@@ -116,18 +116,25 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 lg:p-8 text-white shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2 break-words leading-tight">Dashboard Overview</h1>
-            <p className="text-indigo-100 text-xs sm:text-sm md:text-base truncate">
-              Welcome back, <span className="font-semibold">{session?.user?.email}</span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 sm:px-4 py-1.5 sm:py-2">
-              <p className="text-[10px] sm:text-xs text-indigo-100">Last updated</p>
-              <p className="text-xs sm:text-sm font-semibold">{new Date().toLocaleDateString()}</p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+          <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+            <LayoutDashboard className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            Dashboard Overview
+          </h1>
+        </div>
+        <div className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-gray-600">
+                Welcome back, <span className="font-semibold text-gray-900">{session?.user?.email}</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="bg-gray-50 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-200">
+                <p className="text-xs text-gray-500">Last updated</p>
+                <p className="text-xs sm:text-sm font-semibold text-gray-900">{new Date().toLocaleDateString()}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -208,26 +215,22 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Orders */}
         <div className="admin-card overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 px-4 sm:px-6 py-4 sm:py-5">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-2 sm:p-2.5 shrink-0">
-                  <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-white truncate">Recent Orders</h2>
-                  <p className="text-xs sm:text-sm text-emerald-100 mt-0.5">
-                    {stats.recentOrders.length} {stats.recentOrders.length === 1 ? 'order' : 'orders'}
-                  </p>
-                </div>
-              </div>
+              <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2 flex-1 min-w-0">
+                <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 shrink-0" />
+                <span className="truncate">Recent Orders</span>
+                <span className="text-xs sm:text-sm font-normal text-gray-600 ml-2 shrink-0">
+                  ({stats.recentOrders.length} {stats.recentOrders.length === 1 ? 'order' : 'orders'})
+                </span>
+              </h2>
               <Link 
                 href="/admin/orders"
-                className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl px-3 sm:px-4 py-2 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all duration-200 hover:scale-105 shrink-0"
+                className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 transition-colors shrink-0"
               >
                 <span className="hidden sm:inline">View all</span>
                 <span className="sm:hidden">All</span>
-                <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </Link>
             </div>
           </div>
@@ -315,17 +318,15 @@ export default function AdminDashboard() {
 
         {/* Low Stock Alerts */}
         <div className="bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-red-200">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                <div className="bg-red-100 rounded-lg p-1.5 sm:p-2 shrink-0">
-                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
-                </div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900 truncate">Low Stock Alerts</h2>
-              </div>
+              <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2 flex-1 min-w-0">
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 shrink-0" />
+                <span className="truncate">Low Stock Alerts</span>
+              </h2>
               <Link 
                 href="/admin/products"
-                className="text-xs sm:text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1 transition-colors shrink-0"
+                className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 transition-colors shrink-0"
               >
                 <span className="hidden sm:inline">Manage</span>
                 <span className="sm:hidden">Edit</span>

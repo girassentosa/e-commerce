@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useOrder } from '@/contexts/OrderContext';
@@ -25,6 +25,7 @@ export default function OrderDetailPage() {
   const { status } = useSession();
   const { currentOrder, loading, fetchOrderDetail, cancelOrder } = useOrder();
   const orderNumber = params?.orderNumber as string;
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -37,6 +38,64 @@ export default function OrderDetailPage() {
       fetchOrderDetail(orderNumber);
     }
   }, [status, orderNumber, fetchOrderDetail]);
+
+  // Polling untuk auto-refresh jika payment status masih PENDING
+  useEffect(() => {
+    // Hanya polling jika order ada, status PENDING, dan bukan COD
+    if (
+      !currentOrder ||
+      currentOrder.paymentStatus !== 'PENDING' ||
+      currentOrder.paymentMethod === 'COD' ||
+      status !== 'authenticated'
+    ) {
+      // Stop polling jika kondisi tidak terpenuhi
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Start polling setiap 3 detik
+    const pollStatus = async () => {
+      try {
+        // Sync status dari Midtrans API terlebih dahulu
+        const syncResponse = await fetch(`/api/orders/${orderNumber}/sync-payment`, {
+          method: 'POST',
+        });
+        
+        if (syncResponse.ok) {
+          const syncData = await syncResponse.json();
+          if (syncData.success && syncData.data.order) {
+            // Refresh order detail setelah sync
+            await fetchOrderDetail(orderNumber);
+            
+            // Jika sudah PAID, stop polling
+            if (syncData.data.paymentStatus === 'PAID') {
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+              }
+              toast.success('Pembayaran berhasil!');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error polling payment status:', error);
+      }
+    };
+
+    // Poll immediately, then every 3 seconds
+    pollStatus();
+    pollingIntervalRef.current = setInterval(pollStatus, 3000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [currentOrder, orderNumber, status, fetchOrderDetail]);
 
   const handleBack = () => {
     // Always redirect to orders page (profile orders page)

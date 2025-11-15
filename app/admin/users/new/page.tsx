@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { userCreateSchema } from '@/lib/validations/user';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
 
@@ -25,6 +24,52 @@ export default function NewUserPage() {
     isActive: true,
   });
 
+  // Hide AdminHeader and AdminSidebar dengan CSS - HARUS dipanggil sebelum conditional return
+  useEffect(() => {
+    // Hide AdminHeader - cari header di dalam admin-main-content
+    const adminMainContent = document.querySelector('.admin-main-content');
+    if (adminMainContent) {
+      const adminHeader = adminMainContent.querySelector('header');
+      if (adminHeader) {
+        (adminHeader as HTMLElement).style.display = 'none';
+      }
+      
+      // Remove margin-left dan width constraint
+      (adminMainContent as HTMLElement).style.marginLeft = '0';
+      (adminMainContent as HTMLElement).style.width = '100%';
+    }
+    
+    // Hide AdminSidebar
+    const adminSidebar = document.querySelector('.admin-sidebar');
+    if (adminSidebar) {
+      (adminSidebar as HTMLElement).style.display = 'none';
+    }
+    
+    // Remove padding dari admin-content-wrapper agar content bisa full width
+    const adminContentWrapper = document.querySelector('.admin-content-wrapper');
+    if (adminContentWrapper) {
+      (adminContentWrapper as HTMLElement).style.padding = '0';
+    }
+
+    return () => {
+      // Restore saat unmount
+      if (adminMainContent) {
+        const adminHeader = adminMainContent.querySelector('header');
+        if (adminHeader) {
+          (adminHeader as HTMLElement).style.display = '';
+        }
+        (adminMainContent as HTMLElement).style.marginLeft = '';
+        (adminMainContent as HTMLElement).style.width = '';
+      }
+      if (adminSidebar) {
+        (adminSidebar as HTMLElement).style.display = '';
+      }
+      if (adminContentWrapper) {
+        (adminContentWrapper as HTMLElement).style.padding = '';
+      }
+    };
+  }, []);
+
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
@@ -39,6 +84,10 @@ export default function NewUserPage() {
         return newErrors;
       });
     }
+  };
+
+  const handleBack = () => {
+    router.push('/admin/users');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,22 +136,35 @@ export default function NewUserPage() {
   };
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          href="/admin/users"
-          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to Users
-        </Link>
-        <h1 className="text-3xl font-bold text-gray-900">Add New User</h1>
-      </div>
+    <>
+      {/* Header Full Width - Keluar dari container admin */}
+      <header className="fixed top-0 left-0 right-0 z-[100] bg-white shadow-sm border-b border-gray-200">
+        <div className="flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 w-full">
+          <button
+            onClick={handleBack}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Kembali"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex-1 text-center">
+            Add New User
+          </h1>
+          <div className="min-h-[44px] min-w-[44px]" />
+        </div>
+      </header>
 
-      <form onSubmit={handleSubmit} className="max-w-2xl">
-        <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+      {/* Content dengan padding top untuk header */}
+      <div className="min-h-screen bg-gray-50 pt-14 sm:pt-16">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+          <form onSubmit={handleSubmit} className="max-w-2xl">
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="admin-card-header">
+            <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900">Personal Information</h2>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 First Name *
@@ -198,7 +260,7 @@ export default function NewUserPage() {
                 type="checkbox"
                 checked={formData.isActive}
                 onChange={(e) => handleChange('isActive', e.target.checked)}
-                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="admin-checkbox bg-white border-2 border-gray-300 rounded text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 checked:bg-blue-600 checked:border-blue-600 transition-colors cursor-pointer"
               />
               <span className="text-sm font-medium text-gray-700">
                 Active (User can log in)
@@ -206,29 +268,33 @@ export default function NewUserPage() {
             </label>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create User'
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create User'
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </form>
-    </div>
+        </div>
+      </div>
+    </>
   );
 }
 

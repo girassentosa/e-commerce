@@ -282,17 +282,17 @@ export default function AdminProfilePage() {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-pink-600 via-rose-600 to-pink-600 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-            <UserCircle className="w-6 h-6 sm:w-8 sm:h-8" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">Profile Settings</h1>
-            <p className="text-pink-100 text-sm sm:text-base mt-1">
-              Manage your account information and preferences
-            </p>
-          </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+          <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+            <UserCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            Profile Settings
+          </h1>
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-gray-600">
+            Manage your account information and preferences
+          </p>
         </div>
       </div>
 
@@ -302,12 +302,10 @@ export default function AdminProfilePage() {
           {/* Personal Information with Profile Picture */}
           <div className="admin-card h-full flex flex-col">
             <div className="admin-card-header">
-              <div className="flex items-center gap-2">
-                <div className="bg-pink-100 rounded-lg p-1.5">
-                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
-                </div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900">Personal Information</h2>
-              </div>
+              <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                Personal Information
+              </h2>
             </div>
             <div className="p-4 sm:p-6 space-y-6 flex-1">
               {/* Profile Picture - Center */}
@@ -421,12 +419,10 @@ export default function AdminProfilePage() {
           {/* Change Password */}
           <div className="admin-card h-full flex flex-col">
             <div className="admin-card-header">
-              <div className="flex items-center gap-2">
-                <div className="bg-pink-100 rounded-lg p-1.5">
-                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
-                </div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900">Change Password (Optional)</h2>
-              </div>
+              <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+                <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                Change Password (Optional)
+              </h2>
             </div>
             <div className="p-4 sm:p-6 flex-1 flex flex-col justify-end">
               <p className="text-xs sm:text-sm text-gray-600 mb-4 flex-shrink-0">Leave blank if you don't want to change password</p>
@@ -488,7 +484,8 @@ export default function AdminProfilePage() {
               <Button 
                 type="submit" 
                 disabled={submitting} 
-                className="w-full bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white font-semibold rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all duration-200 py-2.5 sm:py-3"
+                className="admin-no-animation w-full bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white !font-normal rounded-lg sm:rounded-xl shadow-md py-2.5 sm:py-3 !transition-colors !duration-150"
+                style={{ transform: 'none', transition: 'color 0.15s ease, background-color 0.15s ease' }}
               >
                 {submitting ? (
                   <>

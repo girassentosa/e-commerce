@@ -65,7 +65,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Log webhook received for debugging
+    console.log('Midtrans webhook received:', {
+      order_id: body.order_id,
+      transaction_status: body.transaction_status,
+      payment_type: body.payment_type,
+      status_code: body.status_code,
+      has_signature: !!body.signature_key,
+    });
+
     if (!verifySignature(body)) {
+      console.error('Midtrans webhook signature verification failed:', {
+        order_id: body.order_id,
+      });
       return NextResponse.json({ success: false, error: 'Invalid signature' }, { status: 403 });
     }
 
@@ -75,6 +87,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!order) {
+      console.error('Midtrans webhook: Order not found:', orderNumber);
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
 
@@ -84,11 +97,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (!payment) {
+      console.error('Midtrans webhook: Payment record not found for order:', orderNumber);
       return NextResponse.json({ success: false, error: 'Payment record not found' }, { status: 404 });
     }
 
     const paymentStatus = mapStatus(body.transaction_status);
     const { vaNumber, vaBank } = extractPaymentChannel(body);
+
+    // Log before update
+    console.log('Midtrans webhook updating:', {
+      orderNumber,
+      currentPaymentStatus: order.paymentStatus,
+      newPaymentStatus: paymentStatus,
+      transaction_status: body.transaction_status,
+    });
 
     await prisma.$transaction([
       prisma.paymentTransaction.update({
@@ -113,6 +135,13 @@ export async function POST(request: NextRequest) {
         },
       }),
     ]);
+
+    // Log after update
+    console.log('Midtrans webhook update successful:', {
+      orderNumber,
+      paymentStatus,
+      isPaid: paymentStatus === PaymentStatus.PAID,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

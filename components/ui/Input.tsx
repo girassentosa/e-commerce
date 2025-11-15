@@ -49,7 +49,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             'px-3 py-2 border rounded-lg text-sm transition-colors duration-200',
             'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
             'disabled:bg-gray-100 disabled:cursor-not-allowed',
-            'bg-white text-gray-900',
+            'bg-white text-gray-900 placeholder:text-gray-400 placeholder:opacity-100',
             // iOS fixes: ensure text is visible and input is properly styled
             type === 'date' || type === 'time' || type === 'datetime-local'
               ? 'min-w-0'
@@ -62,8 +62,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
           style={{
             // Ensure text color is not transparent on iOS - use explicit color
-            WebkitTextFillColor: '#111827', // Explicit gray-900 color for iOS
-            color: '#111827', // Explicit gray-900 color for iOS
+            // Only apply when input has value (not placeholder)
+            ...(props.value || props.defaultValue
+              ? {
+                  WebkitTextFillColor: '#111827',
+                  color: '#111827',
+                }
+              : {}),
           }}
           {...props}
         />
