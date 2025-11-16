@@ -26,7 +26,7 @@ import {
   ChevronDown,
   X,
 } from 'lucide-react';
-import { useToast } from '@/components/providers/ToastProvider';
+import { useNotification } from '@/contexts/NotificationContext';
 import { useCart } from '@/contexts/CartContext';
 import { useLastViewed } from '@/contexts/LastViewedContext';
 import { useSession } from 'next-auth/react';
@@ -81,7 +81,7 @@ function ProductDetailPageContent() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { showToast } = useToast();
+  const { showSuccess, showError } = useNotification();
   const { addItem: addToCart, itemCount } = useCart();
   const { refreshLastViewed } = useLastViewed();
   const { data: session } = useSession();
@@ -193,12 +193,12 @@ function ProductDetailPageContent() {
               });
         }
       } else {
-        showToast('Product not found', 'error');
+        showError('Produk Tidak Ditemukan', 'Produk yang Anda cari tidak ditemukan');
         router.push('/products');
       }
     } catch (error) {
       console.error('Error fetching product:', error);
-      showToast('Failed to load product', 'error');
+      showError('Gagal Memuat', 'Gagal memuat detail produk');
       router.push('/products');
     }
   };
@@ -451,7 +451,7 @@ function ProductDetailPageContent() {
 
   const openSheet = (mode: 'cart' | 'buy-now') => {
     if (isOutOfStock) {
-      showToast('Produk sedang habis stok', 'error');
+      showError('Stok Habis', 'Produk sedang habis stok');
       return;
     }
     if (!selectedColor && colorOptions.length > 0) {
@@ -484,7 +484,7 @@ function ProductDetailPageContent() {
     if (!product || product.stock === 0 || !sheetMode) return;
 
     if (!selectedColor || !selectedSize) {
-      showToast('Silakan pilih warna dan ukuran terlebih dahulu.', 'error');
+      showError('Peringatan', 'Silakan pilih warna dan ukuran terlebih dahulu');
       return;
     }
 
@@ -512,10 +512,10 @@ function ProductDetailPageContent() {
       // Get current image URL based on selectedImage index
       const currentImageUrl = allImages[selectedImage] || allImages[0] || null;
       await addToCart(product.id, clampQuantity(quantity), undefined, selectedColor, selectedSize, currentImageUrl || undefined);
-      showToast('Produk berhasil masuk ke keranjang', 'success');
+      // Notifikasi sudah dihandle oleh CartContext, tidak perlu showToast lagi
       setSheetMode(null);
     } catch (error) {
-      showToast('Gagal menambahkan ke keranjang', 'error');
+      // Error juga sudah dihandle oleh CartContext
     } finally {
       setActionLoading(false);
     }
@@ -523,7 +523,7 @@ function ProductDetailPageContent() {
 
   const handleBuyNowNavigation = () => {
     if (isOutOfStock || !product) {
-      showToast('Produk sedang habis stok', 'error');
+      showError('Stok Habis', 'Produk sedang habis stok');
       return;
     }
     router.push(`/products/${product.slug}/buy-now`);
@@ -680,8 +680,8 @@ function ProductDetailPageContent() {
                 </div>
               </div>
             )}
-            
-            {/* Product Info Section */}
+
+          {/* Product Info Section */}
             <div className="p-4 sm:p-6 border-t border-gray-200">
               {/* Price */}
               <div className="pb-4">
@@ -756,16 +756,16 @@ function ProductDetailPageContent() {
                 </div>
                 {policyDetails && policyDetails.length > 0 && (
                   <div className="border-t border-gray-200 pt-4 pb-4">
-                    <div
-                      role="button"
-                      tabIndex={0}
+                  <div
+                    role="button"
+                    tabIndex={0}
                       onClick={() => setIsWarrantyExpanded(!isWarrantyExpanded)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
                           setIsWarrantyExpanded(!isWarrantyExpanded);
-                        }
-                      }}
+                      }
+                    }}
                       className="flex items-center gap-2.5 min-h-[24px] cursor-pointer focus:outline-none admin-no-animation"
                       style={{ 
                         transition: 'none !important',
@@ -780,8 +780,8 @@ function ProductDetailPageContent() {
                         e.currentTarget.style.opacity = '1';
                       }}
                       aria-label="Lihat detail garansi"
-                    >
-                      <RotateCcw className="!w-[18px] !h-[18px] text-blue-600 flex-shrink-0" />
+                  >
+                    <RotateCcw className="!w-[18px] !h-[18px] text-blue-600 flex-shrink-0" />
                       <span className="!text-sm text-gray-700 !font-semibold flex-1 min-w-0">
                         {/* Mobile: Show limited text (1 sentence/40 chars) with truncate */}
                         <span className="block sm:hidden truncate">
@@ -793,7 +793,7 @@ function ProductDetailPageContent() {
                             }
                             return allTitles.substring(0, maxLength).trim() + '...';
                           })()}
-                        </span>
+                    </span>
                         {/* Tablet/Desktop: Show all titles */}
                         <span className="hidden sm:block">
                           {policyDetails.map((item, index) => (
@@ -809,9 +809,9 @@ function ProductDetailPageContent() {
                       {isWarrantyExpanded ? (
                         <ChevronDown className="ml-auto w-4 h-4 text-gray-400 flex-shrink-0" />
                       ) : (
-                        <ChevronRight className="ml-auto w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <ChevronRight className="ml-auto w-4 h-4 text-gray-400 flex-shrink-0" />
                       )}
-                    </div>
+                  </div>
                     {isWarrantyExpanded && (
                       <div className="fixed inset-0 z-[60] flex flex-col">
                         <div
@@ -829,7 +829,7 @@ function ProductDetailPageContent() {
                             >
                               <X className="w-4 h-4" />
                             </button>
-                          </div>
+                </div>
                           <div className="pb-[max(env(safe-area-inset-bottom),24px)] overflow-y-auto max-h-[80vh]">
                             <div className="py-4">
                               <div className="w-full bg-white border border-gray-200 rounded-none">
@@ -853,14 +853,14 @@ function ProductDetailPageContent() {
                 {deliveryGuaranteeTitle && deliveryGuaranteeDescription && (
                   <div className="border-t border-gray-200 pt-4 pb-4">
                     <div className="flex items-center gap-2.5 min-h-[24px]">
-                      <Truck className="!w-[18px] !h-[18px] text-purple-600 flex-shrink-0" />
-                      <div className="flex-1">
+                    <Truck className="!w-[18px] !h-[18px] text-purple-600 flex-shrink-0" />
+                    <div className="flex-1">
                         <p className="!text-sm text-gray-700 !font-semibold">{deliveryGuaranteeTitle}</p>
                         <p className="!text-[10px] text-gray-500">{deliveryGuaranteeDescription}</p>
-                      </div>
-                      <ChevronRight className="ml-2 w-4 h-4 text-gray-400" />
                     </div>
+                    <ChevronRight className="ml-2 w-4 h-4 text-gray-400" />
                   </div>
+                </div>
                 )}
               </div>
 

@@ -109,6 +109,7 @@ export async function PUT(request: NextRequest) {
       minimumOrderAmount: 'order',
       // Payment
       paymentTimeoutHours: 'payment',
+      paymentMethods: 'payment',
       // Shipping
       freeShippingThreshold: 'shipping',
       defaultShippingCost: 'shipping',

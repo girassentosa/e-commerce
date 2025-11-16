@@ -82,6 +82,8 @@ interface Order {
   subtotal: string;
   tax: string;
   shippingCost: string;
+  serviceFee?: string;
+  paymentFee?: string;
   discount: string;
   total: string;
   currency: string;
@@ -132,6 +134,7 @@ export default function AdminOrderDetailPage() {
   const [paymentStatus, setPaymentStatus] = useState<Order['paymentStatus']>('PENDING');
   const [transactionId, setTransactionId] = useState('');
   const [notes, setNotes] = useState('');
+  const [paymentMethodName, setPaymentMethodName] = useState<string>('');
 
   // Hide AdminHeader and AdminSidebar dengan CSS - HARUS dipanggil sebelum conditional return
   useEffect(() => {
@@ -184,6 +187,49 @@ export default function AdminOrderDetailPage() {
       fetchOrder();
     }
   }, [orderNumber]);
+
+  // Fetch payment method name
+  useEffect(() => {
+    const fetchPaymentMethodName = async () => {
+      if (!order?.paymentMethod) {
+        setPaymentMethodName('');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/settings/payment-methods');
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          const paymentMethods = data.data;
+          const selectedMethod = paymentMethods.find(
+            (m: any) => (order.paymentMethod === 'VIRTUAL_ACCOUNT' && m.id === order.paymentChannel) ||
+                       (order.paymentMethod === m.type && m.type !== 'VIRTUAL_ACCOUNT' && !order.paymentChannel)
+          );
+          if (selectedMethod) {
+            setPaymentMethodName(selectedMethod.name);
+          } else {
+            // Fallback to paymentChannel or paymentMethod
+            const paymentMeta = getPaymentMethodDisplay(order.paymentMethod, 'id-ID');
+            setPaymentMethodName(order.paymentChannel || paymentMeta.label || order.paymentMethod || '');
+          }
+        } else {
+          // Fallback to paymentChannel or paymentMethod
+          const paymentMeta = getPaymentMethodDisplay(order.paymentMethod, 'id-ID');
+          setPaymentMethodName(order.paymentChannel || paymentMeta.label || order.paymentMethod || '');
+        }
+      } catch (error) {
+        console.error('Error fetching payment method name:', error);
+        // Fallback to paymentChannel or paymentMethod
+        const paymentMeta = getPaymentMethodDisplay(order?.paymentMethod, 'id-ID');
+        setPaymentMethodName(order?.paymentChannel || paymentMeta.label || order?.paymentMethod || '');
+      }
+    };
+
+    if (order) {
+      fetchPaymentMethodName();
+    }
+  }, [order]);
 
   const fetchOrder = async () => {
     try {
@@ -844,29 +890,58 @@ export default function AdminOrderDetailPage() {
             <div className="p-6">
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-sm font-medium text-gray-600">Subtotal</span>
+                  <span className="text-sm font-medium text-gray-600">Subtotal pesanan</span>
                   <span className="text-sm font-semibold text-gray-900">
                     {formatPrice(order.subtotal)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-sm font-medium text-gray-600">Pajak</span>
+                  <span className="text-sm font-medium text-gray-600">Subtotal pengiriman</span>
                   <span className="text-sm font-semibold text-gray-900">
-                    {formatPrice(order.tax)}
+                    {parseFloat(order.shippingCost) === 0 ? (
+                      <span className="line-through text-gray-400">Gratis Ongkir</span>
+                    ) : (
+                      formatPrice(order.shippingCost)
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-sm font-medium text-gray-600">Pengiriman</span>
+                  <span className="text-sm font-medium text-gray-600">Biaya layanan</span>
                   <span className="text-sm font-semibold text-gray-900">
-                    {parseFloat(order.shippingCost) === 0
-                      ? 'FREE'
-                      : formatPrice(order.shippingCost)}
+                    {parseFloat(order.serviceFee || '0') === 0 ? (
+                      <span className="line-through text-gray-400">Gratis Ongkir</span>
+                    ) : (
+                      formatPrice(order.serviceFee || '0')
+                    )}
                   </span>
                 </div>
+                {parseFloat(order.paymentFee || '0') !== 0 && paymentMethodName && (
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm font-medium text-gray-600">
+                      {parseFloat(order.paymentFee || '0') < 0 
+                        ? `Potongan pembayaran ${paymentMethodName}` 
+                        : `Biaya pembayaran ${paymentMethodName}`
+                      }
+                    </span>
+                    <span className={`text-sm font-semibold ${
+                      parseFloat(order.paymentFee || '0') < 0 ? 'text-green-600' : 'text-gray-900'
+                    }`}>
+                      {parseFloat(order.paymentFee || '0') < 0 ? '-' : '+'}{formatPrice(Math.abs(parseFloat(order.paymentFee || '0')))}
+                    </span>
+                  </div>
+                )}
+                {parseFloat(order.tax) > 0 && (
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm font-medium text-gray-600">Pajak</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {formatPrice(order.tax)}
+                    </span>
+                  </div>
+                )}
                 {parseFloat(order.discount) > 0 && (
                   <div className="flex justify-between items-center py-2">
-                    <span className="text-sm font-medium text-green-600">Diskon</span>
-                    <span className="text-sm font-semibold text-green-700">
+                    <span className="text-sm font-medium text-gray-600">Voucher diskon</span>
+                    <span className="text-sm font-semibold text-red-500">
                       -{formatPrice(order.discount)}
                     </span>
                   </div>

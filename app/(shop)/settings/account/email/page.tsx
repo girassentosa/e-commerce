@@ -4,12 +4,13 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 import { useSaveAction } from '@/contexts/SaveActionContext';
 
 function EmailPageContent() {
   const router = useRouter();
   const { data: session, status, update: updateSession } = useSession();
+  const { showSuccess, showError } = useNotification();
   const saveAction = useSaveAction();
 
   const [formData, setFormData] = useState({
@@ -39,7 +40,7 @@ function EmailPageContent() {
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
-          toast.error('Gagal memuat data profil');
+          showError('Gagal', 'Gagal memuat data profil');
         }
       }
     };
@@ -87,15 +88,15 @@ function EmailPageContent() {
 
       if (data.success) {
         setOriginalData(JSON.parse(JSON.stringify(formData)));
-        toast.success('Email berhasil disimpan');
+        showSuccess('Berhasil', 'Email berhasil disimpan');
         // Update session
         updateSession();
       } else {
-        toast.error(data.error || 'Gagal menyimpan email');
+        showError('Gagal', data.error || 'Gagal menyimpan email');
       }
     } catch (error) {
       console.error('Error saving email:', error);
-      toast.error('Gagal menyimpan email');
+      showError('Gagal', 'Gagal menyimpan email');
     } finally {
       setIsSaving(false);
     }

@@ -15,7 +15,7 @@ import { Loader } from '@/components/ui/Loader';
 import { Pagination } from '@/components/ui/Pagination';
 import { Edit, Trash2, Package } from 'lucide-react';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Review {
   id: string;
@@ -42,6 +42,7 @@ interface Review {
 export default function MyReviewsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { showSuccess, showError, showConfirm } = useNotification();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,7 +73,7 @@ export default function MyReviewsPage() {
       }
     } catch (error) {
       console.error('Error fetching reviews:', error);
-      toast.error('Failed to load reviews');
+      showError('Gagal', 'Gagal memuat review');
     } finally {
       setLoading(false);
     }
@@ -82,11 +83,7 @@ export default function MyReviewsPage() {
     setEditingReview(review);
   };
 
-  const handleDelete = async (reviewId: string) => {
-    if (!confirm('Are you sure you want to delete this review?')) {
-      return;
-    }
-
+  const performDelete = async (reviewId: string) => {
     try {
       const response = await fetch(`/api/reviews/${reviewId}`, {
         method: 'DELETE',
@@ -98,12 +95,24 @@ export default function MyReviewsPage() {
         throw new Error(data.error || 'Failed to delete review');
       }
 
-      toast.success('Review deleted successfully');
+      showSuccess('Berhasil', 'Review berhasil dihapus');
       fetchMyReviews();
     } catch (error: any) {
       console.error('Error deleting review:', error);
-      toast.error(error.message || 'Failed to delete review');
+      showError('Gagal', error.message || 'Gagal menghapus review');
     }
+  };
+
+  const handleDelete = (reviewId: string) => {
+    showConfirm(
+      'Hapus Review',
+      'Apakah Anda yakin ingin menghapus review ini?',
+      () => performDelete(reviewId),
+      undefined,
+      'Ya, Hapus',
+      'Batal',
+      'danger'
+    );
   };
 
   const handleSubmitReview = async (data: { rating: number; title?: string; comment?: string }) => {
@@ -124,12 +133,12 @@ export default function MyReviewsPage() {
         throw new Error(result.error || 'Failed to update review');
       }
 
-      toast.success('Review updated successfully!');
+      showSuccess('Berhasil', 'Review berhasil diperbarui!');
       setEditingReview(null);
       fetchMyReviews();
     } catch (error: any) {
       console.error('Error updating review:', error);
-      toast.error(error.message || 'Failed to update review');
+      showError('Gagal', error.message || 'Gagal memperbarui review');
     }
   };
 

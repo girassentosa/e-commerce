@@ -7,7 +7,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import toast from 'react-hot-toast';
+import { useNotification } from './NotificationContext';
 
 // Types
 interface WishlistImage {
@@ -55,6 +55,7 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
+  const { showSuccess, showError } = useNotification();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -86,7 +87,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   // Add item to wishlist
   const addItem = useCallback(async (productId: string) => {
     if (status !== 'authenticated') {
-      toast.error('Please login to add items to wishlist');
+      showError('Login Diperlukan', 'Silakan login untuk menambahkan ke wishlist');
       return;
     }
 
@@ -100,16 +101,16 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
-        toast.success(data.message || 'Added to wishlist');
+        showSuccess('Berhasil', data.message || 'Berhasil ditambahkan ke wishlist');
         await fetchWishlist();
       } else {
-        toast.error(data.error || 'Failed to add to wishlist');
+        showError('Gagal', data.error || 'Gagal menambahkan ke wishlist');
       }
     } catch (error) {
       console.error('Error adding to wishlist:', error);
-      toast.error('Failed to add to wishlist');
+      showError('Gagal', 'Gagal menambahkan ke wishlist');
     }
-  }, [status, fetchWishlist]);
+  }, [status, fetchWishlist, showSuccess, showError]);
 
   // Remove item from wishlist
   const removeItem = useCallback(async (productId: string) => {
@@ -121,16 +122,16 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Removed from wishlist');
+        showSuccess('Berhasil', 'Berhasil dihapus dari wishlist');
         await fetchWishlist();
       } else {
-        toast.error(data.error || 'Failed to remove from wishlist');
+        showError('Gagal', data.error || 'Gagal menghapus dari wishlist');
       }
     } catch (error) {
       console.error('Error removing from wishlist:', error);
-      toast.error('Failed to remove from wishlist');
+      showError('Gagal', 'Gagal menghapus dari wishlist');
     }
-  }, [fetchWishlist]);
+  }, [fetchWishlist, showSuccess, showError]);
 
   // Check if product is in wishlist
   const isInWishlist = useCallback((productId: string): boolean => {

@@ -4,12 +4,13 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 import { useSaveAction } from '@/contexts/SaveActionContext';
 
 function PasswordPageContent() {
   const router = useRouter();
   const { status } = useSession();
+  const { showSuccess, showError } = useNotification();
   const saveAction = useSaveAction();
 
   const [formData, setFormData] = useState({
@@ -118,7 +119,7 @@ function PasswordPageContent() {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Password berhasil diubah');
+        showSuccess('Berhasil', 'Password berhasil diubah');
         // Reset form
         setFormData({
           oldPassword: '',
@@ -127,11 +128,11 @@ function PasswordPageContent() {
         });
         setErrors({});
       } else {
-        toast.error(data.error || 'Gagal mengubah password');
+        showError('Gagal', data.error || 'Gagal mengubah password');
       }
     } catch (error) {
       console.error('Error changing password:', error);
-      toast.error('Gagal mengubah password');
+      showError('Gagal', 'Gagal mengubah password');
     } finally {
       setIsSaving(false);
     }

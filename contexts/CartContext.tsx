@@ -7,7 +7,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import toast from 'react-hot-toast';
+import { useNotification } from './NotificationContext';
 
 // Types
 interface CartImage {
@@ -35,6 +35,8 @@ interface CartProduct {
     name: string;
     value: string;
   }>;
+  freeShippingThreshold?: string | null;
+  defaultShippingCost?: string | null;
 }
 
 interface CartVariant {
@@ -78,6 +80,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
+  const { showSuccess, showError } = useNotification();
   const [items, setItems] = useState<CartItem[]>([]);
   const [itemCount, setItemCount] = useState(0);
   const [subtotal, setSubtotal] = useState('0.00');
@@ -132,7 +135,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Add item to cart
   const addItem = useCallback(async (productId: string, quantity = 1, variantId?: string, color?: string, size?: string, imageUrl?: string) => {
     if (status !== 'authenticated') {
-      toast.error('Please login to add items to cart');
+      showError('Login Diperlukan', 'Silakan login untuk menambahkan item ke keranjang');
       return;
     }
 
@@ -146,18 +149,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
-        toast.success(data.message || 'Item added to cart');
+        showSuccess('Berhasil', data.message || 'Item berhasil ditambahkan ke keranjang');
         // Update count immediately, then fetch full cart
         await fetchCartCount();
         await fetchCart();
       } else {
-        toast.error(data.error || 'Failed to add item to cart');
+        showError('Gagal', data.error || 'Gagal menambahkan item ke keranjang');
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      toast.error('Failed to add item to cart');
+      showError('Gagal', 'Gagal menambahkan item ke keranjang');
     }
-  }, [status, fetchCartCount, fetchCart]);
+  }, [status, fetchCartCount, fetchCart, showSuccess, showError]);
 
   // Update item quantity
   const updateQuantity = useCallback(async (itemId: string, quantity: number) => {
@@ -171,18 +174,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Cart updated');
+        showSuccess('Berhasil', 'Keranjang berhasil diperbarui');
         // Update count immediately, then fetch full cart
         await fetchCartCount();
         await fetchCart();
       } else {
-        toast.error(data.error || 'Failed to update cart');
+        showError('Gagal', data.error || 'Gagal memperbarui keranjang');
       }
     } catch (error) {
       console.error('Error updating cart:', error);
-      toast.error('Failed to update cart');
+      showError('Gagal', 'Gagal memperbarui keranjang');
     }
-  }, [fetchCartCount, fetchCart]);
+  }, [fetchCartCount, fetchCart, showSuccess, showError]);
 
   // Remove item from cart
   const removeItem = useCallback(async (itemId: string) => {
@@ -194,18 +197,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Item removed from cart');
+        showSuccess('Berhasil', 'Item berhasil dihapus dari keranjang');
         // Update count immediately, then fetch full cart
         await fetchCartCount();
         await fetchCart();
       } else {
-        toast.error(data.error || 'Failed to remove item');
+        showError('Gagal', data.error || 'Gagal menghapus item');
       }
     } catch (error) {
       console.error('Error removing item:', error);
-      toast.error('Failed to remove item');
+      showError('Gagal', 'Gagal menghapus item');
     }
-  }, [fetchCartCount, fetchCart]);
+  }, [fetchCartCount, fetchCart, showSuccess, showError]);
 
   // Clear entire cart
   const clearCart = useCallback(async () => {
@@ -217,18 +220,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Cart cleared');
+        showSuccess('Berhasil', 'Keranjang berhasil dikosongkan');
         // Update count immediately, then fetch full cart
         await fetchCartCount();
         await fetchCart();
       } else {
-        toast.error(data.error || 'Failed to clear cart');
+        showError('Gagal', data.error || 'Gagal mengosongkan keranjang');
       }
     } catch (error) {
       console.error('Error clearing cart:', error);
-      toast.error('Failed to clear cart');
+      showError('Gagal', 'Gagal mengosongkan keranjang');
     }
-  }, [fetchCartCount, fetchCart]);
+  }, [fetchCartCount, fetchCart, showSuccess, showError]);
 
   // Refresh cart
   const refreshCart = useCallback(async () => {

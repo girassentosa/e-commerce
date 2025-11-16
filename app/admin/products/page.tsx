@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 import { useAdminHeader } from '@/contexts/AdminHeaderContext';
 import { useCurrency } from '@/hooks/useCurrency';
 
@@ -54,6 +54,7 @@ export default function AdminProductsPage() {
   const router = useRouter();
   const { setHeader } = useAdminHeader();
   const { formatPrice } = useCurrency();
+  const { showSuccess, showError, showConfirm } = useNotification();
 
   useEffect(() => {
     setHeader(Package, 'Products');
@@ -94,7 +95,7 @@ export default function AdminProductsPage() {
       setTotalCount(data.data.pagination.totalCount);
     } catch (error: any) {
       console.error('Error fetching products:', error);
-      toast.error(error.message || 'Failed to load products');
+      showError('Gagal', error.message || 'Gagal memuat produk');
     } finally {
       setLoading(false);
     }
@@ -143,15 +144,9 @@ export default function AdminProductsPage() {
       const failedImages = data.data?.failedImages || 0;
       
       if (failedImages > 0) {
-        toast.success(
-          `Product permanently deleted. ${deletedImages} image(s) deleted, ${failedImages} failed.`,
-          { duration: 5000 }
-        );
+        showSuccess('Berhasil', `Produk berhasil dihapus. ${deletedImages} gambar dihapus, ${failedImages} gagal.`);
       } else {
-        toast.success(
-          `Product permanently deleted. All ${deletedImages} image(s) removed.`,
-          { duration: 4000 }
-        );
+        showSuccess('Berhasil', `Produk berhasil dihapus. Semua ${deletedImages} gambar dihapus.`);
       }
 
       fetchProducts();
@@ -159,7 +154,7 @@ export default function AdminProductsPage() {
       setProductToDelete(null);
     } catch (error: any) {
       console.error('Error deleting product:', error);
-      toast.error(error.message || 'Failed to delete product');
+      showError('Gagal', error.message || 'Gagal menghapus produk');
     }
   };
 
@@ -177,28 +172,15 @@ export default function AdminProductsPage() {
         throw new Error(data.error || 'Failed to update product status');
       }
 
-      toast.success(`Product ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+      showSuccess('Berhasil', `Produk berhasil ${!currentStatus ? 'diaktifkan' : 'dinonaktifkan'}`);
       fetchProducts();
     } catch (error: any) {
       console.error('Error updating product status:', error);
-      toast.error(error.message || 'Failed to update product status');
+      showError('Gagal', error.message || 'Gagal memperbarui status produk');
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedProducts.size === 0) {
-      toast.error('No products selected');
-      return;
-    }
-
-    if (
-      !confirm(
-        `Permanently delete ${selectedProducts.size} selected product(s)?\n\nThis will delete all related data (images, variants, cart items, wishlist, reviews, order items). This action cannot be undone.`
-      )
-    ) {
-      return;
-    }
-
+  const performBulkDelete = async () => {
     try {
       const deletePromises = Array.from(selectedProducts).map(async (id) => {
         const response = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
@@ -211,20 +193,34 @@ export default function AdminProductsPage() {
       const failedCount = results.length - successCount;
 
       if (failedCount > 0) {
-        toast.error(`Failed to delete ${failedCount} product(s)`);
+        showError('Gagal', `Gagal menghapus ${failedCount} produk`);
       } else {
-        toast.success(
-          `${successCount} product(s) permanently deleted. All related data removed.`,
-          { duration: 4000 }
-        );
+        showSuccess('Berhasil', `${successCount} produk berhasil dihapus secara permanen. Semua data terkait dihapus.`);
       }
 
       setSelectedProducts(new Set());
       fetchProducts();
     } catch (error) {
       console.error('Error bulk deleting products:', error);
-      toast.error('Failed to delete some products');
+      showError('Gagal', 'Gagal menghapus beberapa produk');
     }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedProducts.size === 0) {
+      showError('Peringatan', 'Tidak ada produk yang dipilih');
+      return;
+    }
+
+    showConfirm(
+      'Hapus Produk',
+      `Apakah Anda yakin ingin menghapus ${selectedProducts.size} produk yang dipilih secara permanen?\n\nIni akan menghapus semua data terkait (gambar, varian, item keranjang, wishlist, review, item pesanan). Tindakan ini tidak dapat dibatalkan.`,
+      performBulkDelete,
+      undefined,
+      'Ya, Hapus',
+      'Batal',
+      'danger'
+    );
   };
 
   const handleSelectAll = (checked: boolean) => {

@@ -102,7 +102,7 @@ export async function GET(
     const primaryImage = product.images && product.images.length > 0
       ? (product.images.find((img) => img.isPrimary) || product.images[0])
       : null;
-    const { images: originalImages, _count, price: originalPrice, salePrice: originalSalePrice, ratingAverage, stockQuantity, ...rest } = product;
+    const { images: originalImages, _count, price: originalPrice, salePrice: originalSalePrice, ratingAverage, stockQuantity, freeShippingThreshold: originalFreeShippingThreshold, defaultShippingCost: originalDefaultShippingCost, ...rest } = product;
     
     const transformedProduct = {
       ...rest,
@@ -114,6 +114,8 @@ export async function GET(
       reviewCount: _count.reviews,
       stock: stockQuantity,
       salesCount: product.salesCount, // Add salesCount for real-time sold count
+      freeShippingThreshold: originalFreeShippingThreshold?.toString() || null,
+      defaultShippingCost: originalDefaultShippingCost?.toString() || null,
     };
 
     return NextResponse.json({

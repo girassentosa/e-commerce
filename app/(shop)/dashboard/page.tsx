@@ -30,7 +30,7 @@ import {
   Settings,
   ShoppingCart,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 import { z } from 'zod';
 
 interface DashboardStats {
@@ -49,6 +49,7 @@ interface DashboardData {
 export default function DashboardPage() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
+  const { showSuccess, showError } = useNotification();
   const { count: wishlistCount } = useWishlist();
   const { itemCount } = useCart();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -129,7 +130,7 @@ export default function DashboardPage() {
       });
     } catch (error: any) {
       console.error('Error fetching profile:', error);
-      toast.error(error.message || 'Failed to load profile');
+      showError('Gagal', error.message || 'Gagal memuat profil');
     } finally {
       setLoadingProfile(false);
     }
@@ -209,9 +210,9 @@ export default function DashboardPage() {
 
         // Clear password fields after successful change
         setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-        toast.success('Profile and password updated successfully!');
+        showSuccess('Berhasil', 'Profil dan password berhasil diperbarui!');
       } else {
-        toast.success('Profile updated successfully!');
+        showSuccess('Berhasil', 'Profil berhasil diperbarui!');
       }
 
       // Update session and refresh UI
@@ -231,9 +232,9 @@ export default function DashboardPage() {
             }
           }
         });
-        toast.error('Please fix the form errors');
+        showError('Peringatan', 'Silakan perbaiki error pada form');
       } else if (error instanceof Error) {
-        toast.error(error.message);
+        showError('Gagal', error.message);
       }
     } finally {
       setSubmitting(false);
@@ -247,13 +248,13 @@ export default function DashboardPage() {
 
     // Validate file size (2MB max)
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('File size must be less than 2MB');
+      showError('Peringatan', 'Ukuran file harus kurang dari 2MB');
       return;
     }
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('File must be an image');
+      showError('Peringatan', 'File harus berupa gambar');
       return;
     }
 
@@ -274,13 +275,13 @@ export default function DashboardPage() {
       }
 
       setProfileData((prev) => ({ ...prev, avatarUrl: data.data.url }));
-      toast.success('Avatar uploaded successfully!');
+      showSuccess('Berhasil', 'Avatar berhasil diunggah!');
       // Update session and refresh UI
       await update();
       router.refresh();
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
-      toast.error(error.message || 'Failed to upload avatar');
+      showError('Gagal', error.message || 'Gagal mengunggah avatar');
     } finally {
       setUploadingAvatar(false);
       // Reset file input

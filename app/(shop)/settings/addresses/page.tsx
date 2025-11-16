@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Plus, MapPin, ChevronRight, ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface ShippingAddress {
   id: string;
@@ -22,6 +22,7 @@ interface ShippingAddress {
 function AddressesPageContent() {
   const router = useRouter();
   const { status } = useSession();
+  const { showError } = useNotification();
   const [addresses, setAddresses] = useState<ShippingAddress[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -36,11 +37,11 @@ function AddressesPageContent() {
           if (data.success) {
             setAddresses(data.data || []);
           } else {
-            toast.error('Gagal memuat alamat');
+            showError('Gagal', 'Gagal memuat alamat');
           }
         } catch (error) {
           console.error('Error fetching addresses:', error);
-          toast.error('Gagal memuat alamat');
+          showError('Gagal', 'Gagal memuat alamat');
         } finally {
           setIsLoading(false);
         }

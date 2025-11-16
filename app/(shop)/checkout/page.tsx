@@ -8,7 +8,7 @@ import { ArrowLeft, MapPin, ChevronRight } from 'lucide-react';
 import { useCheckout } from '@/contexts/CheckoutContext';
 import { useCart } from '@/contexts/CartContext';
 import { useCurrency } from '@/hooks/useCurrency';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 import { Loader } from '@/components/ui/Loader';
 import { PaymentModal } from '@/components/checkout/PaymentModal';
 
@@ -38,16 +38,30 @@ interface CheckoutProduct {
   brand?: string | null;
   imageUrl?: string | null;
   images?: CheckoutProductImage[];
+  freeShippingThreshold?: string | null;
+  defaultShippingCost?: string | null;
+}
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  type: 'VIRTUAL_ACCOUNT' | 'QRIS' | 'COD' | 'CREDIT_CARD';
+  fee: number;
+  isActive: boolean;
+  description?: string;
+  icon?: string;
 }
 
 function CheckoutPageContent() {
   const router = useRouter();
   const { status } = useSession();
+  const { showSuccess, showError } = useNotification();
   const { addressId, setAddressId, paymentMethod, paymentChannel } = useCheckout();
   const { items: cartItems, subtotal: cartSubtotal, selectedItems } = useCart();
   const { formatPrice } = useCurrency();
   const [selectedAddress, setSelectedAddress] = useState<ShippingAddress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [customPaymentMethods, setCustomPaymentMethods] = useState<PaymentMethod[]>([]);
   const searchParams = useSearchParams();
   const flow = searchParams.get('flow');
   const isBuyNowFlow = flow === 'buy-now';
@@ -62,6 +76,24 @@ function CheckoutPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentOrderNumber, setPaymentOrderNumber] = useState<string | null>(null);
+
+  // Fetch custom payment methods
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        const response = await fetch('/api/settings/payment-methods');
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          setCustomPaymentMethods(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching payment methods:', error);
+      }
+    };
+
+    fetchPaymentMethods();
+  }, []);
 
   // Fetch selected address or default address
   useEffect(() => {
@@ -311,26 +343,37 @@ function CheckoutPageContent() {
   const discountTotal = isBuyNowFlow ? buyNowDiscountTotal : cartDiscountTotal;
   const hasAnyDiscount = discountTotal > 0;
   const brandLabel = productDetails?.brand?.trim() || productDetails?.name || null;
+  // Get selected payment method info
+  const selectedPaymentMethodData = customPaymentMethods.find(
+    (m) => (paymentMethod === 'VIRTUAL_ACCOUNT' && m.id === paymentChannel) || 
+           (paymentMethod === m.type && m.type !== 'VIRTUAL_ACCOUNT' && (!paymentChannel || paymentChannel === m.id))
+  );
+  const paymentFee = selectedPaymentMethodData?.fee || 0;
+
   const paymentMethodMap: Record<
-    NonNullable<typeof paymentMethod>,
+    'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | 'CREDIT_CARD',
     { label: string; description: string }
   > = {
     COD: {
-      label: 'Bayar di Tempat (COD)',
-      description: 'Pembayaran dilakukan saat pesanan diterima.',
+      label: selectedPaymentMethodData?.name || 'Bayar di Tempat (COD)',
+      description: selectedPaymentMethodData?.description || 'Pembayaran dilakukan saat pesanan diterima.',
     },
     VIRTUAL_ACCOUNT: {
-      label: 'Virtual Account',
-      description: 'Pembayaran melalui Virtual Account bank yang tersedia.',
+      label: selectedPaymentMethodData?.name || 'Virtual Account',
+      description: selectedPaymentMethodData?.description || 'Pembayaran melalui Virtual Account bank yang tersedia.',
     },
     QRIS: {
-      label: 'QRIS',
-      description: 'Pembayaran instan menggunakan QR Indonesia Standard.',
+      label: selectedPaymentMethodData?.name || 'QRIS',
+      description: selectedPaymentMethodData?.description || 'Pembayaran instan menggunakan QR Indonesia Standard.',
+    },
+    CREDIT_CARD: {
+      label: selectedPaymentMethodData?.name || 'Credit/Debit Card',
+      description: selectedPaymentMethodData?.description || 'Pembayaran menggunakan kartu kredit atau debit.',
     },
   };
   const selectedPaymentInfo = paymentMethod ? paymentMethodMap[paymentMethod] : null;
   let paymentLabel = selectedPaymentInfo?.label ?? 'Belum ada metode pembayaran';
-  if (paymentMethod === 'VIRTUAL_ACCOUNT' && paymentChannel) {
+  if (paymentMethod === 'VIRTUAL_ACCOUNT' && paymentChannel && !selectedPaymentMethodData) {
     paymentLabel = `${paymentLabel} • ${paymentChannel}`;
   }
   const paymentDescription =
@@ -342,23 +385,23 @@ function CheckoutPageContent() {
   const handleCreateOrder = async () => {
     if (!addressId || !paymentMethod || (paymentMethod === 'VIRTUAL_ACCOUNT' && !paymentChannel)) {
       if (!addressId) {
-        toast.error('Silakan pilih alamat pengiriman terlebih dahulu');
+        showError('Peringatan', 'Silakan pilih alamat pengiriman terlebih dahulu');
       } else if (!paymentMethod) {
-        toast.error('Silakan pilih metode pembayaran terlebih dahulu');
+        showError('Peringatan', 'Silakan pilih metode pembayaran terlebih dahulu');
       } else if (!paymentChannel) {
-        toast.error('Silakan pilih bank virtual account');
+        showError('Peringatan', 'Silakan pilih bank virtual account');
       }
       return;
     }
 
     if (isBuyNowFlow) {
       if (!productDetails) {
-        toast.error('Data produk tidak lengkap');
+        showError('Peringatan', 'Data produk tidak lengkap');
         return;
       }
     } else {
       if (selectedCartItems.length === 0) {
-        toast.error('Tidak ada item yang dipilih');
+        showError('Peringatan', 'Tidak ada item yang dipilih');
         return;
       }
     }
@@ -420,7 +463,7 @@ function CheckoutPageContent() {
         
         // For COD, redirect to success page immediately
         if (orderPaymentMethod === 'COD') {
-          toast.success('Pesanan berhasil dibuat!');
+          showSuccess('Berhasil', 'Pesanan berhasil dibuat!');
         router.push(`/checkout/success?order=${data.data.orderNumber}`);
       } else {
           // For QRIS/VA, show payment modal
@@ -429,12 +472,12 @@ function CheckoutPageContent() {
           setPaymentOrderNumber(data.data.orderNumber);
         }
       } else {
-        toast.success('Pesanan berhasil dibuat!');
+        showSuccess('Berhasil', 'Pesanan berhasil dibuat!');
         router.push('/orders');
       }
     } catch (error) {
       console.error('Error creating order:', error);
-      toast.error(error instanceof Error ? error.message : 'Gagal membuat pesanan');
+      showError('Gagal', error instanceof Error ? error.message : 'Gagal membuat pesanan');
     } finally {
       setIsSubmitting(false);
     }
@@ -448,10 +491,57 @@ function CheckoutPageContent() {
     !(paymentMethod === 'VIRTUAL_ACCOUNT' && !paymentChannel) &&
     !isSubmitting;
 
-  // Payment breakdown calculations (same for both flows)
+  // Payment breakdown calculations
   const subtotalPesanan = subtotal;
-  const subtotalPengiriman = 15000; // Fixed shipping cost for now
-  const biayaLayanan = 2000; // Fixed service fee for now
+  
+  // Calculate shipping based on product settings
+  let subtotalPengiriman = 0;
+  let biayaLayanan = 0;
+  
+  if (isBuyNowFlow && productDetails) {
+    // Buy now flow: use product's shipping settings
+    const freeShippingThreshold = productDetails.freeShippingThreshold ? parseFloat(productDetails.freeShippingThreshold) : null;
+    const defaultShippingCost = productDetails.defaultShippingCost ? parseFloat(productDetails.defaultShippingCost) : null;
+    
+    // Subtotal pengiriman = nilai dari freeShippingThreshold (langsung ambil nilainya)
+    subtotalPengiriman = freeShippingThreshold || 0;
+    
+    // Biaya layanan = nilai dari defaultShippingCost (langsung ambil nilainya)
+    biayaLayanan = defaultShippingCost || 0;
+  } else {
+    // Cart flow: calculate average from all selected products
+    const selectedCartItems = cartItems.filter(item => selectedItems.has(item.id));
+    if (selectedCartItems.length > 0) {
+      let totalFreeShippingThreshold = 0;
+      let totalDefaultShippingCost = 0;
+      let countWithSettings = 0;
+      
+      selectedCartItems.forEach(item => {
+        const product = item.product;
+        const freeShippingThreshold = product.freeShippingThreshold ? parseFloat(product.freeShippingThreshold) : null;
+        const defaultShippingCost = product.defaultShippingCost ? parseFloat(product.defaultShippingCost) : null;
+        
+        if (freeShippingThreshold !== null) {
+          totalFreeShippingThreshold += freeShippingThreshold;
+          countWithSettings++;
+        }
+        if (defaultShippingCost !== null) {
+          totalDefaultShippingCost += defaultShippingCost;
+        }
+      });
+      
+      // Calculate average
+      const avgFreeShippingThreshold = countWithSettings > 0 ? totalFreeShippingThreshold / selectedCartItems.length : null;
+      const avgDefaultShippingCost = selectedCartItems.length > 0 ? totalDefaultShippingCost / selectedCartItems.length : 0;
+      
+      // Subtotal pengiriman = nilai rata-rata dari freeShippingThreshold (langsung ambil nilainya)
+      subtotalPengiriman = avgFreeShippingThreshold || 0;
+      
+      // Biaya layanan = nilai rata-rata dari defaultShippingCost (langsung ambil nilainya)
+      biayaLayanan = avgDefaultShippingCost;
+    }
+  }
+  
   const totalDiskonPengiriman = 0; // No shipping discount for now
   const voucherDiskon = 0; // No voucher discount for now
   const totalPembayaran =
@@ -647,6 +737,16 @@ function CheckoutPageContent() {
               >
                 {paymentDescription}
               </p>
+              {paymentFee !== 0 && selectedPaymentMethodData && (
+                <p className={`mt-1 text-xs font-medium ${
+                  paymentFee < 0 ? 'text-green-600' : 'text-gray-600'
+                }`}>
+                  {paymentFee < 0 
+                    ? `Potongan: ${formatPrice(Math.abs(paymentFee))}` 
+                    : `Tambahan: ${formatPrice(paymentFee)}`
+                  }
+                </p>
+              )}
             </div>
           </section>
 
@@ -666,15 +766,38 @@ function CheckoutPageContent() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Subtotal pengiriman</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatPrice(subtotalPengiriman)}
+                    {subtotalPengiriman === 0 ? (
+                      <span className="line-through text-gray-400">Gratis Ongkir</span>
+                    ) : (
+                      formatPrice(subtotalPengiriman)
+                    )}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Biaya layanan</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatPrice(biayaLayanan)}
+                    {biayaLayanan === 0 ? (
+                      <span className="line-through text-gray-400">Gratis Ongkir</span>
+                    ) : (
+                      formatPrice(biayaLayanan)
+                    )}
                   </span>
                 </div>
+                {paymentFee !== 0 && selectedPaymentMethodData && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      {paymentFee < 0 
+                        ? `Potongan pembayaran ${selectedPaymentMethodData.name}` 
+                        : `Biaya pembayaran ${selectedPaymentMethodData.name}`
+                      }
+                    </span>
+                    <span className={`text-sm font-medium ${
+                      paymentFee < 0 ? 'text-green-600' : 'text-gray-900'
+                    }`}>
+                      {paymentFee < 0 ? '-' : '+'}{formatPrice(Math.abs(paymentFee))}
+                    </span>
+                  </div>
+                )}
                 {totalDiskonPengiriman > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Total diskon pengiriman</span>
@@ -868,16 +991,39 @@ function CheckoutPageContent() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Subtotal pengiriman</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {formatPrice(subtotalPengiriman)}
+                      {subtotalPengiriman === 0 ? (
+                        <span className="line-through text-gray-400">Gratis Ongkir</span>
+                      ) : (
+                        formatPrice(subtotalPengiriman)
+                      )}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Biaya layanan</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatPrice(biayaLayanan)}
-                    </span>
-                  </div>
-                  {totalDiskonPengiriman > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Biaya layanan</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {biayaLayanan === 0 ? (
+                          <span className="line-through text-gray-400">Gratis Ongkir</span>
+                        ) : (
+                          formatPrice(biayaLayanan)
+                        )}
+                      </span>
+                    </div>
+                    {paymentFee !== 0 && selectedPaymentMethodData && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">
+                          {paymentFee < 0 
+                            ? `Potongan pembayaran ${selectedPaymentMethodData.name}` 
+                            : `Biaya pembayaran ${selectedPaymentMethodData.name}`
+                          }
+                        </span>
+                        <span className={`text-sm font-medium ${
+                          paymentFee < 0 ? 'text-green-600' : 'text-gray-900'
+                        }`}>
+                          {paymentFee < 0 ? '-' : '+'}{formatPrice(Math.abs(paymentFee))}
+                        </span>
+                      </div>
+                    )}
+                    {totalDiskonPengiriman > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Total diskon pengiriman</span>
                       <span className="text-sm font-medium text-red-500">

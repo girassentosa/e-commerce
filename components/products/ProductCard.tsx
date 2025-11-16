@@ -129,7 +129,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <div 
-      className="relative bg-white overflow-hidden border-0 rounded-none sm:rounded-xl sm:border sm:border-gray-200"
+      className="product-card relative bg-white overflow-hidden border-0 rounded-none sm:rounded-xl sm:border sm:border-gray-200 w-full min-w-0"
     >
       {/* Product Link Wrapper */}
       <Link
@@ -210,16 +210,16 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* ==================== CONTENT SECTION ==================== */}
-        <div className="p-4 space-y-2 sm:p-4">
+        <div className="p-4 space-y-2 sm:p-4 min-w-0 overflow-hidden">
           
           {/* Rating & Review Count - DI ATAS NAMA */}
           {ratingNum > 0 && (
-            <div className="flex items-center gap-1">
-              <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+              <div className="flex items-center gap-0.5 flex-shrink-0">
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className={`w-3.5 h-3.5 ${
+                    className={`w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 ${
                       i < Math.floor(ratingNum)
                         ? 'text-yellow-400 fill-yellow-400'
                         : 'text-gray-300 fill-gray-300'
@@ -227,11 +227,11 @@ export function ProductCard({ product }: ProductCardProps) {
                   />
                 ))}
               </div>
-              <span className="text-xs font-semibold text-gray-700">
+              <span className="text-[10px] sm:text-xs font-semibold text-gray-700 flex-shrink-0 whitespace-nowrap">
                 ({ratingNum.toFixed(1)})
               </span>
               {product.reviewCount && product.reviewCount > 0 && (
-                <span className="text-xs text-gray-500">
+                <span className="hidden sm:inline text-xs text-gray-500">
                   {product.reviewCount} reviews
                 </span>
               )}
@@ -239,32 +239,30 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
 
           {/* Product Name - Max 2 Lines */}
-          <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight min-h-[2.5rem]">
+          <h3 
+            className="font-semibold text-gray-900 line-clamp-2 leading-tight min-h-[2rem] sm:min-h-[2.5rem]"
+            style={{ 
+              fontSize: '0.75rem',
+            }}
+          >
             {product.name}
           </h3>
 
-          {/* Short Description - Optional */}
-          {product.description && (
-            <p className="text-xs text-gray-500 line-clamp-1 leading-tight">
-              {product.description}
-            </p>
-          )}
-
           {/* Price Display */}
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-lg font-bold text-blue-600">
+          <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+            <span className="text-base sm:text-lg font-bold text-blue-600 truncate min-w-0">
               {formatPrice(displayPrice)}
             </span>
             {hasDiscount && (
-              <span className="text-sm text-gray-400 line-through">
+              <span className="text-xs sm:text-sm text-gray-400 line-through flex-shrink-0">
                 {formatPrice(product.price)}
               </span>
             )}
           </div>
 
           {/* Social Proof - Terjual Count */}
-          <div className="flex items-center gap-1 text-gray-600">
-            <span className="text-xs font-medium">
+          <div className="flex items-center gap-1 text-gray-600 min-w-0">
+            <span className="text-[10px] sm:text-xs font-medium truncate">
               {formattedSold} Terjual
             </span>
           </div>

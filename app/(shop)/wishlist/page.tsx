@@ -115,7 +115,7 @@ export default function WishlistPage() {
           return (
             <div
               key={item.id}
-              className="bg-white rounded-lg border overflow-hidden hover:shadow-lg transition-shadow relative group"
+              className="wishlist-product-card bg-white rounded-lg border overflow-hidden hover:shadow-lg transition-shadow relative group"
             >
               {/* Loading overlay */}
               {isLoading && (
@@ -176,7 +176,7 @@ export default function WishlistPage() {
               <div className="p-4">
                 <Link href={`/products/${product.slug}`}>
                   <p className="text-sm text-gray-500 mb-1">{product.category.name}</p>
-                  <h3 className="font-semibold text-gray-900 mb-2 hover:text-blue-600 line-clamp-2 min-h-[3rem]">
+                  <h3 className="font-semibold text-gray-900 mb-2 hover:text-blue-600 line-clamp-2 min-h-[2rem] sm:min-h-[3rem]">
                     {product.name}
                   </h3>
                 </Link>

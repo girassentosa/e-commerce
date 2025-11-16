@@ -224,7 +224,7 @@ export default function AdminDashboard() {
       {/* Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Orders */}
-        <div className="admin-card overflow-hidden">
+        <div className="admin-card">
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between gap-2 sm:gap-3">
               <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2 flex-1 min-w-0">
@@ -244,29 +244,26 @@ export default function AdminDashboard() {
               </Link>
             </div>
           </div>
-          <div className="p-4 sm:p-6 bg-gradient-to-b from-gray-50 to-white">
+          <div className="p-4 sm:p-6 bg-gradient-to-b from-gray-50 to-white overflow-visible">
             {stats.recentOrders.length > 0 ? (
-              <div className="space-y-3 sm:space-y-4">
+              <div className="admin-dashboard-orders-scroll space-y-3 sm:space-y-4">
                 {stats.recentOrders.map((order, index) => (
                   <Link
                     key={order.id}
                     href={`/admin/orders/${order.orderNumber}`}
-                    className="block group"
+                    className="block"
                   >
-                    <div className="relative bg-white rounded-xl border border-gray-200 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 overflow-hidden group-hover:-translate-y-0.5">
-                      {/* Gradient accent bar */}
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-500 via-teal-500 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      
+                    <div className="relative bg-white rounded-xl border border-gray-200 overflow-hidden">
                       <div className="p-4 sm:p-5">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                           {/* Left Section */}
                           <div className="flex-1 min-w-0 space-y-2">
                             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                               <div className="flex items-center gap-2">
-                                <div className="bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg p-1.5 sm:p-2 group-hover:from-emerald-200 group-hover:to-teal-200 transition-colors">
+                                <div className="bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg p-1.5 sm:p-2">
                                   <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
                                 </div>
-                                <p className="font-bold text-sm sm:text-base md:text-lg text-gray-900 group-hover:text-emerald-600 transition-colors truncate">
+                                <p className="font-bold text-sm sm:text-base md:text-lg text-gray-900 truncate">
                                   {order.orderNumber}
                                 </p>
                               </div>
@@ -300,12 +297,9 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
                             <div className="text-right">
                               <p className="text-xs sm:text-sm text-gray-500 mb-0.5">Total</p>
-                              <p className="font-bold text-lg sm:text-xl md:text-2xl text-gray-900 group-hover:text-emerald-600 transition-colors">
+                              <p className="font-bold text-lg sm:text-xl md:text-2xl text-gray-900">
                                 {formatPrice(order.total)}
                               </p>
-                            </div>
-                            <div className="text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6" />
                             </div>
                           </div>
                         </div>

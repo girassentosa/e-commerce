@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 import { useCheckout } from '@/contexts/CheckoutContext';
 
 interface ShippingAddress {
@@ -23,6 +23,7 @@ interface ShippingAddress {
 export default function SelectAddressPage() {
   const router = useRouter();
   const { status } = useSession();
+  const { showError } = useNotification();
   const { addressId, setAddressId } = useCheckout();
   const [addresses, setAddresses] = useState<ShippingAddress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,11 +55,11 @@ export default function SelectAddressPage() {
             
             setSelectedAddressId(addressToSelect);
           } else {
-            toast.error('Gagal memuat alamat');
+            showError('Gagal', 'Gagal memuat alamat');
           }
         } catch (error) {
           console.error('Error fetching addresses:', error);
-          toast.error('Gagal memuat alamat');
+          showError('Gagal', 'Gagal memuat alamat');
         } finally {
           setIsLoading(false);
         }

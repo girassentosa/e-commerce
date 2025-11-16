@@ -143,15 +143,55 @@ export async function POST(request: NextRequest) {
     const unitPrice = basePrice + variantPriceModifier;
     const subtotal = unitPrice * validatedData.quantity;
 
-    // Calculate shipping and fees (matching frontend calculation)
-    const subtotalPengiriman = 15000; // Fixed shipping cost
-    const biayaLayanan = 2000; // Fixed service fee
+    // Calculate shipping and fees based on product settings
+    const freeShippingThreshold = product.freeShippingThreshold ? parseFloat(String(product.freeShippingThreshold)) : null;
+    const defaultShippingCost = product.defaultShippingCost ? parseFloat(String(product.defaultShippingCost)) : null;
+    
+    // Subtotal pengiriman = nilai dari freeShippingThreshold (langsung ambil nilainya)
+    const subtotalPengiriman = freeShippingThreshold || 0;
+    
+    // Biaya layanan = nilai dari defaultShippingCost (langsung ambil nilainya)
+    const biayaLayanan = defaultShippingCost || 0;
+    
+    // Get payment method fee
+    let paymentFee = 0;
+    if (validatedData.paymentMethod) {
+      try {
+        // Get payment methods from settings
+        const setting = await prisma.setting.findUnique({
+          where: { key: 'paymentMethods' },
+        });
+        
+        if (setting) {
+          let paymentMethods = [];
+          try {
+            paymentMethods = JSON.parse(setting.value);
+          } catch (e) {
+            console.error('Error parsing paymentMethods:', e);
+          }
+          
+          if (Array.isArray(paymentMethods)) {
+            const selectedMethod = paymentMethods.find(
+              (m: any) => (validatedData.paymentMethod === 'VIRTUAL_ACCOUNT' && m.id === validatedData.paymentChannel) ||
+                         (validatedData.paymentMethod === m.type && m.type !== 'VIRTUAL_ACCOUNT' && !validatedData.paymentChannel)
+            );
+            if (selectedMethod) {
+              paymentFee = selectedMethod.fee || 0;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching payment method fee:', error);
+        // Continue with paymentFee = 0 if error
+      }
+    }
+    
     const totalDiskonPengiriman = 0; // No shipping discount for now
     const voucherDiskon = 0; // No voucher discount for now
     const shippingCost = subtotalPengiriman;
     const discount = totalDiskonPengiriman + voucherDiskon;
     const tax = 0; // No tax for now (matching frontend)
-    const total = Math.round((subtotal + shippingCost + biayaLayanan - discount) * 100) / 100; // Round to 2 decimals
+    const total = Math.round((subtotal + shippingCost + biayaLayanan + paymentFee - discount) * 100) / 100; // Round to 2 decimals
 
     // Prepare items for Midtrans (must include shipping and service fee as separate items)
     // Include brand in product name for professional display in payment
@@ -278,6 +318,8 @@ export async function POST(request: NextRequest) {
           subtotal,
           tax,
           shippingCost,
+          serviceFee: biayaLayanan,
+          paymentFee: paymentFee,
           discount,
           total: roundedTotal, // Use rounded total for consistency
           notes: validatedData.notes || null,

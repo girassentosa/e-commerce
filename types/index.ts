@@ -160,6 +160,8 @@ export interface Order {
   subtotal: number | string;
   tax: number | string;
   shippingCost: number | string;
+  serviceFee?: number | string;
+  paymentFee?: number | string;
   discount: number | string;
   total: number | string;
   currency: string;

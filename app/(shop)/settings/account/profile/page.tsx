@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { Camera, ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 import { useSaveAction } from '@/contexts/SaveActionContext';
 
 interface UserProfile {
@@ -21,6 +21,7 @@ interface UserProfile {
 function ProfilePageContent() {
   const router = useRouter();
   const { data: session, status, update: updateSession } = useSession();
+  const { showSuccess, showError } = useNotification();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveAction = useSaveAction();
 
@@ -57,7 +58,7 @@ function ProfilePageContent() {
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
-          toast.error('Gagal memuat data profil');
+          showError('Gagal', 'Gagal memuat data profil');
         } finally {
           setIsLoading(false);
         }
@@ -104,13 +105,13 @@ function ProfilePageContent() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('File harus berupa gambar');
+      showError('Peringatan', 'File harus berupa gambar');
       return;
     }
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('Ukuran file maksimal 2MB');
+      showError('Peringatan', 'Ukuran file maksimal 2MB');
       return;
     }
 
@@ -140,16 +141,16 @@ function ProfilePageContent() {
           avatarUrl: data.data.url,
         }));
         setAvatarPreview(data.data.url);
-        toast.success('Foto profil berhasil diubah');
+        showSuccess('Berhasil', 'Foto profil berhasil diubah');
         // Update session
         updateSession();
       } else {
-        toast.error(data.error || 'Gagal mengubah foto profil');
+        showError('Gagal', data.error || 'Gagal mengubah foto profil');
         setAvatarPreview(originalProfile.avatarUrl || null);
       }
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      toast.error('Gagal mengubah foto profil');
+      showError('Gagal', 'Gagal mengubah foto profil');
       setAvatarPreview(originalProfile.avatarUrl || null);
     } finally {
       setIsLoading(false);
@@ -189,15 +190,15 @@ function ProfilePageContent() {
 
       if (data.success) {
         setOriginalProfile(JSON.parse(JSON.stringify(profile)));
-        toast.success('Profile berhasil disimpan');
+        showSuccess('Berhasil', 'Profile berhasil disimpan');
         // Update session
         updateSession();
       } else {
-        toast.error(data.error || 'Gagal menyimpan profile');
+        showError('Gagal', data.error || 'Gagal menyimpan profile');
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      toast.error('Gagal menyimpan profile');
+      showError('Gagal', 'Gagal menyimpan profile');
     } finally {
       setIsSaving(false);
     }

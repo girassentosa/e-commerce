@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ArrowLeft } from 'lucide-react';
 import { AddressForm } from '@/components/checkout/AddressForm';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Address {
   id: string;
@@ -24,6 +24,7 @@ function EditAddressPageContent() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { status } = useSession();
+  const { showError } = useNotification();
   const addressId = params?.id;
 
   const [address, setAddress] = useState<Address | null>(null);
@@ -44,12 +45,12 @@ function EditAddressPageContent() {
           if (data.success && data.data) {
             setAddress(data.data);
           } else {
-            toast.error('Gagal memuat alamat');
+            showError('Gagal', 'Gagal memuat alamat');
             router.push('/settings/addresses');
           }
         } catch (error) {
           console.error('Error fetching address:', error);
-          toast.error('Gagal memuat alamat');
+          showError('Gagal', 'Gagal memuat alamat');
           router.push('/settings/addresses');
         }
       }

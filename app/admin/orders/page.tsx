@@ -23,7 +23,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 import { useAdminHeader } from '@/contexts/AdminHeaderContext';
 
 interface Order {
@@ -57,6 +57,7 @@ export default function AdminOrdersPage() {
   const router = useRouter();
   const { setHeader } = useAdminHeader();
   const { formatPrice } = useCurrency();
+  const { showSuccess, showError, showConfirm } = useNotification();
 
   useEffect(() => {
     setHeader(ShoppingBag, 'Orders');
@@ -100,7 +101,7 @@ export default function AdminOrdersPage() {
       setTotalCount(data.pagination.total);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
-      toast.error(error.message || 'Failed to load orders');
+      showError('Gagal', error.message || 'Gagal memuat pesanan');
     } finally {
       setLoading(false);
     }
@@ -143,11 +144,7 @@ export default function AdminOrdersPage() {
     return order.user.email;
   };
 
-  const handleSyncSalesCount = async () => {
-    if (!confirm('Apakah Anda yakin ingin sync sales count? Ini akan menghitung ulang salesCount untuk semua produk berdasarkan order yang sudah DELIVERED. Data yang tidak konsisten akan diperbaiki.')) {
-      return;
-    }
-
+  const performSync = async () => {
     try {
       setSyncing(true);
       const response = await fetch('/api/admin/products/sync-sales-count', {
@@ -160,19 +157,30 @@ export default function AdminOrdersPage() {
         throw new Error(data.error || 'Failed to sync sales count');
       }
 
-      toast.success(
-        `Sales count berhasil di-sync! ${data.data.productsUpdated} produk diperbarui dari ${data.data.totalDeliveredOrders} order yang sudah DELIVERED.`,
-        { duration: 5000 }
+      showSuccess(
+        'Berhasil',
+        `Sales count berhasil di-sync! ${data.data.productsUpdated} produk diperbarui dari ${data.data.totalDeliveredOrders} order yang sudah DELIVERED.`
       );
 
       // Refresh orders list
       fetchOrders();
     } catch (error: any) {
       console.error('Error syncing sales count:', error);
-      toast.error(error.message || 'Gagal sync sales count');
+      showError('Gagal', error.message || 'Gagal sync sales count');
     } finally {
       setSyncing(false);
     }
+  };
+
+  const handleSyncSalesCount = () => {
+    showConfirm(
+      'Sync Sales Count',
+      'Apakah Anda yakin ingin sync sales count? Ini akan menghitung ulang salesCount untuk semua produk berdasarkan order yang sudah DELIVERED. Data yang tidak konsisten akan diperbaiki.',
+      performSync,
+      undefined,
+      'Ya, Sync',
+      'Batal'
+    );
   };
 
   const columns = [

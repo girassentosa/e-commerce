@@ -22,12 +22,12 @@ interface OrderSummary {
 interface CheckoutContextType {
   step: number;
   addressId: string | null;
-  paymentMethod: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null;
+  paymentMethod: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | 'CREDIT_CARD' | null;
   paymentChannel: string | null;
   orderSummary: OrderSummary | null;
   loading: boolean;
   setAddressId: (id: string) => void;
-  setPaymentMethod: (method: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null) => void;
+  setPaymentMethod: (method: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | 'CREDIT_CARD' | null) => void;
   setPaymentChannel: (channel: string | null) => void;
   validateCart: () => Promise<boolean>;
   calculateTotals: (addressId: string) => Promise<void>;
@@ -45,7 +45,7 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
   const [step, setStep] = useState(1);
   const [addressId, setAddressId] = useState<string | null>(null);
-  const [paymentMethodState, setPaymentMethodState] = useState<'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null>(null);
+  const [paymentMethodState, setPaymentMethodState] = useState<'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | 'CREDIT_CARD' | null>(null);
   const [paymentChannel, setPaymentChannelState] = useState<string | null>(null);
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -168,7 +168,7 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
     setOrderSummary(null);
   }, []);
 
-  const handleSetPaymentMethod = useCallback((method: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | null) => {
+  const handleSetPaymentMethod = useCallback((method: 'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | 'CREDIT_CARD' | null) => {
     setPaymentMethodState(method);
     if (method !== 'VIRTUAL_ACCOUNT') {
       setPaymentChannelState(null);

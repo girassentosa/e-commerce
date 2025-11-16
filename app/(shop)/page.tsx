@@ -420,6 +420,9 @@ function HomePageContent() {
                           ? 'bg-blue-50 border-blue-300'
                           : 'bg-white border-gray-200 hover:border-gray-300'
                       }`}
+                      style={{
+                        backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                      } as React.CSSProperties}
                     >
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
                         isSelected ? 'bg-blue-100' : 'bg-blue-50'

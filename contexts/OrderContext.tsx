@@ -54,6 +54,8 @@ export interface Order {
   subtotal: string;
   tax: string;
   shippingCost: string;
+  serviceFee?: string;
+  paymentFee?: string;
   discount: string;
   total: string;
   notes: string | null;

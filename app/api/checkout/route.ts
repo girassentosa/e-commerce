@@ -115,10 +115,77 @@ export async function POST(request: NextRequest) {
 
     const subtotal = cartItemDetails.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
+    // Calculate shipping based on product settings (average from all products in cart)
+    let subtotalPengiriman = 0;
+    let biayaLayanan = 0;
+    
+    if (cart.items.length > 0) {
+      let totalFreeShippingThreshold = 0;
+      let totalDefaultShippingCost = 0;
+      let countWithSettings = 0;
+      
+      for (const item of cart.items) {
+        const product = item.product;
+        const freeShippingThreshold = product.freeShippingThreshold ? parseFloat(String(product.freeShippingThreshold)) : null;
+        const defaultShippingCost = product.defaultShippingCost ? parseFloat(String(product.defaultShippingCost)) : null;
+        
+        if (freeShippingThreshold !== null) {
+          totalFreeShippingThreshold += freeShippingThreshold;
+          countWithSettings++;
+        }
+        if (defaultShippingCost !== null) {
+          totalDefaultShippingCost += defaultShippingCost;
+        }
+      }
+      
+      // Calculate average
+      const avgFreeShippingThreshold = countWithSettings > 0 ? totalFreeShippingThreshold / cart.items.length : null;
+      const avgDefaultShippingCost = cart.items.length > 0 ? totalDefaultShippingCost / cart.items.length : 0;
+      
+      // Subtotal pengiriman = nilai rata-rata dari freeShippingThreshold (langsung ambil nilainya)
+      subtotalPengiriman = avgFreeShippingThreshold || 0;
+      
+      // Biaya layanan = nilai rata-rata dari defaultShippingCost (langsung ambil nilainya)
+      biayaLayanan = avgDefaultShippingCost;
+    }
+    
+    // Get payment method fee
+    let paymentFee = 0;
+    if (validatedData.paymentMethod) {
+      try {
+        // Get payment methods from settings
+        const setting = await prisma.setting.findUnique({
+          where: { key: 'paymentMethods' },
+        });
+        
+        if (setting) {
+          let paymentMethods = [];
+          try {
+            paymentMethods = JSON.parse(setting.value);
+          } catch (e) {
+            console.error('Error parsing paymentMethods:', e);
+          }
+          
+          if (Array.isArray(paymentMethods)) {
+            const selectedMethod = paymentMethods.find(
+              (m: any) => (validatedData.paymentMethod === 'VIRTUAL_ACCOUNT' && m.id === validatedData.paymentChannel) ||
+                         (validatedData.paymentMethod === m.type && m.type !== 'VIRTUAL_ACCOUNT' && !validatedData.paymentChannel)
+            );
+            if (selectedMethod) {
+              paymentFee = selectedMethod.fee || 0;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching payment method fee:', error);
+        // Continue with paymentFee = 0 if error
+      }
+    }
+    
+    const shippingCost = subtotalPengiriman;
     const tax = Math.round(subtotal * 0.1 * 100) / 100; // 10% tax, rounded to 2 decimals first
-    const shippingCost = subtotal >= 50 ? 0 : 5; // Free shipping over $50
     const discount = 0; // No coupon yet
-    const total = Math.round((subtotal - discount + tax + shippingCost) * 100) / 100; // Round to 2 decimals
+    const total = Math.round((subtotal - discount + tax + shippingCost + biayaLayanan + paymentFee) * 100) / 100; // Round to 2 decimals
 
     // Prepare items for Midtrans (must include tax and shipping as separate items)
     const itemsForPayment = [...cartItemDetails];
@@ -139,6 +206,16 @@ export async function POST(request: NextRequest) {
         id: 'SHIPPING',
         name: 'Shipping Cost',
         price: Math.round(shippingCost), // Round to integer for Midtrans (Rupiah)
+        quantity: 1,
+      });
+    }
+    
+    // Add service fee as a separate item if > 0
+    if (biayaLayanan > 0) {
+      itemsForPayment.push({
+        id: 'SERVICE_FEE',
+        name: 'Service Fee',
+        price: Math.round(biayaLayanan), // Round to integer for Midtrans (Rupiah)
         quantity: 1,
       });
     }
@@ -233,6 +310,8 @@ export async function POST(request: NextRequest) {
           subtotal,
           tax,
           shippingCost,
+          serviceFee: biayaLayanan,
+          paymentFee: paymentFee,
           discount,
           total: roundedTotal, // Use rounded total for consistency
           notes: validatedData.notes || null,

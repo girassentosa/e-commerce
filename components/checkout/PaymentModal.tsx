@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Check, Loader2, Copy, Download, Clock, QrCode, Building2 } from 'lucide-react';
+import { Check, Loader2, Copy, Download, Clock, QrCode, Building2, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatCurrency } from '@/lib/utils';
@@ -103,6 +103,7 @@ export function PaymentModal({
   const [isExpired, setIsExpired] = useState(false);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
+  const [paymentTimeoutMinutes, setPaymentTimeoutMinutes] = useState<number>(1440); // Default 1440 minutes (24 hours)
   
   // Refs untuk cleanup
   const isMountedRef = useRef(true);
@@ -283,7 +284,28 @@ export function PaymentModal({
     };
   }, [isOpen, orderNumber]);
 
-  // Countdown timer (1 menit)
+  // Fetch payment timeout minutes from settings
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchPaymentTimeout = async () => {
+      try {
+        const response = await fetch('/api/settings/payment-timeout');
+        const data = await response.json();
+        
+        if (data.success && typeof data.data === 'number') {
+          setPaymentTimeoutMinutes(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching payment timeout:', error);
+        // Keep default 1440 minutes (24 hours) on error
+      }
+    };
+
+    fetchPaymentTimeout();
+  }, [isOpen]);
+
+  // Countdown timer (dinamis dari settings)
   useEffect(() => {
     // Stop countdown jika payment sudah PAID atau success
     if (!order || !isOpen || paymentSuccess || order.paymentStatus === 'PAID') {
@@ -303,7 +325,9 @@ export function PaymentModal({
       return;
     }
 
-    const expiryTime = new Date(order.createdAt).getTime() + 60000; // 1 menit
+    // Convert minutes to milliseconds
+    const timeoutMs = paymentTimeoutMinutes * 60 * 1000;
+    const expiryTime = new Date(order.createdAt).getTime() + timeoutMs;
 
     const updateCountdown = () => {
       // Check jika sudah PAID
@@ -335,7 +359,7 @@ export function PaymentModal({
         countdownIntervalRef.current = null;
       }
     };
-  }, [order, isOpen, paymentSuccess]);
+  }, [order, isOpen, paymentSuccess, paymentTimeoutMinutes]);
 
   // Auto-cancel order saat expired - HANYA jika belum PAID
   useEffect(() => {
@@ -512,11 +536,13 @@ export function PaymentModal({
   const isVA = paymentInstruction?.paymentType === 'bank_transfer';
   const hasVAData = isVA && paymentInstruction?.vaNumber;
 
+  if (!isOpen) return null;
+
   return (
-    <div>
+    <>
       {/* Success Animation Overlay - Pop ceklis di tengah layar */}
       {showSuccessAnimation && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center gap-6 animate-in zoom-in duration-300 max-w-sm w-full mx-4">
             {/* Animated Check Circle */}
             <div className="relative w-32 h-32">
@@ -571,26 +597,41 @@ export function PaymentModal({
         </div>
       )}
 
-      {/* Payment Modal */}
-      <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black transition-opacity duration-500 ${showSuccessAnimation ? 'bg-opacity-0 pointer-events-none' : 'bg-opacity-50'}`}>
-        <div className={`bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col relative transition-all duration-500 ${showSuccessAnimation ? 'scale-95 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
+      {/* Payment Modal - Slide up from bottom */}
+      <div className={`fixed inset-0 z-50 flex flex-col ${showSuccessAnimation ? 'pointer-events-none' : ''}`}>
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${showSuccessAnimation ? 'opacity-0' : 'opacity-100'}`}
+          onClick={onClose}
+        />
+        
+        {/* Modal Content - Slide up from bottom */}
+        <div className={`relative mt-auto bg-white rounded-t-2xl sm:rounded-t-3xl shadow-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300 ${showSuccessAnimation ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Pembayaran Pesanan</h2>
+          <div className="relative flex items-center justify-center px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-gray-200 bg-white">
+            <div className="flex-1 text-center">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">Pembayaran Pesanan</h2>
               {order && (
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
                   No. Pesanan: <span className="font-semibold text-blue-600">{order.orderNumber}</span>
                 </p>
               )}
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Tutup"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Loading Overlay - DIHAPUS: Tidak perlu menutupi QR/VA, polling berjalan di background */}
           {/* User harus bisa lihat QR/VA kapan saja, polling hanya background process */}
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
             {isFetching && !order ? (
               <div className="text-center py-12">
                 <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
@@ -628,29 +669,29 @@ export function PaymentModal({
 
                 {/* PAYMENT INSTRUCTIONS - Hanya tampilkan jika belum success */}
                 {paymentInstruction && !paymentSuccess && (
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200 shadow-lg">
-                    <div className="text-center mb-6">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">Instruksi Pembayaran</h3>
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 border-blue-200 shadow-lg w-full min-w-0">
+                    <div className="text-center mb-4 sm:mb-6">
+                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-1 sm:mb-2">Instruksi Pembayaran</h3>
                       {paymentMethodDisplay && (
-                        <p className="text-sm text-gray-600">{paymentMethodDisplay.label}</p>
+                        <p className="text-xs sm:text-sm text-gray-600">{paymentMethodDisplay.label}</p>
                       )}
                     </div>
 
                     {/* QRIS Payment */}
                     {isQRIS && (
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         {hasQRData ? (
                           <>
                             {/* QR Code Display */}
-                            <div className="flex flex-col items-center gap-4 bg-white rounded-xl p-6 border-2 border-blue-300 shadow-md">
-                              <div className="flex items-center gap-2 mb-2">
-                                <QrCode className="w-5 h-5 text-blue-600" />
-                                <span className="text-sm font-semibold text-gray-700">QR Code Pembayaran</span>
+                            <div className="flex flex-col items-center gap-3 sm:gap-4 bg-white rounded-xl p-4 sm:p-6 border-2 border-blue-300 shadow-md w-full min-w-0">
+                              <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                                <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+                                <span className="text-xs sm:text-sm font-semibold text-gray-700">QR Code Pembayaran</span>
                               </div>
                               
                               {qrCodeUrl ? (
-                                <div className="flex flex-col items-center gap-3">
-                                  <div className="relative w-64 h-64 bg-white rounded-lg border-4 border-blue-400 p-4 shadow-lg">
+                                <div className="flex flex-col items-center gap-3 w-full">
+                                  <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-square bg-white rounded-lg border-4 border-blue-400 p-3 sm:p-4 shadow-lg">
                                     <img
                                       src={qrCodeUrl}
                                       alt="QRIS Payment Code"
@@ -665,7 +706,7 @@ export function PaymentModal({
                                     onClick={() => handleDownloadQR(paymentInstruction.qrString, paymentInstruction.qrImageUrl)}
                                     variant="outline"
                                     size="sm"
-                                    className="flex items-center gap-2 bg-white hover:bg-blue-50 border-blue-300"
+                                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-blue-50 border-blue-300"
                                   >
                                     <Download className="w-4 h-4" />
                                     Unduh QR Code
@@ -689,8 +730,8 @@ export function PaymentModal({
                             </div>
 
                             {/* Instructions */}
-                            <div className="bg-white rounded-xl p-4 border border-blue-200">
-                              <p className="text-sm text-gray-700 text-center leading-relaxed">
+                            <div className="bg-white rounded-xl p-3 sm:p-4 border border-blue-200">
+                              <p className="text-xs sm:text-sm text-gray-700 text-center leading-relaxed">
                                 <strong>Langkah pembayaran:</strong>
                                 <br />
                                 1. Buka aplikasi e-wallet atau bank Anda
@@ -733,30 +774,30 @@ export function PaymentModal({
                         {hasVAData ? (
                           <>
                             {/* VA Number Display */}
-                            <div className="flex flex-col items-center gap-4 bg-white rounded-xl p-6 border-2 border-blue-300 shadow-md">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Building2 className="w-5 h-5 text-blue-600" />
-                                <span className="text-sm font-semibold text-gray-700">Virtual Account</span>
+                            <div className="flex flex-col items-center gap-3 sm:gap-4 bg-white rounded-xl p-4 sm:p-6 border-2 border-blue-300 shadow-md w-full min-w-0">
+                              <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                                <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+                                <span className="text-xs sm:text-sm font-semibold text-gray-700">Virtual Account</span>
                               </div>
 
-                              <div className="w-full space-y-4">
+                              <div className="w-full space-y-3 sm:space-y-4 min-w-0">
                                 {/* Bank Name */}
-                                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-600">Bank</span>
-                                    <span className="text-lg font-bold text-gray-900">
+                                <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200 min-w-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-sm text-gray-600 flex-shrink-0">Bank</span>
+                                    <span className="text-base sm:text-lg font-bold text-gray-900 truncate text-right">
                                       {paymentInstruction.vaBank || '-'}
                                     </span>
                                   </div>
                                 </div>
 
                                 {/* VA Number */}
-                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-5 border-2 border-blue-400">
+                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-4 border-2 border-blue-400 min-w-0">
                                   <div className="text-center mb-2">
                                     <span className="text-xs text-gray-600 uppercase tracking-wide">Nomor Virtual Account</span>
                                   </div>
-                                  <div className="text-center">
-                                    <span className="text-2xl font-bold text-gray-900 tracking-wider font-mono">
+                                  <div className="text-center min-w-0 px-2">
+                                    <span className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 tracking-normal sm:tracking-wider font-mono break-all">
                                       {paymentInstruction.vaNumber || '-'}
                                     </span>
                                   </div>
@@ -778,8 +819,8 @@ export function PaymentModal({
                             </div>
 
                             {/* Instructions */}
-                            <div className="bg-white rounded-xl p-4 border border-blue-200">
-                              <p className="text-sm text-gray-700 text-center leading-relaxed">
+                            <div className="bg-white rounded-xl p-3 sm:p-4 border border-blue-200">
+                              <p className="text-xs sm:text-sm text-gray-700 text-center leading-relaxed">
                                 <strong>Langkah pembayaran:</strong>
                                 <br />
                                 1. Buka aplikasi mobile banking atau ATM
@@ -820,19 +861,19 @@ export function PaymentModal({
 
                     {/* Countdown Timer */}
                     {timeRemaining !== null && timeRemaining > 0 && !isExpired && (
-                      <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-blue-200">
-                        <Clock className="w-4 h-4 text-gray-500" />
-                        <p className="text-sm text-gray-600">
-                          Waktu tersisa: <span className="font-bold text-blue-600 text-base">
+                      <div className="flex items-center justify-center gap-2 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-blue-200">
+                        <Clock className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                        <p className="text-xs sm:text-sm text-gray-600">
+                          Waktu tersisa: <span className="font-bold text-blue-600 text-sm sm:text-base">
                             {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
                           </span>
                         </p>
                       </div>
                     )}
                     {isExpired && (
-                      <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-red-200">
-                        <Clock className="w-4 h-4 text-red-500" />
-                        <p className="text-sm font-semibold text-red-600">
+                      <div className="flex items-center justify-center gap-2 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-red-200">
+                        <Clock className="w-4 h-4 text-red-500 flex-shrink-0" />
+                        <p className="text-xs sm:text-sm font-semibold text-red-600">
                           Waktu pembayaran telah habis
                         </p>
                       </div>
@@ -843,8 +884,8 @@ export function PaymentModal({
                 {/* Order Summary */}
                 {!paymentSuccess && (
                   <>
-                    <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Detail Pesanan</h3>
+                    <div className="bg-gray-50 rounded-xl p-3 sm:p-4 space-y-2 sm:space-y-3">
+                      <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-2 sm:mb-3">Detail Pesanan</h3>
                       {order.items.map((item) => {
                         const { colorLabel, sizeLabel } = getVariantLabels(
                           item.variant,
@@ -888,16 +929,16 @@ export function PaymentModal({
                     </div>
 
                     {/* Total Payment */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-200">
-                      <div className="flex items-center justify-between">
-                        <span className="text-base font-semibold text-gray-700">Total Pembayaran</span>
-                        <span className="text-2xl font-bold text-blue-600">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 sm:p-4 border-2 border-blue-200 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm sm:text-base font-semibold text-gray-700">Total Pembayaran</span>
+                        <span className="text-lg sm:text-xl md:text-2xl font-bold text-blue-600 truncate">
                           {formatCurrency(order.total, order.currency, currencyLocale)}
                         </span>
                       </div>
                       {paymentMethodDisplay && (
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-sm text-gray-600">Metode</span>
+                        <div className="flex items-center justify-between mt-2 gap-2">
+                          <span className="text-xs sm:text-sm text-gray-600">Metode</span>
                           <StatusBadge status={order.paymentStatus as any} size="sm" />
                         </div>
                       )}
@@ -905,12 +946,12 @@ export function PaymentModal({
 
                     {/* Shipping Address */}
                     {address && (
-                      <div className="bg-gray-50 rounded-xl p-4">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-2">Alamat Pengiriman</h3>
-                        <p className="text-sm text-gray-700">
+                      <div className="bg-gray-50 rounded-xl p-3 sm:p-4 min-w-0">
+                        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-2">Alamat Pengiriman</h3>
+                        <p className="text-xs sm:text-sm text-gray-700 break-words">
                           {formatShippingAddress(address)}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1 break-words">
                           {formatPhoneDisplay(address.phone)}
                         </p>
                       </div>
@@ -922,6 +963,6 @@ export function PaymentModal({
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

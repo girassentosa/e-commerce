@@ -18,6 +18,7 @@ function OrdersPageContent() {
   const { status } = useSession();
   const { orders, loading, pagination, fetchOrders } = useOrder();
   const { formatPrice } = useCurrency();
+  const [isMobile, setIsMobile] = useState(false);
   
   // Get search query from URL (managed by Header component)
   const searchQuery = searchParams.get('search') || '';
@@ -50,6 +51,16 @@ function OrdersPageContent() {
       router.push('/login?callbackUrl=/orders');
     }
   }, [status, router]);
+
+  // Check if mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -273,8 +284,24 @@ function OrdersPageContent() {
       {filteredOrders.length > 0 && (
         <div className="w-full w-screen -ml-[calc((100vw-100%)/2)] mb-2 sm:mb-6 md:mb-8">
           <div className="max-w-7xl mx-auto pl-2 sm:pl-3 md:pl-4 pr-2">
-            <div className="px-2 sm:px-2.5 md:px-3 pb-2 sm:pb-3 md:pb-4">
-              <div className="space-y-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2">
+            <div className="px-2 sm:px-2.5 md:px-3 pb-2 sm:pb-3 md:pb-4" style={{ overflow: 'visible' }}>
+              <div 
+                className="orders-scroll-container space-y-4 -ml-2 sm:-ml-3 md:-ml-4 -mr-2"
+                style={{
+                  maxHeight: isMobile ? '600px' : '680px',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#cbd5e1 #f1f5f9',
+                  overscrollBehavior: 'contain',
+                  position: 'relative',
+                  display: 'block',
+                  height: 'auto',
+                  minHeight: '0',
+                  willChange: 'scroll-position'
+                }}
+              >
                 {filteredOrders.map((order) => (
                   <Link key={order.id} href={`/orders/${order.orderNumber}`}>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-lg transition cursor-pointer">

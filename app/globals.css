@@ -1027,6 +1027,9 @@ textarea {
   width: 100%;
   position: relative;
   z-index: 30;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 @media (min-width: 1024px) {
@@ -1040,6 +1043,8 @@ textarea {
   padding: var(--admin-content-padding);
   min-height: calc(100vh - var(--admin-header-height));
   background: transparent;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 @media (min-width: 640px) {
@@ -1247,3 +1252,143 @@ button[aria-label="Close sidebar"]:focus,
   box-shadow: none !important;
   background-color: transparent !important;
 }
+
+/* Override h3 font size for product cards - mobile smaller, desktop normal */
+.product-card h3 {
+  font-size: 0.75rem !important; /* 12px mobile */
+}
+
+@media (min-width: 640px) {
+  .product-card h3 {
+    font-size: 0.875rem !important; /* 14px desktop */
+  }
+}
+
+/* Override h3 font size for wishlist page product titles */
+.wishlist-product-card h3 {
+  font-size: 0.75rem !important; /* 12px mobile */
+}
+
+@media (min-width: 640px) {
+  .wishlist-product-card h3 {
+    font-size: 0.875rem !important; /* 14px desktop */
+  }
+}
+
+/* Override h3 font size for admin settings page section titles */
+.app-admin-settings div.bg-gray-50.border.border-gray-200.rounded-lg h3 {
+  font-size: 0.875rem !important; /* 14px - text-sm */
+}
+
+/* Override h2 font size for admin settings modal titles */
+.app-admin-settings h2 {
+  font-size: 0.875rem !important; /* 14px - text-sm */
+}
+
+/* Admin Dashboard Recent Orders Scroll Container */
+.admin-dashboard-orders-scroll {
+  max-height: 500px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #cbd5e1 #f1f5f9 !important;
+  overscroll-behavior: contain !important;
+  position: relative !important;
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure parent container doesn't block scroll */
+.admin-card:has(.admin-dashboard-orders-scroll) {
+  overflow: visible !important;
+}
+
+.admin-card:has(.admin-dashboard-orders-scroll) > div {
+  overflow: visible !important;
+}
+
+@media (max-width: 640px) {
+  .admin-dashboard-orders-scroll {
+    max-height: 400px !important;
+  }
+}
+
+/* Webkit scrollbar styling for admin dashboard orders */
+.admin-dashboard-orders-scroll::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.admin-dashboard-orders-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 3px !important;
+}
+
+.admin-dashboard-orders-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 3px !important;
+}
+
+.admin-dashboard-orders-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+/* Orders scroll container - batas 5 card dengan scroll ke bawah */
+.orders-scroll-container {
+  max-height: 680px !important; /* Approximately 5 order cards (each ~136px with spacing) */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #cbd5e1 #f1f5f9 !important;
+  overscroll-behavior: contain !important;
+  position: relative !important;
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+/* Ensure parent containers don't block scroll */
+.orders-scroll-container,
+.orders-scroll-container * {
+  box-sizing: border-box !important;
+}
+
+/* Ensure scroll works on all devices */
+@media (max-width: 640px) {
+  .orders-scroll-container {
+    max-height: 600px !important; /* Slightly smaller on mobile */
+  }
+}
+
+/* Custom scrollbar styling for webkit browsers */
+.orders-scroll-container::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.orders-scroll-container::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 3px !important;
+}
+
+.orders-scroll-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 3px !important;
+}
+
+.orders-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+/* Ensure parent containers allow scrolling */
+div:has(.orders-scroll-container) {
+  overflow: visible !important;
+}
+
+div:has(.orders-scroll-container) > div {
+  overflow: visible !important;
+}
+

@@ -4,12 +4,13 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 import { useSaveAction } from '@/contexts/SaveActionContext';
 
 function UsernamePageContent() {
   const router = useRouter();
   const { data: session, status, update: updateSession } = useSession();
+  const { showSuccess, showError } = useNotification();
   const saveAction = useSaveAction();
 
   const [formData, setFormData] = useState({
@@ -42,7 +43,7 @@ function UsernamePageContent() {
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
-          toast.error('Gagal memuat data profil');
+          showError('Gagal', 'Gagal memuat data profil');
         }
       }
     };
@@ -95,15 +96,15 @@ function UsernamePageContent() {
 
       if (data.success) {
         setOriginalData(JSON.parse(JSON.stringify(formData)));
-        toast.success('Username berhasil disimpan');
+        showSuccess('Berhasil', 'Username berhasil disimpan');
         // Update session
         updateSession();
       } else {
-        toast.error(data.error || 'Gagal menyimpan username');
+        showError('Gagal', data.error || 'Gagal menyimpan username');
       }
     } catch (error) {
       console.error('Error saving username:', error);
-      toast.error('Gagal menyimpan username');
+      showError('Gagal', 'Gagal menyimpan username');
     } finally {
       setIsSaving(false);
     }

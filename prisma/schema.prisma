@@ -70,29 +70,31 @@ model Category {
 }
 
 model Product {
-  id                String   @id @default(cuid())
-  categoryId        String   @map("category_id")
-  name              String
-  slug              String   @unique
-  sku               String?  @unique
-  description       String?  @db.Text
-  price             Decimal  @db.Decimal(10, 2)
-  salePrice         Decimal? @map("sale_price") @db.Decimal(10, 2)
-  stockQuantity     Int      @default(0) @map("stock_quantity")
-  lowStockThreshold Int      @default(10) @map("low_stock_threshold")
-  weight            Decimal? @db.Decimal(10, 2)
-  brand             String?
-  isFeatured        Boolean  @default(false) @map("is_featured")
-  isActive          Boolean  @default(true) @map("is_active")
-  viewsCount        Int      @default(0) @map("views_count")
-  salesCount        Int      @default(0) @map("sales_count")
-  ratingAverage     Decimal  @default(0) @map("rating_average") @db.Decimal(3, 2)
-  ratingCount       Int      @default(0) @map("rating_count")
-  metaTitle         String?  @map("meta_title")
-  metaDescription   String?  @map("meta_description") @db.Text
-  specifications    Json?    // Key-value pairs for product specifications
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default(cuid())
+  categoryId            String   @map("category_id")
+  name                  String
+  slug                  String   @unique
+  sku                   String?  @unique
+  description           String?  @db.Text
+  price                 Decimal  @db.Decimal(10, 2)
+  salePrice             Decimal? @map("sale_price") @db.Decimal(10, 2)
+  stockQuantity         Int      @default(0) @map("stock_quantity")
+  lowStockThreshold     Int      @default(10) @map("low_stock_threshold")
+  weight                Decimal? @db.Decimal(10, 2)
+  brand                 String?
+  isFeatured            Boolean  @default(false) @map("is_featured")
+  isActive              Boolean  @default(true) @map("is_active")
+  viewsCount            Int      @default(0) @map("views_count")
+  salesCount            Int      @default(0) @map("sales_count")
+  ratingAverage         Decimal  @default(0) @map("rating_average") @db.Decimal(3, 2)
+  ratingCount           Int      @default(0) @map("rating_count")
+  metaTitle             String?  @map("meta_title")
+  metaDescription       String?  @map("meta_description") @db.Text
+  specifications        Json?    // Key-value pairs for product specifications
+  freeShippingThreshold Decimal? @map("free_shipping_threshold") @db.Decimal(10, 2)
+  defaultShippingCost   Decimal? @map("default_shipping_cost") @db.Decimal(10, 2)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   // Relations
   category     Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -199,6 +201,8 @@ model Order {
   subtotal      Decimal       @db.Decimal(10, 2)
   tax           Decimal       @default(0) @db.Decimal(10, 2)
   shippingCost  Decimal       @default(0) @map("shipping_cost") @db.Decimal(10, 2)
+  serviceFee    Decimal       @default(0) @map("service_fee") @db.Decimal(10, 2)
+  paymentFee    Decimal       @default(0) @map("payment_fee") @db.Decimal(10, 2)
   discount      Decimal       @default(0) @db.Decimal(10, 2)
   total         Decimal       @db.Decimal(10, 2)
   currency      String        @default("USD")

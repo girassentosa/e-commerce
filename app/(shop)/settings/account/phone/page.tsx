@@ -4,12 +4,13 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 import { useSaveAction } from '@/contexts/SaveActionContext';
 
 function PhonePageContent() {
   const router = useRouter();
   const { data: session, status, update: updateSession } = useSession();
+  const { showSuccess, showError } = useNotification();
   const saveAction = useSaveAction();
 
   const [formData, setFormData] = useState({
@@ -39,7 +40,7 @@ function PhonePageContent() {
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
-          toast.error('Gagal memuat data profil');
+          showError('Gagal', 'Gagal memuat data profil');
         }
       }
     };
@@ -87,15 +88,15 @@ function PhonePageContent() {
 
       if (data.success) {
         setOriginalData(JSON.parse(JSON.stringify(formData)));
-        toast.success('No HP berhasil disimpan');
+        showSuccess('Berhasil', 'No HP berhasil disimpan');
         // Update session
         updateSession();
       } else {
-        toast.error(data.error || 'Gagal menyimpan no HP');
+        showError('Gagal', data.error || 'Gagal menyimpan no HP');
       }
     } catch (error) {
       console.error('Error saving phone:', error);
-      toast.error('Gagal menyimpan no HP');
+      showError('Gagal', 'Gagal menyimpan no HP');
     } finally {
       setIsSaving(false);
     }

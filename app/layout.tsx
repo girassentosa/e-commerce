@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/components/providers/SessionProvider";
 import ToastProvider from "@/components/providers/ToastProvider";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { LastViewedProvider } from "@/contexts/LastViewedContext";
@@ -55,24 +56,26 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
         <SessionProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <LastViewedProvider>
-                <BuyAgainProvider>
-                  <CheckoutProvider>
-                    <OrderProvider>
-                      <FavoriteEditModeProvider>
-                        <SaveActionProvider>
-                          {children}
-                          <ToastProvider />
-                        </SaveActionProvider>
-                      </FavoriteEditModeProvider>
-                    </OrderProvider>
-                  </CheckoutProvider>
-                </BuyAgainProvider>
-              </LastViewedProvider>
-            </WishlistProvider>
-          </CartProvider>
+          <NotificationProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <LastViewedProvider>
+                  <BuyAgainProvider>
+                    <CheckoutProvider>
+                      <OrderProvider>
+                        <FavoriteEditModeProvider>
+                          <SaveActionProvider>
+                            {children}
+                            <ToastProvider />
+                          </SaveActionProvider>
+                        </FavoriteEditModeProvider>
+                      </OrderProvider>
+                    </CheckoutProvider>
+                  </BuyAgainProvider>
+                </LastViewedProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </NotificationProvider>
         </SessionProvider>
       </body>
     </html>

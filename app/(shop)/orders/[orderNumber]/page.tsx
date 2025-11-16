@@ -18,12 +18,13 @@ import {
   getPaymentMethodDisplay,
   getVariantLabels,
 } from '@/lib/order-helpers';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { status } = useSession();
+  const { showSuccess, showError, showConfirm } = useNotification();
   const { currentOrder, loading, fetchOrderDetail, cancelOrder } = useOrder();
   const orderNumber = params?.orderNumber as string;
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -31,6 +32,7 @@ export default function OrderDetailPage() {
   const [productReviews, setProductReviews] = useState<Record<string, any>>({});
   const [submittingReview, setSubmittingReview] = useState<Record<string, boolean>>({});
   const [reviewModalOpen, setReviewModalOpen] = useState<{ productId: string; productName: string } | null>(null);
+  const [paymentMethodName, setPaymentMethodName] = useState<string>('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -43,6 +45,49 @@ export default function OrderDetailPage() {
       fetchOrderDetail(orderNumber);
     }
   }, [status, orderNumber, fetchOrderDetail]);
+
+  // Fetch payment method name
+  useEffect(() => {
+    const fetchPaymentMethodName = async () => {
+      if (!currentOrder?.paymentMethod) {
+        setPaymentMethodName('');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/settings/payment-methods');
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          const paymentMethods = data.data;
+          const selectedMethod = paymentMethods.find(
+            (m: any) => (currentOrder.paymentMethod === 'VIRTUAL_ACCOUNT' && m.id === currentOrder.paymentChannel) ||
+                       (currentOrder.paymentMethod === m.type && m.type !== 'VIRTUAL_ACCOUNT' && !currentOrder.paymentChannel)
+          );
+          if (selectedMethod) {
+            setPaymentMethodName(selectedMethod.name);
+          } else {
+            // Fallback to paymentLabel
+            const paymentMeta = getPaymentMethodDisplay(currentOrder.paymentMethod, 'id-ID');
+            setPaymentMethodName(currentOrder.paymentChannel || paymentMeta.label || currentOrder.paymentMethod || '');
+          }
+        } else {
+          // Fallback to paymentLabel
+          const paymentMeta = getPaymentMethodDisplay(currentOrder.paymentMethod, 'id-ID');
+          setPaymentMethodName(currentOrder.paymentChannel || paymentMeta.label || currentOrder.paymentMethod || '');
+        }
+      } catch (error) {
+        console.error('Error fetching payment method name:', error);
+        // Fallback to paymentLabel
+        const paymentMeta = getPaymentMethodDisplay(currentOrder?.paymentMethod, 'id-ID');
+        setPaymentMethodName(currentOrder?.paymentChannel || paymentMeta.label || currentOrder?.paymentMethod || '');
+      }
+    };
+
+    if (currentOrder) {
+      fetchPaymentMethodName();
+    }
+  }, [currentOrder]);
 
   // Polling untuk auto-refresh jika payment status masih PENDING
   useEffect(() => {
@@ -81,7 +126,7 @@ export default function OrderDetailPage() {
                 clearInterval(pollingIntervalRef.current);
                 pollingIntervalRef.current = null;
               }
-              toast.success('Pembayaran berhasil!');
+              showSuccess('Berhasil', 'Pembayaran berhasil!');
             }
           }
         }
@@ -145,9 +190,17 @@ export default function OrderDetailPage() {
   };
 
   const handleCancel = async () => {
-    if (confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) {
-      await cancelOrder(orderNumber);
-    }
+    showConfirm(
+      'Batalkan Pesanan',
+      'Apakah Anda yakin ingin membatalkan pesanan ini?',
+      async () => {
+        await cancelOrder(orderNumber);
+      },
+      undefined,
+      'Ya, Batalkan',
+      'Batal',
+      'danger'
+    );
   };
 
   const handleSubmitReview = async (productId: string, data: { rating: number; title?: string; comment?: string; images?: string[] }) => {
@@ -169,7 +222,7 @@ export default function OrderDetailPage() {
         throw new Error(result.error || 'Failed to submit review');
       }
 
-      toast.success('Review submitted successfully!');
+      showSuccess('Berhasil', 'Review berhasil dikirim!');
       
       // Refresh reviews
       const reviewResponse = await fetch(`/api/products/${productId}/reviews?limit=100`);
@@ -198,7 +251,7 @@ export default function OrderDetailPage() {
       setReviewModalOpen(null);
     } catch (error: any) {
       console.error('Error submitting review:', error);
-      toast.error(error.message || 'Failed to submit review');
+      showError('Gagal', error.message || 'Gagal mengirim review');
     } finally {
       setSubmittingReview(prev => ({ ...prev, [productId]: false }));
     }
@@ -230,10 +283,10 @@ export default function OrderDetailPage() {
         document.body.removeChild(link);
       }, 100);
       
-      toast.success('QR code berhasil diunduh');
+      showSuccess('Berhasil', 'QR code berhasil diunduh');
     } catch (error) {
       console.error('Error downloading QR code:', error);
-      toast.error('Gagal mengunduh QR code. Silakan klik kanan pada gambar QR code dan pilih "Simpan gambar sebagai".');
+      showError('Gagal', 'Gagal mengunduh QR code. Silakan klik kanan pada gambar QR code dan pilih "Simpan gambar sebagai".');
     }
   };
 
@@ -252,6 +305,8 @@ export default function OrderDetailPage() {
   // Calculate payment breakdown mengikuti data backend
   const subtotalPesanan = parseFloat(order.subtotal);
   const biayaPengiriman = parseFloat(order.shippingCost);
+  const biayaLayanan = parseFloat(order.serviceFee || '0');
+  const biayaPembayaran = parseFloat(order.paymentFee || '0');
   const pajak = parseFloat(order.tax);
   const voucherDiskon = parseFloat(order.discount);
   const totalPembayaran = parseFloat(order.total);
@@ -276,10 +331,10 @@ export default function OrderDetailPage() {
         throw new Error('Clipboard tidak tersedia');
       }
       await navigator.clipboard.writeText(value);
-      toast.success('Disalin ke clipboard');
+      showSuccess('Berhasil', 'Disalin ke clipboard');
     } catch (error) {
       console.error('Copy failed:', error);
-      toast.error('Gagal menyalin');
+      showError('Gagal', 'Gagal menyalin');
     }
   };
 
@@ -532,9 +587,38 @@ export default function OrderDetailPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Subtotal pengiriman</span>
                 <span className="text-sm font-medium text-gray-900">
-                  {formatPrice(biayaPengiriman)}
+                  {biayaPengiriman === 0 ? (
+                    <span className="line-through text-gray-400">Gratis Ongkir</span>
+                  ) : (
+                    formatPrice(biayaPengiriman)
+                  )}
                 </span>
               </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Biaya layanan</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {biayaLayanan === 0 ? (
+                    <span className="line-through text-gray-400">Gratis Ongkir</span>
+                  ) : (
+                    formatPrice(biayaLayanan)
+                  )}
+                </span>
+              </div>
+              {biayaPembayaran !== 0 && paymentMethodName && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">
+                    {biayaPembayaran < 0 
+                      ? `Potongan pembayaran ${paymentMethodName}` 
+                      : `Biaya pembayaran ${paymentMethodName}`
+                    }
+                  </span>
+                  <span className={`text-sm font-medium ${
+                    biayaPembayaran < 0 ? 'text-green-600' : 'text-gray-900'
+                  }`}>
+                    {biayaPembayaran < 0 ? '-' : '+'}{formatPrice(Math.abs(biayaPembayaran))}
+                  </span>
+                </div>
+              )}
               {pajak > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Pajak</span>
