@@ -20,6 +20,7 @@ import {
   Clock,
   CreditCard,
   ChevronDown,
+  RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -72,6 +73,7 @@ export default function AdminOrdersPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [paymentStatusDropdownOpen, setPaymentStatusDropdownOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -139,6 +141,38 @@ export default function AdminOrdersPage() {
       return `${order.user.firstName} ${order.user.lastName}`;
     }
     return order.user.email;
+  };
+
+  const handleSyncSalesCount = async () => {
+    if (!confirm('Apakah Anda yakin ingin sync sales count? Ini akan menghitung ulang salesCount untuk semua produk berdasarkan order yang sudah DELIVERED. Data yang tidak konsisten akan diperbaiki.')) {
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const response = await fetch('/api/admin/products/sync-sales-count', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sync sales count');
+      }
+
+      toast.success(
+        `Sales count berhasil di-sync! ${data.data.productsUpdated} produk diperbarui dari ${data.data.totalDeliveredOrders} order yang sudah DELIVERED.`,
+        { duration: 5000 }
+      );
+
+      // Refresh orders list
+      fetchOrders();
+    } catch (error: any) {
+      console.error('Error syncing sales count:', error);
+      toast.error(error.message || 'Gagal sync sales count');
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const columns = [
@@ -234,9 +268,19 @@ export default function AdminOrdersPage() {
           </h1>
         </div>
         <div className="p-6">
-          <p className="text-sm text-gray-600">
-            Manage and track all customer orders • {totalCount} total orders
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <p className="text-sm text-gray-600">
+              Manage and track all customer orders • {totalCount} total orders
+            </p>
+            <Button
+              onClick={handleSyncSalesCount}
+              disabled={syncing}
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync Sales Count'}
+            </Button>
+          </div>
         </div>
       </div>
 

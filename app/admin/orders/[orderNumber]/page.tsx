@@ -230,7 +230,7 @@ export default function AdminOrderDetailPage() {
         throw new Error(data.error || 'Failed to update order status');
       }
 
-      toast.success('Status pesanan berhasil diperbarui');
+      toast.success('Status pesanan berhasil diperbarui. Sales count produk telah diperbarui.');
       fetchOrder();
     } catch (error: any) {
       console.error('Error updating order status:', error);

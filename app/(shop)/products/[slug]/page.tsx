@@ -103,10 +103,61 @@ function ProductDetailPageContent() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [productWarranty, setProductWarranty] = useState<Array<{ title: string; description: string }> | null>(null);
+  const [deliveryGuaranteeTitle, setDeliveryGuaranteeTitle] = useState<string | null>(null);
+  const [deliveryGuaranteeDescription, setDeliveryGuaranteeDescription] = useState<string | null>(null);
+  const [isWarrantyExpanded, setIsWarrantyExpanded] = useState(false);
   // Sentinel diletakkan setelah area gambar untuk mendeteksi scroll melewati hero
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   // Ref ke kontainer gambar utama untuk fallback perhitungan manual
   const galleryRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch product warranty
+  useEffect(() => {
+    const fetchWarranty = async () => {
+      if (!product?.id) return;
+
+      try {
+        const response = await fetch(`/api/products/${product.id}/warranty`);
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          setProductWarranty(data.data);
+        } else {
+          setProductWarranty(null);
+        }
+      } catch (error) {
+        console.error('Error fetching warranty:', error);
+        setProductWarranty(null);
+      }
+    };
+
+    fetchWarranty();
+  }, [product?.id]);
+
+  // Fetch delivery guarantee settings
+  useEffect(() => {
+    const fetchDeliveryGuarantee = async () => {
+      try {
+        const response = await fetch('/api/settings/delivery-guarantee');
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          setDeliveryGuaranteeTitle(data.data.title || null);
+          setDeliveryGuaranteeDescription(data.data.description || null);
+        } else {
+          setDeliveryGuaranteeTitle(null);
+          setDeliveryGuaranteeDescription(null);
+        }
+      } catch (error) {
+        console.error('Error fetching delivery guarantee settings:', error);
+        setDeliveryGuaranteeTitle(null);
+        setDeliveryGuaranteeDescription(null);
+      }
+    };
+
+    fetchDeliveryGuarantee();
+  }, []);
 
   // Fetch product
   useEffect(() => {
@@ -317,38 +368,9 @@ function ProductDetailPageContent() {
   
   const formattedSold = formatSoldCount(soldCount);
 
-  // ===== Delivery Guarantee (3-5 business days) =====
-  const addBusinessDays = (date: Date, days: number): Date => {
-    const d = new Date(date);
-    let remaining = days;
-    while (remaining > 0) {
-      d.setDate(d.getDate() + 1);
-      const day = d.getDay(); // 0 = Sun, 6 = Sat
-      if (day !== 0 && day !== 6) {
-        remaining -= 1;
-      }
-    }
-    return d;
-  };
 
-  const monthNamesId = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-  ];
-
-  const formatDateRangeId = (start: Date, end: Date): string => {
-    const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
-    if (sameMonth) {
-      return `${start.getDate()} - ${end.getDate()} ${monthNamesId[end.getMonth()]}`;
-    }
-    return `${start.getDate()} ${monthNamesId[start.getMonth()]} - ${end.getDate()} ${monthNamesId[end.getMonth()]}`;
-  };
-
-  const deliveryStart = addBusinessDays(new Date(), 3);
-  const deliveryEnd = addBusinessDays(new Date(), 5);
-  const deliveryGuaranteeText = `Garansi tiba ${formatDateRangeId(deliveryStart, deliveryEnd)}`;
-
-  const policyDetails = [
+  // Default warranty policy (fallback)
+  const defaultPolicyDetails = [
     {
       title: '15 Hari Pengembalian',
       description: 'Ajukan retur dalam 15 hari jika produk tidak sesuai ekspektasi Anda.'
@@ -366,6 +388,11 @@ function ProductDetailPageContent() {
       description: 'Penggantian atau pengembalian dana jika barang diterima dalam kondisi rusak.'
     },
   ];
+
+  // Use warranty from settings if available, otherwise use default
+  const policyDetails = productWarranty && productWarranty.length > 0 
+    ? productWarranty 
+    : defaultPolicyDetails;
   const allImages = product
     ? [
         product.imageUrl,
@@ -560,9 +587,9 @@ function ProductDetailPageContent() {
         {/* Main Product Section - Full Width */}
         <div className="mb-12">
           
-          {/* Product Image - Full Width Card */}
-          <div className="bg-white rounded-none sm:rounded-xl overflow-hidden border-0 sm:border sm:border-gray-200 mb-0">
-            <div ref={galleryRef} className="relative aspect-square overflow-hidden bg-gray-50 rounded-none sm:rounded-t-xl">
+          {/* Product Image & Info - Single Card */}
+          <div className="bg-white rounded-none sm:rounded-xl border-0 sm:border sm:border-gray-200 max-w-full lg:max-w-4xl xl:max-w-5xl mx-auto">
+            <div ref={galleryRef} className="relative aspect-square sm:aspect-square md:aspect-[4/3] lg:aspect-[3/2] xl:aspect-[16/10] overflow-hidden bg-gray-50 rounded-none sm:rounded-t-xl">
               <SwipeGesture
                 onSwipeLeft={() => {
                   if (allImages.length < 2) return;
@@ -630,7 +657,7 @@ function ProductDetailPageContent() {
 
             {/* Thumbnails */}
             {allImages.length > 1 && (
-              <div className="px-4 py-3 border-t border-gray-100">
+              <div className="px-4 py-3 border-t border-gray-200">
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {allImages.map((image, index) => (
                     <button
@@ -653,25 +680,23 @@ function ProductDetailPageContent() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Product Info Section */}
-          <div className="bg-white rounded-none sm:rounded-xl border-0 sm:border sm:border-gray-200">
-            <div className="p-4 sm:p-6">
+            
+            {/* Product Info Section */}
+            <div className="p-4 sm:p-6 border-t border-gray-200">
               {/* Price */}
-              <div className="mb-4">
+              <div className="pb-4">
                 <div className="flex items-baseline gap-2 mb-1 flex-wrap">
-                  <span className="text-3xl font-bold text-blue-600">
+                  <span className="text-lg sm:text-xl font-bold text-blue-600">
                     {formatPrice(displayPrice)}
                   </span>
                   {hasDiscount && (
-                    <span className="text-lg text-gray-400 line-through">
+                    <span className="text-xs sm:text-sm text-gray-400 line-through">
                       {formatPrice(product.price)}
                     </span>
                   )}
                   {/* Sold Count & Love Icon */}
                   <div className="flex items-center gap-1.5 ml-auto">
-                    <span className="text-sm font-semibold text-gray-600 leading-none">
+                    <span className="text-xs sm:text-sm font-semibold text-gray-600 leading-none">
                       {formattedSold} Terjual
                     </span>
                     <Heart className="w-[14px] h-[14px] text-red-500 fill-red-500 flex-shrink-0" />
@@ -696,87 +721,228 @@ function ProductDetailPageContent() {
                   }
                 }}
                 aria-expanded={isTitleExpanded}
-                className="w-full flex items-center gap-2 text-left cursor-pointer focus:outline-none focus-visible:ring-0 border-t border-gray-200 pt-4"
+                className="w-full flex items-center gap-2 text-left cursor-pointer focus:outline-none focus-visible:ring-0 border-t border-gray-200 pt-4 pb-4 admin-no-animation"
+                style={{ 
+                  transition: 'none !important',
+                  backgroundColor: 'transparent !important',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.opacity = '1';
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.opacity = '1';
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
-                <h1 className={`!text-base sm:!text-lg font-bold text-gray-900 leading-tight ${isTitleExpanded ? '' : 'truncate'} flex-1`}>
+                <h1 className={`!text-sm sm:!text-base font-bold text-gray-900 leading-tight ${isTitleExpanded ? '' : 'truncate'} flex-1`}>
                   {product.brand ? `${product.brand} - ${product.name}` : product.name}
                 </h1>
                 <ChevronDown className={`ml-auto w-4 h-4 text-gray-400 transition-transform ${isTitleExpanded ? 'rotate-180' : ''}`} />
               </div>
 
               {/* Trust Badges */}
-              <div className="mt-4 pt-4 space-y-4 border-t border-gray-200">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2.5">
+              <div className="pt-4 border-t border-gray-200">
+                <div className="pb-4">
+                  <div className="flex items-center gap-2.5 min-h-[24px]">
                     <ShieldCheck className="!w-[18px] !h-[18px] text-green-600 flex-shrink-0" />
                     <span className="!text-sm text-gray-700 !font-semibold">Secure Payment</span>
                     <ChevronRight className="ml-auto w-4 h-4 text-gray-400" />
                   </div>
                 </div>
-                <div className="border-t border-gray-200 pt-4">
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setIsPolicyModalOpen(true)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        setIsPolicyModalOpen(true);
-                      }
-                    }}
-                    className="flex items-center gap-2.5 cursor-pointer focus:outline-none"
-                    aria-label="Lihat detail kebijakan"
-                  >
-                    <RotateCcw className="!w-[18px] !h-[18px] text-blue-600 flex-shrink-0" />
-                    <span className="!text-sm text-gray-700 !font-semibold truncate">
-                      15 Hari Pengembalian • 100% Original • COD-Cek-dulu • proteks kerusakan
-                    </span>
-                    <ChevronRight className="ml-auto w-4 h-4 text-gray-400 flex-shrink-0" />
-                  </div>
-                </div>
-                <div className="border-t border-gray-200 pt-4">
-                  <div className="flex items-center gap-2.5">
-                    <Truck className="!w-[18px] !h-[18px] text-purple-600 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="!text-sm text-gray-700 !font-semibold">{deliveryGuaranteeText}</p>
-                      <p className="!text-[10px] text-gray-500">Dapatkan voucher s/d Rp10.000% jika pesanan terlambat</p>
+                {policyDetails && policyDetails.length > 0 && (
+                  <div className="border-t border-gray-200 pt-4 pb-4">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setIsWarrantyExpanded(!isWarrantyExpanded)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setIsWarrantyExpanded(!isWarrantyExpanded);
+                        }
+                      }}
+                      className="flex items-center gap-2.5 min-h-[24px] cursor-pointer focus:outline-none admin-no-animation"
+                      style={{ 
+                        transition: 'none !important',
+                        backgroundColor: 'transparent !important',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                      aria-label="Lihat detail garansi"
+                    >
+                      <RotateCcw className="!w-[18px] !h-[18px] text-blue-600 flex-shrink-0" />
+                      <span className="!text-sm text-gray-700 !font-semibold flex-1 min-w-0">
+                        {/* Mobile: Show limited text (1 sentence/40 chars) with truncate */}
+                        <span className="block sm:hidden truncate">
+                          {(() => {
+                            const allTitles = policyDetails.map(item => item.title).join(' • ');
+                            const maxLength = 40;
+                            if (allTitles.length <= maxLength) {
+                              return allTitles;
+                            }
+                            return allTitles.substring(0, maxLength).trim() + '...';
+                          })()}
+                        </span>
+                        {/* Tablet/Desktop: Show all titles */}
+                        <span className="hidden sm:block">
+                          {policyDetails.map((item, index) => (
+                            <span key={index}>
+                              {index > 0 && (
+                                <span className="inline-block w-1 h-1 rounded-full bg-gray-700 mx-1.5 align-middle"></span>
+                              )}
+                              {item.title}
+                            </span>
+                          ))}
+                        </span>
+                      </span>
+                      {isWarrantyExpanded ? (
+                        <ChevronDown className="ml-auto w-4 h-4 text-gray-400 flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="ml-auto w-4 h-4 text-gray-400 flex-shrink-0" />
+                      )}
                     </div>
-                    <ChevronRight className="ml-2 w-4 h-4 text-gray-400" />
+                    {isWarrantyExpanded && (
+                      <div className="fixed inset-0 z-[60] flex flex-col">
+                        <div
+                          className="absolute inset-0 bg-black/40"
+                          onClick={() => setIsWarrantyExpanded(false)}
+                        ></div>
+                        <div className="relative mt-auto bg-white rounded-t-3xl shadow-2xl border border-gray-100 bottom-sheet">
+                          <div className="relative flex items-center justify-center px-6 pt-5 pb-3 border-b border-gray-200">
+                            <span className="text-sm font-semibold text-gray-500 tracking-wide uppercase">Jaminan Shopee</span>
+                            <button
+                              type="button"
+                              onClick={() => setIsWarrantyExpanded(false)}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                              aria-label="Tutup detail garansi"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="pb-[max(env(safe-area-inset-bottom),24px)] overflow-y-auto max-h-[80vh]">
+                            <div className="py-4">
+                              <div className="w-full bg-white border border-gray-200 rounded-none">
+                                {policyDetails.map((item, index) => (
+                                  <div
+                                    key={index}
+                                    className={`px-6 py-4 bg-white ${index > 0 ? 'border-t border-gray-200' : ''}`}
+                                  >
+                                    <p className="text-sm font-semibold text-gray-900 mb-1">{item.title}</p>
+                                    <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
+                {deliveryGuaranteeTitle && deliveryGuaranteeDescription && (
+                  <div className="border-t border-gray-200 pt-4 pb-4">
+                    <div className="flex items-center gap-2.5 min-h-[24px]">
+                      <Truck className="!w-[18px] !h-[18px] text-purple-600 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="!text-sm text-gray-700 !font-semibold">{deliveryGuaranteeTitle}</p>
+                        <p className="!text-[10px] text-gray-500">{deliveryGuaranteeDescription}</p>
+                      </div>
+                      <ChevronRight className="ml-2 w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Tabs Section */}
-              <div className="border-t border-gray-200 mt-4 pt-4">
+              <div className="border-t border-gray-200 pt-4 pb-4">
                 <div className="border-b border-gray-200">
                   <div className="flex">
                     <button
                       onClick={() => setActiveTab('description')}
-                      className={`px-6 py-4 font-semibold text-sm transition-colors border-b-2 ${
+                      className={`px-6 py-4 font-semibold text-sm transition-colors border-b-2 admin-no-animation ${
                         activeTab === 'description'
                           ? 'border-blue-600 text-blue-600'
                           : 'border-transparent text-gray-600 hover:text-gray-900'
                       }`}
+                      style={{ 
+                        transition: 'none !important',
+                        backgroundColor: 'transparent !important',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     >
                       Description
                     </button>
                     <button
                       onClick={() => setActiveTab('specifications')}
-                      className={`px-6 py-4 font-semibold text-sm transition-colors border-b-2 ${
+                      className={`px-6 py-4 font-semibold text-sm transition-colors border-b-2 admin-no-animation ${
                         activeTab === 'specifications'
                           ? 'border-blue-600 text-blue-600'
                           : 'border-transparent text-gray-600 hover:text-gray-900'
                       }`}
+                      style={{ 
+                        transition: 'none !important',
+                        backgroundColor: 'transparent !important',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     >
                       Specifications
                     </button>
                     <button
                       onClick={() => setActiveTab('reviews')}
-                      className={`px-6 py-4 font-semibold text-sm transition-colors border-b-2 ${
+                      className={`px-6 py-4 font-semibold text-sm transition-colors border-b-2 admin-no-animation ${
                         activeTab === 'reviews'
                           ? 'border-blue-600 text-blue-600'
                           : 'border-transparent text-gray-600 hover:text-gray-900'
                       }`}
+                      style={{ 
+                        transition: 'none !important',
+                        backgroundColor: 'transparent !important',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     >
                       Reviews ({product.reviewCount || 0})
                     </button>

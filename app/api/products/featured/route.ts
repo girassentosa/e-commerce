@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     // Transform products to include imageUrl and images array for frontend compatibility
     const transformedProducts = products.map((product) => {
       const primaryImage = product.images && product.images.length > 0 ? product.images[0] : null;
-      const { images: originalImages, _count, price: originalPrice, salePrice: originalSalePrice, ratingAverage, stockQuantity, ...rest } = product;
+      const { images: originalImages, _count, price: originalPrice, salePrice: originalSalePrice, ratingAverage, stockQuantity, salesCount, ...rest } = product;
       
       return {
         ...rest,
@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
         rating: ratingAverage.toString(),
         reviewCount: _count.reviews,
         stock: stockQuantity,
+        salesCount: salesCount || 0, // Add salesCount for sold count display
       };
     });
 

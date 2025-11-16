@@ -146,9 +146,12 @@ export async function PATCH(
 
     const { status, notes } = validationResult.data;
 
-    // Check if order exists
+    // Check if order exists with items
     const existingOrder = await prisma.order.findUnique({
       where: { orderNumber },
+      include: {
+        items: true,
+      },
     });
 
     if (!existingOrder) {
@@ -158,28 +161,98 @@ export async function PATCH(
       );
     }
 
-    // Update order
-    const updateData: any = {};
-    if (status) {
-      updateData.status = status;
-    }
-    if (notes !== undefined) {
-      updateData.notes = notes;
-    }
+    // Track if status is changing
+    const isStatusChanging = status && status !== existingOrder.status;
+    const oldStatus = existingOrder.status;
+    const newStatus = status || oldStatus;
 
-    const updatedOrder = await prisma.order.update({
-      where: { orderNumber },
-      data: updateData,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
+    // Update order and salesCount in transaction
+    const updatedOrder = await prisma.$transaction(async (tx) => {
+      // Update order
+      const updateData: any = {};
+      if (status) {
+        updateData.status = status;
+      }
+      if (notes !== undefined) {
+        updateData.notes = notes;
+      }
+
+      const updated = await tx.order.update({
+        where: { orderNumber },
+        data: updateData,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
-      },
+      });
+
+      // Update salesCount based on status change
+      // salesCount hanya dihitung dari order yang statusnya DELIVERED
+      if (isStatusChanging) {
+        console.log('Order status changing:', {
+          orderNumber,
+          oldStatus,
+          newStatus,
+          itemsCount: existingOrder.items.length,
+        });
+
+        // Case 1: Status changed to DELIVERED (from non-DELIVERED)
+        if (newStatus === 'DELIVERED' && oldStatus !== 'DELIVERED') {
+          console.log('Incrementing salesCount for DELIVERED order');
+          // Increment salesCount for each item
+          for (const item of existingOrder.items) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: {
+                salesCount: {
+                  increment: item.quantity,
+                },
+              },
+            });
+            console.log(`Incremented salesCount for product ${item.productId} by ${item.quantity}`);
+          }
+        }
+        // Case 2: Status changed from DELIVERED to non-DELIVERED (CANCELLED/REFUNDED)
+        else if (oldStatus === 'DELIVERED' && newStatus !== 'DELIVERED' && (newStatus === 'CANCELLED' || newStatus === 'REFUNDED')) {
+          console.log('Decrementing salesCount for cancelled/refunded order');
+          // Decrement salesCount for each item
+          for (const item of existingOrder.items) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: {
+                salesCount: {
+                  decrement: item.quantity,
+                },
+              },
+            });
+            console.log(`Decremented salesCount for product ${item.productId} by ${item.quantity}`);
+          }
+        }
+        // Case 3: Status changed from CANCELLED/REFUNDED back to DELIVERED
+        else if ((oldStatus === 'CANCELLED' || oldStatus === 'REFUNDED') && newStatus === 'DELIVERED') {
+          console.log('Incrementing salesCount for order changed back to DELIVERED');
+          // Increment salesCount for each item
+          for (const item of existingOrder.items) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: {
+                salesCount: {
+                  increment: item.quantity,
+                },
+              },
+            });
+            console.log(`Incremented salesCount for product ${item.productId} by ${item.quantity}`);
+          }
+        }
+      }
+
+      return updated;
     });
 
     return NextResponse.json({

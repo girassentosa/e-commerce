@@ -85,6 +85,8 @@ export async function PUT(
       });
 
       // Restore stock for each item
+      // Note: salesCount is not decremented here because it's only updated when order becomes DELIVERED
+      // If order is cancelled before DELIVERED, salesCount was never incremented
       for (const item of order.items) {
         await tx.product.update({
           where: { id: item.productId },
@@ -92,9 +94,7 @@ export async function PUT(
             stockQuantity: {
               increment: item.quantity,
             },
-            salesCount: {
-              decrement: item.quantity,
-            },
+            // salesCount is only decremented if order was previously DELIVERED
           },
         });
       }

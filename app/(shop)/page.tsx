@@ -327,7 +327,16 @@ function HomePageContent() {
 
                 <Link
                   href={`/products/${featuredProduct.slug}`}
-                  className="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-base"
+                  className="inline-flex items-center justify-center gap-2 bg-transparent border-2 border-blue-600 text-blue-600 px-8 py-3 rounded-lg font-semibold text-base"
+                  style={{ 
+                    transition: 'opacity 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
                 >
                   Shop Now
                   <ArrowRight className="w-5 h-5" />
@@ -401,16 +410,25 @@ function HomePageContent() {
               <div className="flex lg:grid lg:grid-cols-6 xl:grid-cols-8 gap-4 pb-2">
                 {categories.slice(0, 12).map((category) => {
                   const Icon = getCategoryIcon(category.name);
+                  const isSelected = selectedCategory === category.id;
                   return (
                     <button
                       key={category.id}
                       onClick={() => setSelectedCategory(category.id)}
-                      className="flex flex-col items-center gap-2 p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all flex-shrink-0 w-24 sm:w-28 lg:w-auto"
+                      className={`flex flex-col items-center gap-2 p-4 rounded-lg border transition-all flex-shrink-0 w-24 sm:w-28 lg:w-auto ${
+                        isSelected
+                          ? 'bg-blue-50 border-blue-300'
+                          : 'bg-white border-gray-200 hover:border-gray-300'
+                      }`}
                     >
-                      <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
-                        <Icon className="w-6 h-6 text-blue-600" />
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        isSelected ? 'bg-blue-100' : 'bg-blue-50'
+                      }`}>
+                        <Icon className={`w-6 h-6 ${isSelected ? 'text-blue-700' : 'text-blue-600'}`} />
                       </div>
-                      <span className="text-xs font-medium text-gray-700 text-center line-clamp-2 leading-tight">
+                      <span className={`text-xs font-medium text-center line-clamp-2 leading-tight ${
+                        isSelected ? 'text-blue-700' : 'text-gray-700'
+                      }`}>
                         {category.name}
                       </span>
                     </button>

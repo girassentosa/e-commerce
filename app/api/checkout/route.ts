@@ -361,7 +361,7 @@ export async function POST(request: NextRequest) {
         vaBank: paymentTx.vaBank,
       });
 
-      // Update product stock and sales count
+      // Update product stock (salesCount will be updated when order status becomes DELIVERED)
       for (const item of cart.items) {
         await tx.product.update({
           where: { id: item.productId },
@@ -369,9 +369,7 @@ export async function POST(request: NextRequest) {
             stockQuantity: {
               decrement: item.quantity,
             },
-            salesCount: {
-              increment: item.quantity,
-            },
+            // salesCount is only updated when order status becomes DELIVERED
           },
         });
       }

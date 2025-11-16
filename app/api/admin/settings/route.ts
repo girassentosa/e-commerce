@@ -86,23 +86,64 @@ export async function PUT(request: NextRequest) {
     const updates = [];
     const adminId = session.user.id;
 
+    // Map keys to categories
+    const categoryMap: Record<string, string> = {
+      // General
+      storeName: 'general',
+      storeDescription: 'general',
+      contactEmail: 'general',
+      contactPhone: 'general',
+      storeAddress: 'general',
+      currency: 'general',
+      timezone: 'general',
+      // Product
+      defaultLowStockThreshold: 'product',
+      productsPerPage: 'product',
+      autoHideOutOfStock: 'product',
+      productWarranty: 'product',
+      deliveryGuaranteeTitle: 'product',
+      deliveryGuaranteeDescription: 'product',
+      // Order
+      autoCancelPendingDays: 'order',
+      allowOrderCancellation: 'order',
+      minimumOrderAmount: 'order',
+      // Payment
+      paymentTimeoutHours: 'payment',
+      // Shipping
+      freeShippingThreshold: 'shipping',
+      defaultShippingCost: 'shipping',
+      // Email
+      smtpHost: 'email',
+      smtpPort: 'email',
+      smtpUser: 'email',
+      fromEmail: 'email',
+      fromName: 'email',
+      // SEO
+      metaTitle: 'seo',
+      metaDescription: 'seo',
+      googleAnalyticsId: 'seo',
+    };
+
     for (const [key, value] of Object.entries(settings)) {
       // Convert value to string (JSON stringify if object/array)
       const stringValue = typeof value === 'string' 
         ? value 
         : JSON.stringify(value);
 
+      const category = categoryMap[key] || 'general';
+
       updates.push(
         prisma.setting.upsert({
           where: { key },
           update: {
             value: stringValue,
+            category,
             updatedBy: adminId,
           },
           create: {
             key,
             value: stringValue,
-            category: 'general', // Default category, can be updated later
+            category,
             updatedBy: adminId,
           },
         })

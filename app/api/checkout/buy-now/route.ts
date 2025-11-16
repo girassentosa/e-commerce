@@ -419,16 +419,14 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Update product stock and sales count
+      // Update product stock (salesCount will be updated when order status becomes DELIVERED)
       await tx.product.update({
         where: { id: product.id },
         data: {
           stockQuantity: {
             decrement: validatedData.quantity,
           },
-          salesCount: {
-            increment: validatedData.quantity,
-          },
+          // salesCount is only updated when order status becomes DELIVERED
         },
       });
 

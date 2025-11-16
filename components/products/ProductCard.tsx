@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingCart, Star, Flame } from 'lucide-react';
+import { ShoppingCart, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -34,6 +34,7 @@ interface ProductCardProps {
     rating?: string | number | null;
     reviewCount?: number;
     isFeatured?: boolean;
+    salesCount?: number;
   };
 }
 
@@ -59,8 +60,27 @@ export function ProductCard({ product }: ProductCardProps) {
   const displayPrice = product.salePrice || product.price;
   const hasDiscount = !!product.salePrice && parseFloat(product.salePrice) < parseFloat(product.price);
   
-  // Social proof - sold count (mock data, bisa diganti dengan real data)
-  const soldCount = product.reviewCount ? Math.max(product.reviewCount * 3, 10) : Math.floor(Math.random() * 100) + 10;
+  // Get real-time sold count from product data (salesCount from DELIVERED orders)
+  const soldCount = product.salesCount || 0;
+  
+  // Format terjual: jika >= 1000 jadi 2 angka + " RB", jika < 1000 tampilkan angka biasa
+  const formatSoldCount = (count: number): string => {
+    if (count >= 1000) {
+      // Ambil 2 angka pertama dari ratusan (untuk 1000-9999) atau ribuan (untuk 10000+)
+      if (count >= 10000) {
+        // Untuk 10000+, ambil 2 digit pertama dari ribuan
+        const firstTwo = Math.floor(count / 1000);
+        return `${firstTwo} RB+`;
+      } else {
+        // Untuk 1000-9999, ambil 2 digit pertama dari ratusan
+        const firstTwo = Math.floor(count / 100);
+        return `${firstTwo} RB+`;
+      }
+    }
+    return `${count}`;
+  };
+  
+  const formattedSold = formatSoldCount(soldCount);
 
   const toggleWishlist = async () => {
     if (isWishlisted) {
@@ -242,15 +262,12 @@ export function ProductCard({ product }: ProductCardProps) {
             )}
           </div>
 
-          {/* Social Proof - 🔥 Sold Count */}
-          {soldCount > 0 && (
-            <div className="flex items-center gap-1 text-gray-600">
-              <Flame className="w-3.5 h-3.5 text-orange-500" />
-              <span className="text-xs font-medium">
-                {soldCount}+ sold
-              </span>
-            </div>
-          )}
+          {/* Social Proof - Terjual Count */}
+          <div className="flex items-center gap-1 text-gray-600">
+            <span className="text-xs font-medium">
+              {formattedSold} Terjual
+            </span>
+          </div>
 
         </div>
       </Link>

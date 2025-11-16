@@ -18,6 +18,10 @@ import {
   Shield,
   Loader2,
   Save,
+  X,
+  Plus,
+  Trash2,
+  Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAdminHeader } from '@/contexts/AdminHeaderContext';
@@ -38,6 +42,9 @@ interface SettingsData {
   defaultLowStockThreshold?: number;
   productsPerPage?: number;
   autoHideOutOfStock?: boolean;
+  productWarranty?: Record<string, Array<{ title: string; description: string }>>;
+  deliveryGuaranteeTitle?: string;
+  deliveryGuaranteeDescription?: string;
   
   // Order
   autoCancelPendingDays?: number;
@@ -82,10 +89,57 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<SettingsData>({});
+  const [products, setProducts] = useState<Array<{ id: string; name: string; imageUrl: string | null }>>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [warrantyModalOpen, setWarrantyModalOpen] = useState(false);
+  const [warrantyModalTab, setWarrantyModalTab] = useState<'product' | 'delivery'>('product');
+  const [toggledProducts, setToggledProducts] = useState<Set<string>>(new Set());
+  const [gridStyle, setGridStyle] = useState<React.CSSProperties>({
+    gridTemplateColumns: 'repeat(2, minmax(140px, 1fr))',
+    gridAutoFlow: 'column',
+    gridTemplateRows: 'repeat(3, auto)',
+  });
 
   useEffect(() => {
     setHeader(Settings, 'Pengaturan');
   }, [setHeader]);
+
+  // Set grid style based on screen size
+  useEffect(() => {
+    const updateGridStyle = () => {
+      const width = window.innerWidth;
+      if (width >= 1024) {
+        // Desktop: 3 columns x 2 rows
+        setGridStyle({
+          gridTemplateColumns: 'repeat(3, minmax(200px, 1fr))',
+          gridAutoFlow: 'column',
+          gridTemplateRows: 'repeat(2, auto)',
+          alignItems: 'start',
+        });
+      } else if (width >= 640) {
+        // Tablet: 3 columns x 3 rows
+        setGridStyle({
+          gridTemplateColumns: 'repeat(3, minmax(160px, 1fr))',
+          gridAutoFlow: 'column',
+          gridTemplateRows: 'repeat(3, auto)',
+          alignItems: 'start',
+        });
+      } else {
+        // Mobile: 2 columns x 3 rows
+        setGridStyle({
+          gridTemplateColumns: 'repeat(2, minmax(140px, 1fr))',
+          gridAutoFlow: 'column',
+          gridTemplateRows: 'repeat(3, auto)',
+          alignItems: 'start',
+        });
+      }
+    };
+
+    updateGridStyle();
+    window.addEventListener('resize', updateGridStyle);
+    return () => window.removeEventListener('resize', updateGridStyle);
+  }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -98,6 +152,12 @@ export default function AdminSettingsPage() {
       fetchSettings();
     }
   }, [status]);
+
+  useEffect(() => {
+    if (status === 'authenticated' && activeTab === 'product') {
+      fetchProducts();
+    }
+  }, [status, activeTab]);
 
   const fetchSettings = async () => {
     try {
@@ -113,6 +173,16 @@ export default function AdminSettingsPage() {
       console.log('[Settings] Fetched settings from API:', settingsMap);
       console.log('[Settings] Currency value:', settingsMap.currency);
       
+      // Parse productWarranty if it exists
+      if (settingsMap.productWarranty && typeof settingsMap.productWarranty === 'string') {
+        try {
+          settingsMap.productWarranty = JSON.parse(settingsMap.productWarranty);
+        } catch (e) {
+          console.error('Error parsing productWarranty:', e);
+          settingsMap.productWarranty = {};
+        }
+      }
+      
       setSettings(settingsMap);
     } catch (error: any) {
       console.error('Error fetching settings:', error);
@@ -122,8 +192,122 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const fetchProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const response = await fetch('/api/admin/products?limit=1000&status=active');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch products');
+      }
+
+      const productsList = (data.data?.products || []).map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        imageUrl: product.images?.[0]?.imageUrl || product.imageUrl || null,
+      }));
+
+      setProducts(productsList);
+    } catch (error: any) {
+      console.error('Error fetching products:', error);
+      toast.error(error.message || 'Gagal memuat produk');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
   const handleChange = (key: keyof SettingsData, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const toggleProductSelection = (productId: string) => {
+    const currentWarranty = settings.productWarranty || {};
+    const warrantyItems = currentWarranty[productId] || [];
+    
+    // Jika sudah ada garansi, tidak bisa di-toggle
+    if (warrantyItems.length > 0) {
+      return;
+    }
+    
+    // Toggle untuk menampilkan/menyembunyikan button "Atur Garansi"
+    setToggledProducts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
+  };
+
+  const removeProductWarranty = (productId: string) => {
+    const currentWarranty = settings.productWarranty || {};
+    const newWarranty = { ...currentWarranty };
+    delete newWarranty[productId];
+    handleChange('productWarranty', newWarranty);
+  };
+
+  const openWarrantyModal = (productId: string) => {
+    setSelectedProductId(productId);
+    setWarrantyModalTab('product');
+    setWarrantyModalOpen(true);
+  };
+
+  const openDeliveryGuaranteeModal = () => {
+    setSelectedProductId(null);
+    setWarrantyModalTab('delivery');
+    setWarrantyModalOpen(true);
+  };
+
+  const closeWarrantyModal = () => {
+    // Reset toggle state untuk produk yang sudah ada garansi
+    if (selectedProductId) {
+      const currentWarranty = settings.productWarranty || {};
+      const warrantyItems = currentWarranty[selectedProductId] || [];
+      if (warrantyItems.length > 0) {
+        setToggledProducts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(selectedProductId);
+          return newSet;
+        });
+      }
+    }
+    setSelectedProductId(null);
+    setWarrantyModalOpen(false);
+  };
+
+  const addWarrantyItem = (productId: string) => {
+    const currentWarranty = settings.productWarranty || {};
+    const productWarranty = currentWarranty[productId] || [];
+    const newWarranty = {
+      ...currentWarranty,
+      [productId]: [...productWarranty, { title: '', description: '' }],
+    };
+    handleChange('productWarranty', newWarranty);
+  };
+
+  const removeWarrantyItem = (productId: string, index: number) => {
+    const currentWarranty = settings.productWarranty || {};
+    const productWarranty = currentWarranty[productId] || [];
+    const newWarranty = {
+      ...currentWarranty,
+      [productId]: productWarranty.filter((_: any, i: number) => i !== index),
+    };
+    handleChange('productWarranty', newWarranty);
+  };
+
+  const updateWarrantyItem = (productId: string, index: number, field: 'title' | 'description', value: string) => {
+    const currentWarranty = settings.productWarranty || {};
+    const productWarranty = currentWarranty[productId] || [];
+    const newWarranty = {
+      ...currentWarranty,
+      [productId]: productWarranty.map((item: any, i: number) =>
+        i === index ? { ...item, [field]: value } : item
+      ),
+    };
+    handleChange('productWarranty', newWarranty);
   };
 
   const handleSave = async () => {
@@ -133,12 +317,18 @@ export default function AdminSettingsPage() {
       console.log('[Settings] Saving settings:', settings);
       console.log('[Settings] Currency to save:', settings.currency);
       
+      // Prepare settings for save - ensure productWarranty is properly stringified
+      const settingsToSave: any = { ...settings };
+      if (settingsToSave.productWarranty && typeof settingsToSave.productWarranty === 'object') {
+        settingsToSave.productWarranty = JSON.stringify(settingsToSave.productWarranty);
+      }
+      
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ settings }),
+        body: JSON.stringify({ settings: settingsToSave }),
       });
 
       const data = await response.json();
@@ -338,6 +528,117 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Garansi Per Produk */}
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-gray-600" />
+                  Garansi Per Produk
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Pilih produk dan atur informasi garansi yang akan ditampilkan di halaman detail produk
+                </p>
+                
+                {loadingProducts ? (
+                  <div className="flex justify-center py-8">
+                    <Loader size="md" />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {products.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">Tidak ada produk tersedia</p>
+                    ) : (
+                      <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
+                        <div 
+                          className="inline-grid gap-3 min-w-max items-start"
+                          style={gridStyle}
+                        >
+                          {products.map((product) => {
+                            const currentWarranty = settings.productWarranty || {};
+                            const warrantyItems = currentWarranty[product.id] || [];
+                            const hasWarranty = warrantyItems.length > 0;
+                            const isToggled = toggledProducts.has(product.id);
+                            
+                            return (
+                              <div
+                                key={product.id}
+                                className={`
+                                  relative border-2 rounded-lg transition-all self-start
+                                  ${hasWarranty 
+                                    ? 'border-green-600 bg-green-50 shadow-md cursor-default p-4' 
+                                    : isToggled
+                                    ? 'border-blue-600 bg-blue-50 shadow-md cursor-pointer p-4'
+                                    : 'border-gray-200 hover:border-gray-300 bg-white cursor-pointer p-3'
+                                  }
+                                `}
+                                onClick={() => !hasWarranty && toggleProductSelection(product.id)}
+                              >
+                                <div className="flex items-start gap-3">
+                                  {product.imageUrl ? (
+                                    <img
+                                      src={product.imageUrl}
+                                      alt={product.name}
+                                      className="w-12 h-12 object-cover rounded flex-shrink-0"
+                                    />
+                                  ) : (
+                                    <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
+                                      <Package className="w-6 h-6 text-gray-400" />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {product.name}
+                                    </p>
+                                    {hasWarranty && (
+                                      <p className="text-xs text-green-600 mt-1 font-medium">
+                                        {warrantyItems.length} item garansi
+                                      </p>
+                                    )}
+                                  </div>
+                                  {hasWarranty && (
+                                    <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <Check className="w-3 h-3 text-white" />
+                                    </div>
+                                  )}
+                                </div>
+                                {hasWarranty && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openWarrantyModal(product.id);
+                                    }}
+                                    className="mt-3 w-full text-xs text-green-700 hover:text-green-800 font-medium py-2 px-2 bg-green-100 hover:bg-green-200 rounded transition-colors"
+                                  >
+                                    Edit Garansi
+                                  </button>
+                                )}
+                                {isToggled && !hasWarranty && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Tambahkan entry kosong ke productWarranty sebelum buka modal
+                                      const newWarranty = { ...currentWarranty };
+                                      if (!newWarranty[product.id]) {
+                                        newWarranty[product.id] = [];
+                                        handleChange('productWarranty', newWarranty);
+                                      }
+                                      openWarrantyModal(product.id);
+                                    }}
+                                    className="mt-3 w-full text-xs text-blue-600 hover:text-blue-700 font-medium py-2 px-2 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
+                                  >
+                                    Atur Garansi
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 
@@ -600,6 +901,202 @@ export default function AdminSettingsPage() {
           )}
         </Button>
       </div>
+
+      {/* Warranty Modal */}
+      {warrantyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {warrantyModalTab === 'product' ? 'Atur Garansi Produk' : 'Atur Garansi Pengiriman'}
+                </h2>
+                {warrantyModalTab === 'product' && selectedProductId && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {products.find(p => p.id === selectedProductId)?.name}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={closeWarrantyModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => {
+                  if (!selectedProductId) {
+                    toast.error('Pilih produk terlebih dahulu');
+                    return;
+                  }
+                  setWarrantyModalTab('product');
+                }}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  warrantyModalTab === 'product'
+                    ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                Atur Garansi Produk
+              </button>
+              <button
+                onClick={() => setWarrantyModalTab('delivery')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  warrantyModalTab === 'delivery'
+                    ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                Garansi Pengiriman
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {warrantyModalTab === 'product' && selectedProductId ? (
+                (() => {
+                  const warrantyItems = (settings.productWarranty || {})[selectedProductId] || [];
+                  
+                  return (
+                    <div className="space-y-4">
+                      {warrantyItems.length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-8">
+                          Belum ada item garansi. Klik tombol "Tambah Item" untuk menambahkan.
+                        </p>
+                      ) : (
+                        warrantyItems.map((item: any, index: number) => (
+                          <div
+                            key={index}
+                            className="border border-gray-200 rounded-lg p-4 space-y-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700">
+                                Item {index + 1}
+                              </span>
+                              <button
+                                onClick={() => removeWarrantyItem(selectedProductId, index)}
+                                className="text-red-600 hover:text-red-700 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Judul
+                              </label>
+                              <Input
+                                type="text"
+                                value={item.title || ''}
+                                onChange={(e) =>
+                                  updateWarrantyItem(selectedProductId, index, 'title', e.target.value)
+                                }
+                                placeholder="Contoh: 15 Hari Pengembalian"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Deskripsi
+                              </label>
+                              <textarea
+                                value={item.description || ''}
+                                onChange={(e) =>
+                                  updateWarrantyItem(selectedProductId, index, 'description', e.target.value)
+                                }
+                                placeholder="Contoh: Ajukan retur dalam 15 hari jika produk tidak sesuai ekspektasi Anda."
+                                rows={3}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+                              />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  );
+                })()
+              ) : warrantyModalTab === 'delivery' ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Judul
+                    </label>
+                    <Input
+                      type="text"
+                      value={settings.deliveryGuaranteeTitle || ''}
+                      onChange={(e) => handleChange('deliveryGuaranteeTitle', e.target.value)}
+                      placeholder="Contoh: Garansi tiba 19 - 21 November"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Judul yang akan ditampilkan di bagian garansi pengiriman</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Deskripsi
+                    </label>
+                    <textarea
+                      value={settings.deliveryGuaranteeDescription || ''}
+                      onChange={(e) => handleChange('deliveryGuaranteeDescription', e.target.value)}
+                      placeholder="Contoh: Dapatkan voucher s/d Rp10.000% jika pesanan terlambat"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Deskripsi yang akan ditampilkan di bawah judul garansi pengiriman</p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+              {warrantyModalTab === 'product' && selectedProductId ? (
+                <Button
+                  onClick={() => addWarrantyItem(selectedProductId)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Tambah Item
+                </Button>
+              ) : (
+                <div></div>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  onClick={closeWarrantyModal}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-700"
+                >
+                  Batal
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (warrantyModalTab === 'product' && selectedProductId) {
+                      const warrantyItems = (settings.productWarranty || {})[selectedProductId] || [];
+                      if (warrantyItems.length === 0) {
+                        toast.error('Tambahkan minimal 1 item garansi');
+                        return;
+                      }
+                      // Validasi semua item harus ada title dan description
+                      const hasEmptyFields = warrantyItems.some((item: any) => !item.title || !item.description);
+                      if (hasEmptyFields) {
+                        toast.error('Semua item garansi harus memiliki judul dan deskripsi');
+                        return;
+                      }
+                    }
+                    closeWarrantyModal();
+                    toast.success('Perubahan garansi tersimpan. Klik "Simpan Pengaturan" untuk menyimpan ke database.');
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Simpan
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
