@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { MapPin, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Address {
   id: string;
@@ -53,6 +53,7 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
   const [loadingLocation, setLoadingLocation] = useState(false);
   const isEditMode = !!addressId && !!initialData;
   const formRef = useRef<HTMLFormElement>(null);
+  const { showSuccess, showError } = useNotification();
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -163,7 +164,7 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
   const handleUseCurrentLocation = async () => {
     // Check if geolocation is supported
     if (!navigator.geolocation) {
-      toast.error('Geolokasi tidak didukung oleh browser Anda');
+      showError('Geolokasi tidak didukung', 'Browser Anda tidak mendukung geolokasi.');
       return;
     }
 
@@ -185,14 +186,11 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
 
       const { latitude, longitude } = position.coords;
 
-      // Show loading message
-      toast.loading('Mendapatkan lokasi Anda...', { id: 'location' });
-
       // Reverse geocode to get address
       const geocodeResult = await reverseGeocode(latitude, longitude);
 
       if (!geocodeResult || !geocodeResult.address) {
-        toast.error('Tidak dapat menentukan alamat Anda. Silakan masukkan secara manual.', { id: 'location' });
+        showError('Gagal mendeteksi alamat', 'Tidak dapat menentukan alamat Anda. Silakan isi secara manual.');
         setLoadingLocation(false);
         return;
       }
@@ -227,7 +225,7 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
         country: country || prev.country,
       }));
 
-      toast.success('Alamat terisi otomatis! Silakan periksa dan lengkapi formulir.', { id: 'location' });
+      showSuccess('Alamat terisi otomatis', 'Silakan periksa dan lengkapi formulir.');
     } catch (error: any) {
       console.error('Error getting location:', error);
       
@@ -241,7 +239,7 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
         errorMessage = 'Permintaan lokasi timeout. Silakan coba lagi atau masukkan alamat secara manual.';
       }
 
-      toast.error(errorMessage, { id: 'location' });
+      showError('Gagal mendapatkan lokasi', errorMessage);
     } finally {
       setLoadingLocation(false);
     }
@@ -301,18 +299,21 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
 
       if (data.success) {
         if (isEditMode) {
-          toast.success('Alamat berhasil diubah');
+          showSuccess('Alamat diperbarui', 'Alamat berhasil diubah.');
           setOriginalData(JSON.parse(JSON.stringify(formData)));
         } else {
-          toast.success('Alamat berhasil ditambahkan');
+          showSuccess('Alamat ditambahkan', 'Alamat baru berhasil disimpan.');
         }
         onSuccess();
       } else {
-        toast.error(data.error || (isEditMode ? 'Gagal mengubah alamat' : 'Gagal menambahkan alamat'));
+        showError(
+          'Gagal menyimpan alamat',
+          data.error || (isEditMode ? 'Gagal mengubah alamat' : 'Gagal menambahkan alamat')
+        );
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} address:`, error);
-      toast.error(isEditMode ? 'Gagal mengubah alamat' : 'Gagal menambahkan alamat');
+      showError('Gagal menyimpan alamat', isEditMode ? 'Gagal mengubah alamat' : 'Gagal menambahkan alamat');
     } finally {
       setLoading(false);
     }

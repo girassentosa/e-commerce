@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Upload, X, Loader2, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface ImageUploaderProps {
   images: Array<{ imageUrl: string; altText?: string }>;
@@ -17,12 +17,13 @@ export function ImageUploader({ images, onChange, maxImages = 5 }: ImageUploader
   const [dragActive, setDragActive] = useState(false);
   const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
   const [urlInput, setUrlInput] = useState('');
+  const { showSuccess, showError } = useNotification();
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     if (images.length + files.length > maxImages) {
-      toast.error(`Maximum ${maxImages} images allowed`);
+      showError('Batas gambar tercapai', `Maksimal ${maxImages} gambar diizinkan.`);
       return;
     }
 
@@ -62,10 +63,10 @@ export function ImageUploader({ images, onChange, maxImages = 5 }: ImageUploader
 
       const uploadedImages = await Promise.all(uploadPromises);
       onChange([...images, ...uploadedImages]);
-      toast.success(`${uploadedImages.length} image(s) uploaded successfully`);
+      showSuccess('Gambar diunggah', `${uploadedImages.length} gambar berhasil diunggah.`);
     } catch (error: any) {
       console.error('Error uploading images:', error);
-      toast.error(error.message || 'Failed to upload images');
+      showError('Gagal mengunggah gambar', error.message || 'Failed to upload images');
     } finally {
       setUploading(false);
     }
@@ -73,7 +74,7 @@ export function ImageUploader({ images, onChange, maxImages = 5 }: ImageUploader
 
   const handleUrlUpload = async () => {
     if (!urlInput.trim()) {
-      toast.error('Please enter an image URL');
+      showError('URL kosong', 'Harap masukkan URL gambar.');
       return;
     }
 
@@ -81,12 +82,12 @@ export function ImageUploader({ images, onChange, maxImages = 5 }: ImageUploader
     try {
       new URL(urlInput.trim());
     } catch {
-      toast.error('Invalid URL format');
+      showError('Format URL tidak valid', 'Periksa kembali URL gambar Anda.');
       return;
     }
 
     if (images.length >= maxImages) {
-      toast.error(`Maximum ${maxImages} images allowed`);
+      showError('Batas gambar tercapai', `Maksimal ${maxImages} gambar diizinkan.`);
       return;
     }
 
@@ -116,11 +117,11 @@ export function ImageUploader({ images, onChange, maxImages = 5 }: ImageUploader
         },
       ]);
 
-      toast.success('Image uploaded successfully from URL');
+      showSuccess('Gambar diunggah', 'Gambar dari URL berhasil diunggah.');
       setUrlInput('');
     } catch (error: any) {
       console.error('Error uploading image from URL:', error);
-      toast.error(error.message || 'Failed to upload image from URL');
+      showError('Gagal mengunggah gambar', error.message || 'Failed to upload image from URL');
     } finally {
       setUploading(false);
     }

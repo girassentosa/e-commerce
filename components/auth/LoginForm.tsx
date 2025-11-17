@@ -12,8 +12,8 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { loginSchema } from '@/lib/validations/auth';
-import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { useNotification } from '@/contexts/NotificationContext';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -23,6 +23,7 @@ export default function LoginForm() {
     password: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { showSuccess, showError } = useNotification();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -50,10 +51,10 @@ export default function LoginForm() {
       });
 
       if (result?.error) {
-        toast.error(result.error);
+        showError('Login gagal', result.error);
         setErrors({ submit: result.error });
       } else if (result?.ok) {
-        toast.success('Logged in successfully!');
+        showSuccess('Masuk berhasil', 'Logged in successfully!');
         
         // Fetch session to get user role
         const response = await fetch('/api/auth/session');
@@ -78,7 +79,7 @@ export default function LoginForm() {
         });
         setErrors(fieldErrors);
       } else {
-        toast.error('An unexpected error occurred');
+        showError('Terjadi kesalahan', 'An unexpected error occurred');
       }
     } finally {
       setIsLoading(false);

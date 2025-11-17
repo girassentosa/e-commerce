@@ -11,7 +11,7 @@ import { Star, ThumbsUp, CheckCircle, Edit, Trash2 } from 'lucide-react';
 import { StarRating } from './StarRating';
 import { Button } from '@/components/ui/Button';
 import Image from 'next/image';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Review {
   id: string;
@@ -53,6 +53,7 @@ export function ReviewCard({
   const { data: session } = useSession();
   const [helpfulLoading, setHelpfulLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { showError, showConfirm } = useNotification();
 
   const isOwnReview = session?.user?.id === review.user.id;
   const isAdmin = session?.user?.role === 'ADMIN';
@@ -91,22 +92,28 @@ export function ReviewCard({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!onDelete) return;
 
-    if (!confirm('Are you sure you want to delete this review?')) {
-      return;
-    }
-
-    try {
-      setDeleting(true);
-      await onDelete(review.id);
-    } catch (error) {
-      console.error('Error deleting review:', error);
-      toast.error('Failed to delete review');
-    } finally {
-      setDeleting(false);
-    }
+    showConfirm(
+      'Hapus ulasan?',
+      'Ulasan yang dihapus tidak dapat dikembalikan.',
+      async () => {
+        try {
+          setDeleting(true);
+          await onDelete(review.id);
+        } catch (error) {
+          console.error('Error deleting review:', error);
+          showError('Gagal menghapus ulasan', 'Terjadi kesalahan saat menghapus ulasan.');
+        } finally {
+          setDeleting(false);
+        }
+      },
+      undefined,
+      'Hapus',
+      'Batal',
+      'danger'
+    );
   };
 
   return (

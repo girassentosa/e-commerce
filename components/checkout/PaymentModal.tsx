@@ -20,8 +20,8 @@ import {
   getVariantLabels,
   getCurrencyLocale,
 } from '@/lib/order-helpers';
-import toast from 'react-hot-toast';
 import Image from 'next/image';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface OrderItem {
   id: string;
@@ -104,6 +104,7 @@ export function PaymentModal({
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [paymentTimeoutMinutes, setPaymentTimeoutMinutes] = useState<number>(1440); // Default 1440 minutes (24 hours)
+  const { showSuccess, showError } = useNotification();
   
   // Refs untuk cleanup
   const isMountedRef = useRef(true);
@@ -163,8 +164,7 @@ export function PaymentModal({
     setIsExpired(false);
     setTimeRemaining(null);
     
-    // Show toast
-    toast.success('Pembayaran berhasil!');
+    showSuccess('Pembayaran berhasil', 'Pembayaran berhasil!'); 
     
     // Step 1: Tampilkan ceklis di pop pembayaran (paymentSuccess = true)
     // Step 2: Setelah 1 detik, tampilkan pop ceklis di tengah
@@ -264,12 +264,12 @@ export function PaymentModal({
           // Jangan set isPolling di sini - biarkan polling effect yang handle
           // Polling effect akan otomatis jalan jika order.paymentStatus === 'PENDING'
         } else {
-          toast.error('Gagal memuat detail pesanan');
+          showError('Gagal memuat pesanan', 'Gagal memuat detail pesanan.');
         }
       } catch (error) {
         if (!isMounted) return;
         console.error('Error fetching order:', error);
-        toast.error('Gagal memuat detail pesanan');
+        showError('Gagal memuat pesanan', 'Gagal memuat detail pesanan.');
       } finally {
         if (isMounted) {
           setIsFetching(false);
@@ -388,17 +388,17 @@ export function PaymentModal({
         const data = await response.json();
 
         if (response.ok && data.success) {
-          toast.error('Pembayaran telah kedaluwarsa. Pesanan dibatalkan.');
+          showError('Pembayaran kedaluwarsa', 'Pembayaran telah kedaluwarsa. Pesanan dibatalkan.');
           setTimeout(() => {
             onClose();
             window.location.href = '/orders';
           }, 2000);
         } else {
-          toast.error('Gagal membatalkan pesanan yang expired');
+          showError('Gagal membatalkan pesanan', 'Gagal membatalkan pesanan yang kedaluwarsa.');
         }
       } catch (error) {
         console.error('Error cancelling expired order:', error);
-        toast.error('Gagal membatalkan pesanan yang expired');
+        showError('Gagal membatalkan pesanan', 'Gagal membatalkan pesanan yang kedaluwarsa.');
       }
     };
 
@@ -481,7 +481,7 @@ export function PaymentModal({
   // Helper functions
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('Berhasil disalin!');
+    showSuccess('Disalin', 'Berhasil disalin!');
   };
 
   const handleDownloadQR = async (qrString: string | null | undefined, qrImageUrl: string | null | undefined) => {
@@ -503,10 +503,10 @@ export function PaymentModal({
       link.click();
       document.body.removeChild(link);
       
-      toast.success('QR code berhasil diunduh');
+      showSuccess('Berhasil diunduh', 'QR code berhasil diunduh.');
     } catch (error) {
       console.error('Error downloading QR code:', error);
-      toast.error('Gagal mengunduh QR code');
+      showError('Gagal mengunduh', 'Gagal mengunduh QR code.');
     }
   };
 

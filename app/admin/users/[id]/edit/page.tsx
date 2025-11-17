@@ -7,13 +7,14 @@ import { Input } from '@/components/ui/Input';
 import { Loader } from '@/components/ui/Loader';
 import { userUpdateSchema } from '@/lib/validations/user';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
+import { useNotification } from '@/contexts/NotificationContext';
 
 export default function EditUserPage() {
   const params = useParams();
   const router = useRouter();
   const userId = params?.id as string;
+  const { showSuccess, showError } = useNotification();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -103,7 +104,7 @@ export default function EditUserPage() {
       });
     } catch (error: any) {
       console.error('Error fetching user:', error);
-      toast.error(error.message || 'Failed to load user');
+      showError('Gagal memuat pengguna', error.message || 'Failed to load user');
       router.push('/admin/users');
     } finally {
       setLoading(false);
@@ -159,7 +160,7 @@ export default function EditUserPage() {
         throw new Error(data.error || 'Failed to update user');
       }
 
-      toast.success('User updated successfully!');
+      showSuccess('Pengguna diperbarui', 'User updated successfully!');
       router.push('/admin/users');
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -170,11 +171,11 @@ export default function EditUserPage() {
           }
         });
         setErrors(fieldErrors);
-        toast.error('Please fix the form errors');
+        showError('Periksa formulir', 'Please fix the form errors');
       } else if (error instanceof Error) {
-        toast.error(error.message);
+        showError('Gagal memperbarui pengguna', error.message);
       } else {
-        toast.error('Failed to update user');
+        showError('Gagal memperbarui pengguna', 'Failed to update user');
       }
     } finally {
       setSubmitting(false);

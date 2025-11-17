@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
 import {
   formatPhoneDisplay,
   formatShippingAddress,
@@ -32,6 +31,7 @@ import {
   getVariantLabels,
 } from '@/lib/order-helpers';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface OrderItem {
   id: string;
@@ -126,6 +126,7 @@ export default function AdminOrderDetailPage() {
   const router = useRouter();
   const orderNumber = params?.orderNumber as string;
   const { formatPrice, currency } = useCurrency();
+  const { showSuccess, showError } = useNotification();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -249,7 +250,7 @@ export default function AdminOrderDetailPage() {
       setNotes(orderData.notes || '');
     } catch (error: any) {
       console.error('Error fetching order:', error);
-      toast.error(error.message || 'Failed to load order');
+      showError('Gagal memuat order', error.message || 'Failed to load order');
       router.push('/admin/orders');
     } finally {
       setLoading(false);
@@ -276,11 +277,11 @@ export default function AdminOrderDetailPage() {
         throw new Error(data.error || 'Failed to update order status');
       }
 
-      toast.success('Status pesanan berhasil diperbarui. Sales count produk telah diperbarui.');
+      showSuccess('Status diperbarui', 'Status pesanan dan sales count berhasil diperbarui.');
       fetchOrder();
     } catch (error: any) {
       console.error('Error updating order status:', error);
-      toast.error(error.message || 'Failed to update order status');
+      showError('Gagal memperbarui status', error.message || 'Failed to update order status');
     } finally {
       setUpdating(false);
     }
@@ -306,11 +307,11 @@ export default function AdminOrderDetailPage() {
         throw new Error(data.error || 'Failed to update payment status');
       }
 
-      toast.success('Status pembayaran berhasil diperbarui');
+      showSuccess('Status pembayaran diperbarui', 'Status pembayaran berhasil diperbarui.');
       fetchOrder();
     } catch (error: any) {
       console.error('Error updating payment status:', error);
-      toast.error(error.message || 'Failed to update payment status');
+      showError('Gagal memperbarui pembayaran', error.message || 'Failed to update payment status');
     } finally {
       setUpdating(false);
     }
@@ -351,10 +352,10 @@ export default function AdminOrderDetailPage() {
         throw new Error('Clipboard not available');
       }
       await navigator.clipboard.writeText(value);
-      toast.success('Copied to clipboard');
+      showSuccess('Disalin', 'Berhasil disalin ke clipboard.');
     } catch (error) {
       console.error('Copy failed:', error);
-      toast.error('Failed to copy');
+      showError('Gagal menyalin', 'Failed to copy');
     }
   };
 

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { Loader } from '@/components/ui/Loader';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
-import toast from 'react-hot-toast';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Review {
   id?: string;
@@ -46,6 +46,7 @@ export function ReviewForm({
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<{ rating?: string; title?: string; comment?: string; images?: string }>({});
+  const { showSuccess, showError } = useNotification();
 
   useEffect(() => {
     if (initialData) {
@@ -62,19 +63,19 @@ export function ReviewForm({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('File must be an image');
+      showError('Format tidak valid', 'File harus berupa gambar.');
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be less than 5MB');
+      showError('Ukuran terlalu besar', 'Ukuran gambar maksimal 5MB.');
       return;
     }
 
     // Validate max images (max 3)
     if (reviewImages.length >= 3) {
-      toast.error('Maximum 3 images allowed');
+      showError('Batas gambar tercapai', 'Maksimal 3 gambar per ulasan.');
       return;
     }
 
@@ -95,7 +96,7 @@ export function ReviewForm({
       }
 
       setReviewImages([...reviewImages, data.data.url]);
-      toast.success('Image uploaded successfully');
+      showSuccess('Gambar diunggah', 'Gambar berhasil diunggah.');
       
       // Reset file input
       if (fileInputRef.current) {
@@ -103,7 +104,7 @@ export function ReviewForm({
       }
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      toast.error(error.message || 'Failed to upload image');
+      showError('Gagal mengunggah gambar', error.message || 'Failed to upload image');
     } finally {
       setUploadingImage(false);
     }

@@ -16,8 +16,8 @@ import { StarRating } from '@/components/reviews/StarRating';
 import { ConfirmDialog } from '@/components/admin/ConfirmDialog';
 import { Search, Filter, Trash2, Eye, Star, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
 import { useAdminHeader } from '@/contexts/AdminHeaderContext';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Review {
   id: string;
@@ -43,6 +43,7 @@ interface Review {
 export default function AdminReviewsPage() {
   const router = useRouter();
   const { setHeader } = useAdminHeader();
+  const { showSuccess, showError } = useNotification();
 
   useEffect(() => {
     setHeader(Star, 'Reviews');
@@ -82,7 +83,7 @@ export default function AdminReviewsPage() {
       setTotalCount(data.pagination.total);
     } catch (error: any) {
       console.error('Error fetching reviews:', error);
-      toast.error(error.message || 'Failed to load reviews');
+      showError('Gagal memuat ulasan', error.message || 'Failed to load reviews');
     } finally {
       setLoading(false);
     }
@@ -110,13 +111,13 @@ export default function AdminReviewsPage() {
         throw new Error(data.error || 'Failed to delete review');
       }
 
-      toast.success('Review deleted successfully');
+      showSuccess('Ulasan dihapus', 'Review deleted successfully');
       fetchReviews();
       setShowDeleteDialog(false);
       setReviewToDelete(null);
     } catch (error: any) {
       console.error('Error deleting review:', error);
-      toast.error(error.message || 'Failed to delete review');
+      showError('Gagal menghapus ulasan', error.message || 'Failed to delete review');
     }
   };
 

@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/components/providers/SessionProvider";
-import ToastProvider from "@/components/providers/ToastProvider";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
@@ -64,10 +63,7 @@ export default function RootLayout({
                     <CheckoutProvider>
                       <OrderProvider>
                         <FavoriteEditModeProvider>
-                          <SaveActionProvider>
-                            {children}
-                            <ToastProvider />
-                          </SaveActionProvider>
+                          <SaveActionProvider>{children}</SaveActionProvider>
                         </FavoriteEditModeProvider>
                       </OrderProvider>
                     </CheckoutProvider>

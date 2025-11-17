@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { userCreateSchema } from '@/lib/validations/user';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
+import { useNotification } from '@/contexts/NotificationContext';
 
 export default function NewUserPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { showSuccess, showError } = useNotification();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -113,7 +114,7 @@ export default function NewUserPage() {
         throw new Error(data.error || 'Failed to create user');
       }
 
-      toast.success('User created successfully!');
+      showSuccess('Pengguna dibuat', 'User created successfully!');
       router.push('/admin/users');
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -124,11 +125,11 @@ export default function NewUserPage() {
           }
         });
         setErrors(fieldErrors);
-        toast.error('Please fix the form errors');
+        showError('Periksa formulir', 'Please fix the form errors');
       } else if (error instanceof Error) {
-        toast.error(error.message);
+        showError('Gagal membuat pengguna', error.message);
       } else {
-        toast.error('Failed to create user');
+        showError('Gagal membuat pengguna', 'Failed to create user');
       }
     } finally {
       setLoading(false);

@@ -8,7 +8,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import toast from 'react-hot-toast';
+import { useNotification } from './NotificationContext';
 
 // Types
 interface OrderSummary {
@@ -43,6 +43,7 @@ const CheckoutContext = createContext<CheckoutContextType | undefined>(undefined
 export function CheckoutProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { status } = useSession();
+  const { showSuccess, showError } = useNotification();
   const [step, setStep] = useState(1);
   const [addressId, setAddressId] = useState<string | null>(null);
   const [paymentMethodState, setPaymentMethodState] = useState<'COD' | 'VIRTUAL_ACCOUNT' | 'QRIS' | 'CREDIT_CARD' | null>(null);
@@ -53,7 +54,7 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
   // Validate cart before checkout
   const validateCart = useCallback(async (): Promise<boolean> => {
     if (status !== 'authenticated') {
-      toast.error('Please login to continue');
+      showError('Butuh login', 'Silakan masuk terlebih dahulu untuk melanjutkan checkout.');
       return false;
     }
 
@@ -69,23 +70,22 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         return true;
       } else {
         // Show validation errors
-        if (data.validation.errors && data.validation.errors.length > 0) {
-          data.validation.errors.forEach((error: string) => {
-            toast.error(error);
-          });
+        if (data.validation?.errors && data.validation.errors.length > 0) {
+          const firstError = data.validation.errors[0];
+          showError('Validasi keranjang gagal', firstError || 'Beberapa item tidak valid.');
         } else {
-          toast.error(data.error || 'Cart validation failed');
+          showError('Validasi keranjang gagal', data.error || 'Cart validation failed');
         }
         return false;
       }
     } catch (error) {
       console.error('Error validating cart:', error);
-      toast.error('Failed to validate cart');
+      showError('Validasi keranjang gagal', 'Terjadi kesalahan saat memvalidasi keranjang.');
       return false;
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [status, showError]);
 
   // Calculate totals
   const calculateTotals = useCallback(async (addressIdParam: string) => {
@@ -102,20 +102,20 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
       if (data.success) {
         setOrderSummary(data.data);
       } else {
-        toast.error(data.error || 'Failed to calculate totals');
+        showError('Gagal menghitung total', data.error || 'Failed to calculate totals');
       }
     } catch (error) {
       console.error('Error calculating totals:', error);
-      toast.error('Failed to calculate totals');
+      showError('Gagal menghitung total', 'Terjadi kesalahan saat menghitung total belanja.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   // Create order
   const createOrder = useCallback(async (notes?: string): Promise<string | null> => {
     if (!addressId || !paymentMethodState) {
-      toast.error('Please complete all checkout steps');
+      showError('Checkout belum lengkap', 'Silakan lengkapi alamat dan metode pembayaran.');
       return null;
     }
 
@@ -135,20 +135,20 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Order created successfully!');
+        showSuccess('Pesanan dibuat', 'Pesanan berhasil dibuat. Lanjutkan ke pembayaran.');
         return data.data.orderNumber;
       } else {
-        toast.error(data.error || 'Failed to create order');
+        showError('Gagal membuat pesanan', data.error || 'Failed to create order');
         return null;
       }
     } catch (error) {
       console.error('Error creating order:', error);
-      toast.error('Failed to create order');
+      showError('Gagal membuat pesanan', 'Terjadi kesalahan saat membuat pesanan.');
       return null;
     } finally {
       setLoading(false);
     }
-  }, [addressId, paymentMethodState, paymentChannel]);
+  }, [addressId, paymentMethodState, paymentChannel, showError, showSuccess]);
 
   // Step navigation
   const nextStep = useCallback(() => {

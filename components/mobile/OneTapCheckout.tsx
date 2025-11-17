@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ShoppingBag, Loader } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
-import { useToast } from '@/components/providers/ToastProvider';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface OneTapCheckoutProps {
   productId?: string;
@@ -28,12 +28,12 @@ export function OneTapCheckout({
   const router = useRouter();
   const { data: session } = useSession();
   const { addItem, itemCount } = useCart();
-  const { showToast } = useToast();
+  const { showError } = useNotification();
   const [loading, setLoading] = useState(false);
 
   const handleOneTapCheckout = async () => {
     if (!session) {
-      showToast('Please login to checkout', 'error');
+      showError('Butuh login', 'Silakan masuk terlebih dahulu untuk checkout.');
       router.push('/login?redirect=/checkout');
       return;
     }
@@ -47,7 +47,7 @@ export function OneTapCheckout({
 
       // If cart is empty, show error
       if (itemCount === 0 && !productId) {
-        showToast('Your cart is empty', 'error');
+        showError('Keranjang kosong', 'Tambahkan produk sebelum checkout.');
         setLoading(false);
         return;
       }
@@ -55,7 +55,7 @@ export function OneTapCheckout({
       // Navigate to checkout
       router.push('/checkout');
     } catch (error) {
-      showToast('Failed to proceed to checkout', 'error');
+      showError('Gagal melanjutkan', 'Tidak dapat melanjutkan ke checkout.');
       setLoading(false);
     }
   };

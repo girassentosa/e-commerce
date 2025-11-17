@@ -7,7 +7,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import toast from 'react-hot-toast';
+import { useNotification } from './NotificationContext';
 
 // Types
 interface OrderItem {
@@ -110,6 +110,7 @@ const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { status } = useSession();
+  const { showSuccess, showError } = useNotification();
   const [orders, setOrders] = useState<Order[]>([]);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
@@ -150,15 +151,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         setPagination(data.pagination || null);
         setIsInitialLoad(false);
       } else {
-        toast.error(data.error || 'Failed to fetch orders');
+        showError('Gagal memuat pesanan', data.error || 'Failed to fetch orders');
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      toast.error('Failed to fetch orders');
+      showError('Gagal memuat pesanan', 'Terjadi kesalahan saat mengambil daftar pesanan.');
     } finally {
       setLoading(false);
     }
-  }, [status, isInitialLoad]);
+  }, [status, isInitialLoad, showError]);
 
   // Fetch single order detail
   const fetchOrderDetail = useCallback(async (orderNumber: string) => {
@@ -174,15 +175,15 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       if (data.success) {
         setCurrentOrder(data.data);
       } else {
-        toast.error(data.error || 'Failed to fetch order details');
+        showError('Gagal memuat detail pesanan', data.error || 'Failed to fetch order details');
       }
     } catch (error) {
       console.error('Error fetching order detail:', error);
-      toast.error('Failed to fetch order details');
+      showError('Gagal memuat detail pesanan', 'Terjadi kesalahan saat mengambil detail pesanan.');
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [status, showError]);
 
   // Cancel order
   const cancelOrder = useCallback(async (orderNumber: string): Promise<boolean> => {
@@ -195,24 +196,24 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Order cancelled successfully');
+        showSuccess('Pesanan dibatalkan', 'Pesanan berhasil dibatalkan.');
         // Refresh order detail if it's the current order
         if (currentOrder?.orderNumber === orderNumber) {
           await fetchOrderDetail(orderNumber);
         }
         return true;
       } else {
-        toast.error(data.error || 'Failed to cancel order');
+        showError('Gagal membatalkan pesanan', data.error || 'Failed to cancel order');
         return false;
       }
     } catch (error) {
       console.error('Error cancelling order:', error);
-      toast.error('Failed to cancel order');
+      showError('Gagal membatalkan pesanan', 'Terjadi kesalahan saat membatalkan pesanan.');
       return false;
     } finally {
       setLoading(false);
     }
-  }, [currentOrder, fetchOrderDetail]);
+  }, [currentOrder, fetchOrderDetail, showError, showSuccess]);
 
   return (
     <OrderContext.Provider

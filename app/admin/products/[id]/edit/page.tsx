@@ -8,9 +8,9 @@ import { ImageUploader } from '@/components/admin/ImageUploader';
 import { Loader } from '@/components/ui/Loader';
 import { productSchema, ProductFormData } from '@/lib/validations/admin';
 import { ArrowLeft, Loader2, X } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Category {
   id: string;
@@ -22,6 +22,7 @@ export default function EditProductPage() {
   const router = useRouter();
   const productId = params?.id as string;
   const { currency } = useCurrency();
+  const { showSuccess, showError } = useNotification();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -177,7 +178,7 @@ export default function EditProductPage() {
       });
     } catch (error: any) {
       console.error('Error fetching product:', error);
-      toast.error(error.message || 'Failed to load product');
+      showError('Gagal memuat produk', error.message || 'Failed to load product');
       router.push('/admin/products');
     } finally {
       setLoading(false);
@@ -277,7 +278,7 @@ export default function EditProductPage() {
         currentImagesRef.current = savedImages;
       }
 
-      toast.success('Product updated successfully!');
+      showSuccess('Produk diperbarui', 'Product updated successfully!');
       router.push('/admin/products');
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -288,11 +289,11 @@ export default function EditProductPage() {
           }
         });
         setErrors(fieldErrors);
-        toast.error('Please fix the form errors');
+        showError('Periksa formulir', 'Please fix the form errors');
       } else if (error instanceof Error) {
-        toast.error(error.message);
+        showError('Gagal memperbarui produk', error.message);
       } else {
-        toast.error('Failed to update product');
+        showError('Gagal memperbarui produk', 'Failed to update product');
       }
     } finally {
       setSubmitting(false);

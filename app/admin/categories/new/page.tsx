@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { categorySchema, CategoryFormData } from '@/lib/validations/admin';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Category {
   id: string;
@@ -19,6 +19,7 @@ export default function NewCategoryPage() {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { showSuccess, showError } = useNotification();
 
   const [formData, setFormData] = useState<Partial<CategoryFormData>>({
     name: '',
@@ -153,7 +154,7 @@ export default function NewCategoryPage() {
         throw new Error(data.error || 'Failed to create category');
       }
 
-      toast.success('Category created successfully!');
+      showSuccess('Kategori dibuat', 'Category created successfully!');
       router.push('/admin/categories');
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -164,11 +165,11 @@ export default function NewCategoryPage() {
           }
         });
         setErrors(fieldErrors);
-        toast.error('Please fix the form errors');
+        showError('Periksa formulir', 'Please fix the form errors');
       } else if (error instanceof Error) {
-        toast.error(error.message);
+        showError('Gagal membuat kategori', error.message);
       } else {
-        toast.error('Failed to create category');
+        showError('Gagal membuat kategori', 'Failed to create category');
       }
     } finally {
       setLoading(false);

@@ -18,10 +18,10 @@ import {
   Truck,
   LayoutDashboard,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useAdminHeader } from '@/contexts/AdminHeaderContext';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface DashboardStats {
   totalSales: number;
@@ -79,6 +79,7 @@ export default function AdminDashboard() {
   const { formatPrice } = useCurrency();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const { showError } = useNotification();
 
   useEffect(() => {
     setHeader(LayoutDashboard, 'Dashboard');
@@ -109,7 +110,7 @@ export default function AdminDashboard() {
       setStats(data.data);
     } catch (error: any) {
       console.error('Error fetching dashboard stats:', error);
-      toast.error(error.message || 'Failed to load dashboard');
+      showError('Gagal memuat dashboard', error.message || 'Failed to load dashboard');
     } finally {
       setLoading(false);
     }

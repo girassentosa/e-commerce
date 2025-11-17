@@ -11,9 +11,9 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { registerSchema } from '@/lib/validations/auth';
-import toast from 'react-hot-toast';
 import Link from 'next/link';
 import axios from 'axios';
+import { useNotification } from '@/contexts/NotificationContext';
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -26,6 +26,7 @@ export default function RegisterForm() {
     lastName: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { showSuccess, showError } = useNotification();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -55,7 +56,7 @@ export default function RegisterForm() {
       });
 
       if (response.data.success) {
-        toast.success('Account created successfully! Please sign in.');
+        showSuccess('Akun berhasil dibuat', 'Silakan masuk untuk melanjutkan.');
         // Redirect to login page
         router.push('/login');
       }
@@ -72,10 +73,10 @@ export default function RegisterForm() {
       } else if (axios.isAxiosError(error)) {
         // Handle API errors
         const message = error.response?.data?.error || 'Failed to create account';
-        toast.error(message);
+        showError('Gagal membuat akun', message);
         setErrors({ submit: message });
       } else {
-        toast.error('An unexpected error occurred');
+        showError('Terjadi kesalahan', 'An unexpected error occurred');
         setErrors({ submit: 'An unexpected error occurred' });
       }
     } finally {

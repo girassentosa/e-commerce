@@ -10,8 +10,8 @@ import { ConfirmDialog } from '@/components/admin/ConfirmDialog';
 import { Plus, Edit, Trash2, FolderTree, Search, Filter } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
 import { useAdminHeader } from '@/contexts/AdminHeaderContext';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Category {
   id: string;
@@ -32,6 +32,7 @@ interface Category {
 export default function AdminCategoriesPage() {
   const router = useRouter();
   const { setHeader } = useAdminHeader();
+  const { showSuccess, showError } = useNotification();
 
   useEffect(() => {
     setHeader(FolderTree, 'Categories');
@@ -61,7 +62,7 @@ export default function AdminCategoriesPage() {
       setFilteredCategories(data.data);
     } catch (error: any) {
       console.error('Error fetching categories:', error);
-      toast.error(error.message || 'Failed to load categories');
+      showError('Gagal memuat kategori', error.message || 'Failed to load categories');
     } finally {
       setLoading(false);
     }
@@ -100,11 +101,11 @@ export default function AdminCategoriesPage() {
         throw new Error(data.error || 'Failed to delete category');
       }
 
-      toast.success('Category deleted successfully');
+      showSuccess('Kategori dihapus', 'Category deleted successfully');
       fetchCategories();
     } catch (error: any) {
       console.error('Error deleting category:', error);
-      toast.error(error.message || 'Failed to delete category');
+      showError('Gagal menghapus kategori', error.message || 'Failed to delete category');
     }
   };
 

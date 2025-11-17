@@ -15,8 +15,8 @@ import Link from 'next/link';
 import { ProductCard } from '@/components/products/ProductCard';
 import { ProductGridSkeleton } from '@/components/products/ProductSkeleton';
 import { Pagination } from '@/components/ui/Pagination';
-import toast from 'react-hot-toast';
 import { useCart } from '@/contexts/CartContext';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Product {
   id: string;
@@ -61,6 +61,7 @@ function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { itemCount } = useCart();
+  const { showError } = useNotification();
 
   // Single state object for products and pagination - ensures all updates happen together
   const [productsData, setProductsData] = useState<ProductsData>({
@@ -114,11 +115,11 @@ function ProductsPageContent() {
           },
         });
       } else {
-        toast.error('Failed to load products');
+        showError('Gagal memuat produk', 'Failed to load products');
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('Failed to load products');
+      showError('Gagal memuat produk', 'Failed to load products');
     } finally {
       setLoading(false);
     }

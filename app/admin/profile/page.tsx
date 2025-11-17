@@ -9,14 +9,15 @@ import { Loader } from '@/components/ui/Loader';
 import { profileSchema, passwordChangeSchema } from '@/lib/validations/profile';
 import { Upload, Loader2, User, Link as LinkIcon, UserCircle, Settings, Lock, Camera } from 'lucide-react';
 import Image from 'next/image';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { useAdminHeader } from '@/contexts/AdminHeaderContext';
+import { useNotification } from '@/contexts/NotificationContext';
 
 export default function AdminProfilePage() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
   const { setHeader } = useAdminHeader();
+  const { showSuccess, showError } = useNotification();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -68,7 +69,7 @@ export default function AdminProfilePage() {
       });
     } catch (error: any) {
       console.error('Error fetching profile:', error);
-      toast.error(error.message || 'Failed to load profile');
+      showError('Gagal memuat profil', error.message || 'Failed to load profile');
     } finally {
       setLoading(false);
     }
@@ -145,9 +146,9 @@ export default function AdminProfilePage() {
 
         // Clear password fields after successful change
         setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-        toast.success('Profile and password updated successfully!');
+        showSuccess('Profil & password diperbarui', 'Profile and password updated successfully!');
       } else {
-        toast.success('Profile updated successfully!');
+        showSuccess('Profil diperbarui', 'Profile updated successfully!');
       }
 
       // Update session and refresh UI
@@ -167,9 +168,9 @@ export default function AdminProfilePage() {
             }
           }
         });
-        toast.error('Please fix the form errors');
+        showError('Periksa formulir', 'Please fix the form errors');
       } else if (error instanceof Error) {
-        toast.error(error.message);
+        showError('Gagal memperbarui profil', error.message);
       }
     } finally {
       setSubmitting(false);
@@ -182,13 +183,13 @@ export default function AdminProfilePage() {
 
     // Validate file size (2MB max)
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('File size must be less than 2MB');
+      showError('Ukuran file terlalu besar', 'File size must be less than 2MB');
       return;
     }
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('File must be an image');
+      showError('Format tidak valid', 'File must be an image');
       return;
     }
 
@@ -209,13 +210,13 @@ export default function AdminProfilePage() {
       }
 
       setProfileData((prev) => ({ ...prev, avatarUrl: data.data.url }));
-      toast.success('Avatar uploaded successfully!');
+      showSuccess('Avatar diunggah', 'Avatar uploaded successfully!');
       // Update session and refresh UI
       await update();
       router.refresh();
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
-      toast.error(error.message || 'Failed to upload avatar');
+      showError('Gagal mengunggah avatar', error.message || 'Failed to upload avatar');
     } finally {
       setUploadingAvatar(false);
     }
@@ -223,7 +224,7 @@ export default function AdminProfilePage() {
 
   const handleAvatarUrlUpload = async () => {
     if (!urlInput.trim()) {
-      toast.error('Please enter an image URL');
+      showError('URL kosong', 'Please enter an image URL');
       return;
     }
 
@@ -231,7 +232,7 @@ export default function AdminProfilePage() {
     try {
       new URL(urlInput.trim());
     } catch {
-      toast.error('Invalid URL format');
+      showError('Format URL tidak valid', 'Invalid URL format');
       return;
     }
 
@@ -252,7 +253,7 @@ export default function AdminProfilePage() {
       }
 
       setProfileData((prev) => ({ ...prev, avatarUrl: data.data.url }));
-      toast.success('Avatar uploaded successfully from URL!');
+      showSuccess('Avatar diunggah', 'Avatar uploaded successfully from URL!');
       setUrlInput('');
       setUploadMode('file');
       // Update session and refresh UI
@@ -260,7 +261,7 @@ export default function AdminProfilePage() {
       router.refresh();
     } catch (error: any) {
       console.error('Error uploading avatar from URL:', error);
-      toast.error(error.message || 'Failed to upload avatar from URL');
+      showError('Gagal mengunggah avatar', error.message || 'Failed to upload avatar from URL');
     } finally {
       setUploadingAvatar(false);
     }

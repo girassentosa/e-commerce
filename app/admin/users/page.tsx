@@ -10,8 +10,8 @@ import { ConfirmDialog } from '@/components/admin/ConfirmDialog';
 import { Plus, Search, Edit, Trash2, UserCircle, Users, Filter, Shield, User, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
 import { useAdminHeader } from '@/contexts/AdminHeaderContext';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface User {
   id: string;
@@ -27,6 +27,7 @@ interface User {
 
 export default function AdminUsersPage() {
   const { setHeader } = useAdminHeader();
+  const { showSuccess, showError } = useNotification();
 
   useEffect(() => {
     setHeader(Users, 'Users');
@@ -65,7 +66,7 @@ export default function AdminUsersPage() {
       setTotalCount(data.data.pagination.totalCount);
     } catch (error: any) {
       console.error('Error fetching users:', error);
-      toast.error(error.message || 'Failed to load users');
+      showError('Gagal memuat pengguna', error.message || 'Failed to load users');
     } finally {
       setLoading(false);
     }
@@ -96,24 +97,17 @@ export default function AdminUsersPage() {
       // Show detailed success message
       const avatarDeleted = data.data?.avatarDeleted || false;
       
-      if (avatarDeleted) {
-        toast.success(
-          `User permanently deleted. Avatar file removed.`,
-          { duration: 4000 }
-        );
-      } else {
-        toast.success(
-          `User permanently deleted. All related data removed.`,
-          { duration: 4000 }
-        );
-      }
+      const message = avatarDeleted
+        ? 'User permanently deleted. Avatar file removed.'
+        : 'User permanently deleted. All related data removed.';
+      showSuccess('Pengguna dihapus', message);
 
       fetchUsers();
       setShowDeleteDialog(false);
       setUserToDelete(null);
     } catch (error: any) {
       console.error('Error deleting user:', error);
-      toast.error(error.message || 'Failed to delete user');
+      showError('Gagal menghapus pengguna', error.message || 'Failed to delete user');
     }
   };
 

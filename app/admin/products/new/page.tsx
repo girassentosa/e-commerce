@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/Input';
 import { ImageUploader } from '@/components/admin/ImageUploader';
 import { productSchema, ProductFormData } from '@/lib/validations/admin';
 import { ArrowLeft, Loader2, X } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface Category {
   id: string;
@@ -19,6 +19,7 @@ interface Category {
 export default function NewProductPage() {
   const router = useRouter();
   const { currency } = useCurrency();
+  const { showSuccess, showError } = useNotification();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -201,7 +202,7 @@ export default function NewProductPage() {
       // Clear uploaded images ref since product is saved (images are now in DB)
       uploadedImagesRef.current = [];
 
-      toast.success('Product created successfully!');
+      showSuccess('Produk dibuat', 'Product created successfully!');
       router.push('/admin/products');
     } catch (error) {
       // On error, cleanup uploaded images that weren't saved
@@ -235,11 +236,11 @@ export default function NewProductPage() {
           }
         });
         setErrors(fieldErrors);
-        toast.error('Please fix the form errors');
+        showError('Periksa formulir', 'Please fix the form errors');
       } else if (error instanceof Error) {
-        toast.error(error.message);
+        showError('Gagal membuat produk', error.message);
       } else {
-        toast.error('Failed to create product');
+        showError('Gagal membuat produk', 'Failed to create product');
       }
     } finally {
       setLoading(false);
