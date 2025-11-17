@@ -161,50 +161,88 @@ function ProductDetailPageContent() {
 
   // Fetch product
   useEffect(() => {
-  const fetchProduct = async () => {
     if (!slug) return;
-    
-    try {
-      const response = await fetch(`/api/products/slug/${slug}`);
-      const data = await response.json();
 
-      if (data.success && data.data) {
-        setProduct(data.data);
-        
-          // Track product view
-        if (session?.user?.id) {
-          fetch('/api/last-viewed', {
-            method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ productId: data.data.id }),
-          })
-              .then(() => refreshLastViewed())
-              .catch((err) => console.error('Failed to track:', err));
-          }
+    const abortController = new AbortController();
 
-          // Fetch related products
-          if (data.data.category?.id) {
-            fetch(`/api/products?categoryId=${data.data.category.id}&limit=6`)
-              .then(res => res.json())
-              .then(data => {
-                if (data.products) {
-                  setRelatedProducts(data.products.filter((p: Product) => p.id !== data.data.id).slice(0, 6));
-                }
-              });
+    // Reset states immediately to avoid showing stale data
+    setProduct(null);
+    setRelatedProducts([]);
+    setReviews([]);
+    setSelectedImage(0);
+    setImageErrors({});
+    setActiveTab('description');
+    setIsZoomed(false);
+    setIsTitleExpanded(false);
+    setIsPolicyModalOpen(false);
+    setSheetMode(null);
+    setSelectedColor(null);
+    setSelectedSize(null);
+    setQuantity(1);
+    setActionLoading(false);
+    setIsWarrantyExpanded(false);
+
+    const fetchProduct = async () => {
+      try {
+        const response = await fetch(`/api/products/slug/${slug}`, {
+          signal: abortController.signal,
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !data.data) {
+          throw new Error(data?.error || 'Produk tidak ditemukan');
         }
-      } else {
-        showError('Produk Tidak Ditemukan', 'Produk yang Anda cari tidak ditemukan');
+
+        setProduct(data.data);
+
+        if (data.data.category?.id) {
+          fetch(`/api/products?categoryId=${data.data.category.id}&limit=6`, {
+            signal: abortController.signal,
+          })
+            .then((res) => res.json())
+            .then((relatedData) => {
+              if (!relatedData.success && !Array.isArray(relatedData.products)) return;
+              if (relatedData.products) {
+                setRelatedProducts(
+                  relatedData.products
+                    .filter((p: Product) => p.id !== data.data.id)
+                    .slice(0, 6)
+                );
+              }
+            })
+            .catch((error) => {
+              if (error.name !== 'AbortError') {
+                console.error('Error fetching related products:', error);
+              }
+            });
+        }
+      } catch (error: any) {
+        if (error?.name === 'AbortError') return;
+        console.error('Error fetching product:', error);
+        showError('Gagal Memuat', error?.message || 'Gagal memuat detail produk');
         router.push('/products');
       }
-    } catch (error) {
-      console.error('Error fetching product:', error);
-      showError('Gagal Memuat', 'Gagal memuat detail produk');
-      router.push('/products');
-    }
-  };
+    };
 
-      fetchProduct();
-  }, [slug, session?.user?.id]);
+    fetchProduct();
+
+    return () => {
+      abortController.abort();
+    };
+  }, [slug]);
+
+  // Track last viewed when product & session are ready
+  useEffect(() => {
+    if (!product?.id || !session?.user?.id) return;
+
+    fetch('/api/last-viewed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId: product.id }),
+    })
+      .then(() => refreshLastViewed())
+      .catch((err) => console.error('Failed to track:', err));
+  }, [product?.id, session?.user?.id, refreshLastViewed]);
 
   // Fetch reviews when product is loaded
   useEffect(() => {

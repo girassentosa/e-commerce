@@ -21,6 +21,9 @@ export const productSchema = z.object({
   isFeatured: z.boolean().default(false),
   isActive: z.boolean().default(true),
   specifications: z.record(z.string(), z.string()).optional(),
+  freeShippingThreshold: z.coerce.number().min(0).optional().nullable(),
+  defaultShippingCost: z.coerce.number().min(0).optional().nullable(),
+  serviceFee: z.coerce.number().min(0).optional().nullable(),
   images: z
     .array(
       z.object({

@@ -9,13 +9,13 @@ import { useState } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 
 interface FilterSidebarProps {
-  categories: Array<{ id: string; name: string }>;
-  selectedCategories: string[];
+  categories?: Array<{ id: string; name: string }>;
+  selectedCategories?: string[];
   priceRange: { min: number; max: number };
   maxPrice: number;
   minRating: number | null;
   inStockOnly: boolean;
-  onCategoriesChange: (categories: string[]) => void;
+  onCategoriesChange?: (categories: string[]) => void;
   onPriceRangeChange: (range: { min: number; max: number }) => void;
   onMinRatingChange: (rating: number | null) => void;
   onInStockOnlyChange: (value: boolean) => void;
@@ -52,6 +52,7 @@ export function FilterSidebar({
   };
 
   const handleCategoryToggle = (categoryId: string) => {
+    if (!onCategoriesChange || !selectedCategories) return;
     if (selectedCategories.includes(categoryId)) {
       onCategoriesChange(selectedCategories.filter((id) => id !== categoryId));
     } else {
@@ -92,41 +93,43 @@ export function FilterSidebar({
 
         {/* Filters Content */}
         <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
-          {/* Categories Section */}
-          <div className="border-b border-gray-200">
-            <button
-              onClick={() => toggleSection('categories')}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-            >
-              <span className="font-semibold text-gray-900">Categories</span>
-              {expandedSections.has('categories') ? (
-                <ChevronUp className="w-4 h-4 text-gray-500" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              )}
-            </button>
+          {/* Categories Section - Only show if categories provided */}
+          {categories && categories.length > 0 && onCategoriesChange && selectedCategories && (
+            <div className="border-b border-gray-200">
+              <button
+                onClick={() => toggleSection('categories')}
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+              >
+                <span className="font-semibold text-gray-900">Categories</span>
+                {expandedSections.has('categories') ? (
+                  <ChevronUp className="w-4 h-4 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                )}
+              </button>
 
-            {expandedSections.has('categories') && (
-              <div className="px-4 pb-4 space-y-2">
-                {categories.map((category) => (
-                  <label
-                    key={category.id}
-                    className="flex items-center gap-2 cursor-pointer group"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(category.id)}
-                      onChange={() => handleCategoryToggle(category.id)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                    />
-                    <span className="text-sm text-gray-700 group-hover:text-gray-900">
-                      {category.name}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+              {expandedSections.has('categories') && (
+                <div className="px-4 pb-4 space-y-2">
+                  {categories.map((category) => (
+                    <label
+                      key={category.id}
+                      className="flex items-center gap-2 cursor-pointer group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedCategories.includes(category.id)}
+                        onChange={() => handleCategoryToggle(category.id)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                        {category.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Price Range Section */}
           <div className="border-b border-gray-200">

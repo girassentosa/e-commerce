@@ -30,6 +30,48 @@ export function formatCurrency(
 }
 
 /**
+ * Format number to Indonesian format (with dots as thousand separators)
+ * Example: 59500 → "59.500"
+ */
+export function formatIndonesianNumber(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  
+  if (isNaN(numValue)) {
+    return '';
+  }
+  
+  // Format dengan titik sebagai pemisah ribuan, tanpa desimal
+  return Math.floor(numValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+/**
+ * Parse Indonesian number format to number
+ * Example: "59.500" → 59500
+ * Handles both "59.500" and "59500" formats
+ */
+export function parseIndonesianNumber(value: string | null | undefined): number | null {
+  if (!value || value === '') {
+    return null;
+  }
+  
+  // Remove all dots (thousand separators) and spaces
+  const cleaned = value.toString().replace(/\./g, '').replace(/\s/g, '').trim();
+  
+  // Parse to number
+  const parsed = parseFloat(cleaned);
+  
+  if (isNaN(parsed)) {
+    return null;
+  }
+  
+  return parsed;
+}
+
+/**
  * Format date to readable string
  */
 export function formatDate(

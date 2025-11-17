@@ -8,13 +8,13 @@
 import { ChevronDown, Grid3x3, List, SlidersHorizontal } from 'lucide-react';
 
 interface FilterBarProps {
-  categories: Array<{ id: string; name: string }>;
-  selectedCategory: string | null;
+  categories?: Array<{ id: string; name: string }>;
+  selectedCategory?: string | null;
   priceRange: string | null;
   minRating: number | null;
   sortBy: string;
   viewMode: 'grid' | 'list';
-  onCategoryChange: (categoryId: string | null) => void;
+  onCategoryChange?: (categoryId: string | null) => void;
   onPriceRangeChange: (range: string | null) => void;
   onMinRatingChange: (rating: number | null) => void;
   onSortChange: (sort: string) => void;

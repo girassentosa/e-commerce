@@ -37,6 +37,7 @@ interface CartProduct {
   }>;
   freeShippingThreshold?: string | null;
   defaultShippingCost?: string | null;
+  serviceFee?: string | null;
 }
 
 interface CartVariant {

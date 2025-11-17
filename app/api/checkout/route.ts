@@ -9,6 +9,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { checkoutSchema } from '@/lib/validations/checkout';
 import { createPaymentIntent } from '@/lib/payments';
+import { calculateShipping } from '@/lib/shipping';
 import { z } from 'zod';
 
 /**
@@ -115,39 +116,32 @@ export async function POST(request: NextRequest) {
 
     const subtotal = cartItemDetails.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
-    // Calculate shipping based on product settings (average from all products in cart)
-    let subtotalPengiriman = 0;
-    let biayaLayanan = 0;
-    
-    if (cart.items.length > 0) {
-      let totalFreeShippingThreshold = 0;
-      let totalDefaultShippingCost = 0;
-      let countWithSettings = 0;
-      
-      for (const item of cart.items) {
-        const product = item.product;
-        const freeShippingThreshold = product.freeShippingThreshold ? parseFloat(String(product.freeShippingThreshold)) : null;
-        const defaultShippingCost = product.defaultShippingCost ? parseFloat(String(product.defaultShippingCost)) : null;
-        
-        if (freeShippingThreshold !== null) {
-          totalFreeShippingThreshold += freeShippingThreshold;
-          countWithSettings++;
-        }
-        if (defaultShippingCost !== null) {
-          totalDefaultShippingCost += defaultShippingCost;
-        }
-      }
-      
-      // Calculate average
-      const avgFreeShippingThreshold = countWithSettings > 0 ? totalFreeShippingThreshold / cart.items.length : null;
-      const avgDefaultShippingCost = cart.items.length > 0 ? totalDefaultShippingCost / cart.items.length : 0;
-      
-      // Subtotal pengiriman = nilai rata-rata dari freeShippingThreshold (langsung ambil nilainya)
-      subtotalPengiriman = avgFreeShippingThreshold || 0;
-      
-      // Biaya layanan = nilai rata-rata dari defaultShippingCost (langsung ambil nilainya)
-      biayaLayanan = avgDefaultShippingCost;
-    }
+    // Get global shipping settings
+    const [freeShippingThresholdSetting, defaultShippingCostSetting] = await Promise.all([
+      prisma.setting.findUnique({ where: { key: 'freeShippingThreshold' } }),
+      prisma.setting.findUnique({ where: { key: 'defaultShippingCost' } }),
+    ]);
+
+    const globalShippingSettings = {
+      freeShippingThreshold: parseFloat(freeShippingThresholdSetting?.value || '0'),
+      defaultShippingCost: parseFloat(defaultShippingCostSetting?.value || '0'),
+    };
+
+    // Calculate shipping using new hybrid logic
+    const cartItemsForShipping = cart.items.map(item => ({
+      productId: item.product.id,
+      quantity: item.quantity,
+      subtotal: parseFloat(String(item.product.salePrice || item.product.price)) * item.quantity,
+      shippingSettings: {
+        freeShippingThreshold: item.product.freeShippingThreshold ? parseFloat(String(item.product.freeShippingThreshold)) : null,
+        defaultShippingCost: item.product.defaultShippingCost ? parseFloat(String(item.product.defaultShippingCost)) : null,
+        serviceFee: item.product.serviceFee ? parseFloat(String(item.product.serviceFee)) : null,
+      },
+    }));
+
+    const shippingResult = calculateShipping(cartItemsForShipping, globalShippingSettings);
+    const biayaOngkir = shippingResult.shippingCost;
+    const biayaLayanan = shippingResult.serviceFee;
     
     // Get payment method fee
     let paymentFee = 0;
@@ -182,10 +176,11 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    const shippingCost = subtotalPengiriman;
+    const shippingCost = biayaOngkir;
+    const serviceFee = biayaLayanan;
     const tax = Math.round(subtotal * 0.1 * 100) / 100; // 10% tax, rounded to 2 decimals first
     const discount = 0; // No coupon yet
-    const total = Math.round((subtotal - discount + tax + shippingCost + biayaLayanan + paymentFee) * 100) / 100; // Round to 2 decimals
+    const total = Math.round((subtotal - discount + tax + shippingCost + serviceFee + paymentFee) * 100) / 100; // Round to 2 decimals
 
     // Prepare items for Midtrans (must include tax and shipping as separate items)
     const itemsForPayment = [...cartItemDetails];
@@ -206,16 +201,6 @@ export async function POST(request: NextRequest) {
         id: 'SHIPPING',
         name: 'Shipping Cost',
         price: Math.round(shippingCost), // Round to integer for Midtrans (Rupiah)
-        quantity: 1,
-      });
-    }
-    
-    // Add service fee as a separate item if > 0
-    if (biayaLayanan > 0) {
-      itemsForPayment.push({
-        id: 'SERVICE_FEE',
-        name: 'Service Fee',
-        price: Math.round(biayaLayanan), // Round to integer for Midtrans (Rupiah)
         quantity: 1,
       });
     }
@@ -310,7 +295,7 @@ export async function POST(request: NextRequest) {
           subtotal,
           tax,
           shippingCost,
-          serviceFee: biayaLayanan,
+          serviceFee: serviceFee,
           paymentFee: paymentFee,
           discount,
           total: roundedTotal, // Use rounded total for consistency

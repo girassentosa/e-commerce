@@ -135,7 +135,7 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
    * Reverse geocoding: Convert lat/lng to address
    * Using OpenStreetMap Nominatim API (free, no API key required)
    */
-  const reverseGeocode = async (lat: number, lng: number): Promise<GeocodeResult | null> => {
+  const reverseGeocode = async (lat: number, lng: number): Promise<GeocodeResult> => {
     try {
       // OpenStreetMap Nominatim API
       const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
@@ -144,17 +144,30 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
         headers: {
           'User-Agent': 'ECommerceApp/1.0', // Required by Nominatim
         },
+        signal: AbortSignal.timeout(8000), // 8 second timeout
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch address');
+        throw new Error(`Nominatim API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      
+      // Validate response has address data
+      if (!data || !data.address) {
+        throw new Error('Alamat tidak ditemukan untuk lokasi Anda');
+      }
+      
       return data;
-    } catch (error) {
-      console.error('Error reverse geocoding:', error);
-      return null;
+    } catch (error: any) {
+      // Re-throw with meaningful message
+      if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+        throw new Error('Timeout saat mengambil alamat. Silakan coba lagi.');
+      }
+      if (error.message) {
+        throw error; // Re-throw with existing message
+      }
+      throw new Error('Gagal mendapatkan alamat dari koordinat');
     }
   };
 
@@ -186,15 +199,8 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
 
       const { latitude, longitude } = position.coords;
 
-      // Reverse geocode to get address
+      // Reverse geocode to get address (will throw error if fails)
       const geocodeResult = await reverseGeocode(latitude, longitude);
-
-      if (!geocodeResult || !geocodeResult.address) {
-        showError('Gagal mendeteksi alamat', 'Tidak dapat menentukan alamat Anda. Silakan isi secara manual.');
-        setLoadingLocation(false);
-        return;
-      }
-
       const addr = geocodeResult.address;
 
       // Build address line 1
@@ -227,16 +233,23 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
 
       showSuccess('Alamat terisi otomatis', 'Silakan periksa dan lengkapi formulir.');
     } catch (error: any) {
-      console.error('Error getting location:', error);
+      // Only log error if it has meaningful content
+      if (error && (error.message || error.code || (typeof error === 'string'))) {
+        console.error('Error getting location:', error);
+      }
       
       let errorMessage = 'Gagal mendapatkan lokasi Anda. Silakan masukkan alamat secara manual.';
       
-      if (error.code === 1) {
+      // Handle GeolocationPositionError codes
+      if (error?.code === 1 || error?.PERMISSION_DENIED === 1) {
         errorMessage = 'Akses lokasi ditolak. Silakan aktifkan izin lokasi atau masukkan alamat secara manual.';
-      } else if (error.code === 2) {
+      } else if (error?.code === 2 || error?.POSITION_UNAVAILABLE === 2) {
         errorMessage = 'Lokasi tidak tersedia. Silakan masukkan alamat secara manual.';
-      } else if (error.code === 3) {
+      } else if (error?.code === 3 || error?.TIMEOUT === 3) {
         errorMessage = 'Permintaan lokasi timeout. Silakan coba lagi atau masukkan alamat secara manual.';
+      } else if (error?.message && typeof error.message === 'string') {
+        // Use error message if available
+        errorMessage = `${error.message}. Silakan masukkan alamat secara manual.`;
       }
 
       showError('Gagal mendapatkan lokasi', errorMessage);

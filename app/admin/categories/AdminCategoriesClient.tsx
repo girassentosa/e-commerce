@@ -1,0 +1,327 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { FolderTree, Plus, Filter, Search, Edit, Trash2 } from 'lucide-react';
+import { DataTable } from '@/components/admin/DataTable';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Badge } from '@/components/ui/Badge';
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog';
+import { useAdminHeader } from '@/contexts/AdminHeaderContext';
+import { useNotification } from '@/contexts/NotificationContext';
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl: string | null;
+  isActive: boolean;
+  parent: {
+    id: string;
+    name: string;
+  } | null;
+  _count: {
+    products: number;
+    children: number;
+  };
+}
+
+interface AdminCategoriesClientProps {
+  initialCategories: Category[];
+}
+
+export default function AdminCategoriesClient({ initialCategories }: AdminCategoriesClientProps) {
+  const { setHeader } = useAdminHeader();
+  const { showSuccess, showError } = useNotification();
+
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [filteredCategories, setFilteredCategories] = useState<Category[]>(initialCategories);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const initialFetchSkipped = useRef(false);
+
+  useEffect(() => {
+    setHeader(FolderTree, 'Categories');
+  }, [setHeader]);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/categories', { cache: 'no-store' });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch categories');
+      }
+
+      setCategories(data.data);
+    } catch (error: any) {
+      console.error('Error fetching categories:', error);
+      showError('Gagal memuat kategori', error.message || 'Failed to load categories');
+    } finally {
+      setLoading(false);
+    }
+  }, [showError]);
+
+  useEffect(() => {
+    if (!initialFetchSkipped.current) {
+      initialFetchSkipped.current = true;
+      return;
+    }
+    fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    if (!search.trim()) {
+      setFilteredCategories(categories);
+      return;
+    }
+
+    const normalized = search.toLowerCase();
+    setFilteredCategories(
+      categories.filter((category) => {
+        const parentName = category.parent?.name?.toLowerCase() ?? '';
+        return (
+          category.name.toLowerCase().includes(normalized) ||
+          category.slug.toLowerCase().includes(normalized) ||
+          parentName.includes(normalized)
+        );
+      })
+    );
+  }, [search, categories]);
+
+  const handleClearFilters = () => {
+    setSearch('');
+  };
+
+  const handleDelete = async (categoryId: string) => {
+    try {
+      const response = await fetch(`/api/admin/categories/${categoryId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete category');
+      }
+
+      showSuccess('Kategori dihapus', 'Category deleted successfully');
+      fetchCategories();
+    } catch (error: any) {
+      console.error('Error deleting category:', error);
+      showError('Gagal menghapus kategori', error.message || 'Failed to delete category');
+    } finally {
+      setShowDeleteDialog(false);
+      setCategoryToDelete(null);
+    }
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        key: 'name',
+        label: 'Category',
+        render: (category: Category) => (
+          <div className="flex items-center gap-3">
+            {category.imageUrl ? (
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
+                <Image
+                  src={category.imageUrl}
+                  alt={category.name}
+                  width={64}
+                  height={64}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 border border-gray-200">
+                <FolderTree className="w-7 h-7 sm:w-8 sm:h-8 text-gray-400" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm sm:text-base text-gray-900 mb-1 line-clamp-2">
+                {category.name}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs text-gray-500">Slug: {category.slug}</p>
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'parent',
+        label: 'Parent Category',
+        render: (category: Category) =>
+          category.parent ? (
+            <span className="text-gray-700">{category.parent.name}</span>
+          ) : (
+            <span className="text-gray-400 italic">None</span>
+          ),
+        hideOnMobile: true,
+      },
+      {
+        key: 'products',
+        label: 'Products',
+        render: (category: Category) => <Badge variant="default">{category._count.products}</Badge>,
+      },
+      {
+        key: 'subcategories',
+        label: 'Subcategories',
+        render: (category: Category) => (
+          <Badge variant="secondary">{category._count.children}</Badge>
+        ),
+        hideOnMobile: true,
+      },
+      {
+        key: 'status',
+        label: 'Status',
+        render: (category: Category) => (
+          <Badge variant={category.isActive ? 'default' : 'secondary'}>
+            {category.isActive ? 'Active' : 'Inactive'}
+          </Badge>
+        ),
+      },
+      {
+        key: 'actions',
+        label: 'Actions',
+        render: (category: Category) => (
+          <div className="flex items-center justify-end gap-2 flex-nowrap">
+            <Link
+              href={`/admin/categories/${category.id}/edit`}
+              onClick={(e) => e.stopPropagation()}
+              className="p-2 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 active:scale-95 touch-manipulation flex items-center justify-center shrink-0"
+              title="Edit"
+            >
+              <Edit className="w-4 h-4" />
+            </Link>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setCategoryToDelete(category.id);
+                setShowDeleteDialog(true);
+              }}
+              className="p-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 active:scale-95 touch-manipulation flex items-center justify-center shrink-0"
+              title="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+          <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+            <FolderTree className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            Categories Management
+          </h1>
+        </div>
+        <div className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-gray-600">{categories.length} total categories in your store</p>
+            </div>
+            <Link href="/admin/categories/new" className="w-full sm:w-auto shrink-0">
+              <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200">
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Category
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="admin-filter-card">
+        <div className="admin-card-header">
+          <h2 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex items-center gap-2">
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            Filters & Search
+          </h2>
+        </div>
+        <div className="p-4 sm:p-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                <span className="hidden sm:inline">Search Categories</span>
+                <span className="sm:hidden">Search</span>
+              </label>
+              <div className="relative">
+                <div className="absolute left-2 sm:left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+                </div>
+                <Input
+                  type="text"
+                  placeholder="Search by name, slug, or parent category..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-8 sm:pl-10 md:pl-12 border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-xs sm:text-sm md:text-base py-2 sm:py-2.5"
+                />
+              </div>
+            </div>
+
+            {search && (
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClearFilters}
+                  className="admin-no-animation w-full border-orange-300 text-orange-600 hover:bg-orange-50 rounded-lg sm:rounded-xl !font-normal !transition-colors !duration-150"
+                  style={{
+                    transform: 'none',
+                    transition: 'color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease',
+                  }}
+                >
+                  Clear Search
+                </Button>
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
+
+      <div className="admin-table-card">
+        <DataTable
+          columns={columns as any}
+          data={filteredCategories}
+          loading={loading}
+          emptyMessage="No categories found"
+        />
+      </div>
+
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        title="Delete Category"
+        message="Are you sure you want to delete this category? This action cannot be undone. Categories with products or subcategories cannot be deleted."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (categoryToDelete) {
+            handleDelete(categoryToDelete);
+          }
+        }}
+        onCancel={() => {
+          setShowDeleteDialog(false);
+          setCategoryToDelete(null);
+        }}
+      />
+    </div>
+  );
+}
+

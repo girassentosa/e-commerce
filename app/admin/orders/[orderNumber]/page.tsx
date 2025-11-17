@@ -897,23 +897,19 @@ export default function AdminOrderDetailPage() {
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-sm font-medium text-gray-600">Subtotal pengiriman</span>
+                  <span className="text-sm font-medium text-gray-600">Ongkos Kirim</span>
                   <span className="text-sm font-semibold text-gray-900">
                     {parseFloat(order.shippingCost) === 0 ? (
-                      <span className="line-through text-gray-400">Gratis Ongkir</span>
+                      <span className="text-green-600 font-semibold">Gratis</span>
                     ) : (
                       formatPrice(order.shippingCost)
                     )}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-sm font-medium text-gray-600">Biaya layanan</span>
+                  <span className="text-sm font-medium text-gray-600">Biaya Layanan</span>
                   <span className="text-sm font-semibold text-gray-900">
-                    {parseFloat(order.serviceFee || '0') === 0 ? (
-                      <span className="line-through text-gray-400">Gratis Ongkir</span>
-                    ) : (
-                      formatPrice(order.serviceFee || '0')
-                    )}
+                    {formatPrice(order.serviceFee || '0')}
                   </span>
                 </div>
                 {parseFloat(order.paymentFee || '0') !== 0 && paymentMethodName && (

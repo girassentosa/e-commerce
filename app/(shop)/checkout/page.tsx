@@ -11,6 +11,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useNotification } from '@/contexts/NotificationContext';
 import { Loader } from '@/components/ui/Loader';
 import { PaymentModal } from '@/components/checkout/PaymentModal';
+import { calculateShipping } from '@/lib/shipping';
 
 interface ShippingAddress {
   id: string;
@@ -40,6 +41,7 @@ interface CheckoutProduct {
   images?: CheckoutProductImage[];
   freeShippingThreshold?: string | null;
   defaultShippingCost?: string | null;
+  serviceFee?: string | null;
 }
 
 interface PaymentMethod {
@@ -76,23 +78,44 @@ function CheckoutPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentOrderNumber, setPaymentOrderNumber] = useState<string | null>(null);
+  const [globalShippingSettings, setGlobalShippingSettings] = useState<{
+    freeShippingThreshold: number;
+    defaultShippingCost: number;
+  }>({
+    freeShippingThreshold: 0,
+    defaultShippingCost: 0,
+  });
 
-  // Fetch custom payment methods
+  // Fetch custom payment methods and global shipping settings
   useEffect(() => {
-    const fetchPaymentMethods = async () => {
+    const fetchSettings = async () => {
       try {
-        const response = await fetch('/api/settings/payment-methods');
-        const data = await response.json();
+        const [paymentRes, shippingRes] = await Promise.all([
+          fetch('/api/settings/payment-methods'),
+          fetch('/api/settings'),
+        ]);
 
-        if (response.ok && data.success) {
-          setCustomPaymentMethods(data.data || []);
+        const [paymentData, shippingData] = await Promise.all([
+          paymentRes.json(),
+          shippingRes.json(),
+        ]);
+
+        if (paymentRes.ok && paymentData.success) {
+          setCustomPaymentMethods(paymentData.data || []);
+        }
+
+        if (shippingRes.ok && shippingData.success) {
+          setGlobalShippingSettings({
+            freeShippingThreshold: parseFloat(shippingData.data.freeShippingThreshold || '0'),
+            defaultShippingCost: parseFloat(shippingData.data.defaultShippingCost || '0'),
+          });
         }
       } catch (error) {
-        console.error('Error fetching payment methods:', error);
+        console.error('Error fetching settings:', error);
       }
     };
 
-    fetchPaymentMethods();
+    fetchSettings();
   }, []);
 
   // Fetch selected address or default address
@@ -494,58 +517,52 @@ function CheckoutPageContent() {
   // Payment breakdown calculations
   const subtotalPesanan = subtotal;
   
-  // Calculate shipping based on product settings
-  let subtotalPengiriman = 0;
+  // Calculate shipping using new hybrid logic
+  let biayaOngkir = 0;
   let biayaLayanan = 0;
+  let shippingReason = '';
   
   if (isBuyNowFlow && productDetails) {
-    // Buy now flow: use product's shipping settings
-    const freeShippingThreshold = productDetails.freeShippingThreshold ? parseFloat(productDetails.freeShippingThreshold) : null;
-    const defaultShippingCost = productDetails.defaultShippingCost ? parseFloat(productDetails.defaultShippingCost) : null;
+    // Buy now flow: single product
+    const cartItemsForShipping = [{
+      productId: productIdParam || '',
+      quantity: quantityParam,
+      subtotal: subtotal,
+      shippingSettings: {
+        freeShippingThreshold: productDetails.freeShippingThreshold ? parseFloat(productDetails.freeShippingThreshold) : null,
+        defaultShippingCost: productDetails.defaultShippingCost ? parseFloat(productDetails.defaultShippingCost) : null,
+        serviceFee: productDetails.serviceFee ? parseFloat(productDetails.serviceFee) : null,
+      },
+    }];
     
-    // Subtotal pengiriman = nilai dari freeShippingThreshold (langsung ambil nilainya)
-    subtotalPengiriman = freeShippingThreshold || 0;
-    
-    // Biaya layanan = nilai dari defaultShippingCost (langsung ambil nilainya)
-    biayaLayanan = defaultShippingCost || 0;
+    const shippingResult = calculateShipping(cartItemsForShipping, globalShippingSettings);
+    biayaOngkir = shippingResult.shippingCost;
+    biayaLayanan = shippingResult.serviceFee;
+    shippingReason = shippingResult.reason;
   } else {
-    // Cart flow: calculate average from all selected products
+    // Cart flow: multiple products
     const selectedCartItems = cartItems.filter(item => selectedItems.has(item.id));
-    if (selectedCartItems.length > 0) {
-      let totalFreeShippingThreshold = 0;
-      let totalDefaultShippingCost = 0;
-      let countWithSettings = 0;
-      
-      selectedCartItems.forEach(item => {
-        const product = item.product;
-        const freeShippingThreshold = product.freeShippingThreshold ? parseFloat(product.freeShippingThreshold) : null;
-        const defaultShippingCost = product.defaultShippingCost ? parseFloat(product.defaultShippingCost) : null;
-        
-        if (freeShippingThreshold !== null) {
-          totalFreeShippingThreshold += freeShippingThreshold;
-          countWithSettings++;
-        }
-        if (defaultShippingCost !== null) {
-          totalDefaultShippingCost += defaultShippingCost;
-        }
-      });
-      
-      // Calculate average
-      const avgFreeShippingThreshold = countWithSettings > 0 ? totalFreeShippingThreshold / selectedCartItems.length : null;
-      const avgDefaultShippingCost = selectedCartItems.length > 0 ? totalDefaultShippingCost / selectedCartItems.length : 0;
-      
-      // Subtotal pengiriman = nilai rata-rata dari freeShippingThreshold (langsung ambil nilainya)
-      subtotalPengiriman = avgFreeShippingThreshold || 0;
-      
-      // Biaya layanan = nilai rata-rata dari defaultShippingCost (langsung ambil nilainya)
-      biayaLayanan = avgDefaultShippingCost;
-    }
+    
+    const cartItemsForShipping = selectedCartItems.map(item => ({
+      productId: item.product.id,
+      quantity: item.quantity,
+      subtotal: parseFloat(item.product.salePrice || item.product.price) * item.quantity,
+      shippingSettings: {
+        freeShippingThreshold: item.product.freeShippingThreshold ? parseFloat(item.product.freeShippingThreshold) : null,
+        defaultShippingCost: item.product.defaultShippingCost ? parseFloat(item.product.defaultShippingCost) : null,
+        serviceFee: item.product.serviceFee ? parseFloat(item.product.serviceFee) : null,
+      },
+    }));
+    
+    const shippingResult = calculateShipping(cartItemsForShipping, globalShippingSettings);
+    biayaOngkir = shippingResult.shippingCost;
+    biayaLayanan = shippingResult.serviceFee;
+    shippingReason = shippingResult.reason;
   }
   
   const totalDiskonPengiriman = 0; // No shipping discount for now
   const voucherDiskon = 0; // No voucher discount for now
-  const totalPembayaran =
-    subtotalPesanan + subtotalPengiriman + biayaLayanan - totalDiskonPengiriman - voucherDiskon;
+  const totalPembayaran = subtotalPesanan + biayaOngkir + biayaLayanan + paymentFee - totalDiskonPengiriman - voucherDiskon;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -764,23 +781,19 @@ function CheckoutPageContent() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Subtotal pengiriman</span>
+                  <span className="text-sm text-gray-600">Ongkos Kirim</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {subtotalPengiriman === 0 ? (
-                      <span className="line-through text-gray-400">Gratis Ongkir</span>
+                    {biayaOngkir === 0 ? (
+                      <span className="text-green-600 font-semibold">Gratis</span>
                     ) : (
-                      formatPrice(subtotalPengiriman)
+                      formatPrice(biayaOngkir)
                     )}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Biaya layanan</span>
+                  <span className="text-sm text-gray-600">Biaya Layanan</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {biayaLayanan === 0 ? (
-                      <span className="line-through text-gray-400">Gratis Ongkir</span>
-                    ) : (
-                      formatPrice(biayaLayanan)
-                    )}
+                    {formatPrice(biayaLayanan)}
                   </span>
                 </div>
                 {paymentFee !== 0 && selectedPaymentMethodData && (
@@ -989,25 +1002,21 @@ function CheckoutPageContent() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Subtotal pengiriman</span>
+                    <span className="text-sm text-gray-600">Ongkos Kirim</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {subtotalPengiriman === 0 ? (
-                        <span className="line-through text-gray-400">Gratis Ongkir</span>
+                      {biayaOngkir === 0 ? (
+                        <span className="text-green-600 font-semibold">Gratis</span>
                       ) : (
-                        formatPrice(subtotalPengiriman)
+                        formatPrice(biayaOngkir)
                       )}
                     </span>
                   </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Biaya layanan</span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {biayaLayanan === 0 ? (
-                          <span className="line-through text-gray-400">Gratis Ongkir</span>
-                        ) : (
-                          formatPrice(biayaLayanan)
-                        )}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Biaya Layanan</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {formatPrice(biayaLayanan)}
+                    </span>
+                  </div>
                     {paymentFee !== 0 && selectedPaymentMethodData && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-600">

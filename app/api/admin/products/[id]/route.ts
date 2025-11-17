@@ -140,6 +140,16 @@ export async function PUT(
               ? body.specifications 
               : null 
           }),
+          // Shipping settings (per-product)
+          ...(body.freeShippingThreshold !== undefined && { 
+            freeShippingThreshold: body.freeShippingThreshold 
+          }),
+          ...(body.defaultShippingCost !== undefined && { 
+            defaultShippingCost: body.defaultShippingCost 
+          }),
+          ...(body.serviceFee !== undefined && { 
+            serviceFee: body.serviceFee 
+          }),
         },
       });
 

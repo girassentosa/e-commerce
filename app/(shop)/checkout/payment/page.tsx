@@ -7,6 +7,7 @@ import { useCheckout } from '@/contexts/CheckoutContext';
 import { useCart } from '@/contexts/CartContext';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useNotification } from '@/contexts/NotificationContext';
+import { calculateShipping } from '@/lib/shipping';
 
 const virtualAccountBanks = ['BCA', 'MANDIRI', 'BNI', 'BRI', 'BSI', 'PERMATA'];
 
@@ -18,6 +19,7 @@ interface CheckoutProduct {
   brand?: string | null;
   freeShippingThreshold?: string | null;
   defaultShippingCost?: string | null;
+  serviceFee?: string | null;
 }
 
 interface PaymentMethod {
@@ -40,6 +42,13 @@ function SelectPaymentPageContent() {
   const [isVirtualAccountExpanded, setIsVirtualAccountExpanded] = useState(false);
   const [customPaymentMethods, setCustomPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
+  const [globalShippingSettings, setGlobalShippingSettings] = useState<{
+    freeShippingThreshold: number;
+    defaultShippingCost: number;
+  }>({
+    freeShippingThreshold: 0,
+    defaultShippingCost: 0,
+  });
   
   // For buy-now flow
   const flow = searchParams.get('flow');
@@ -134,23 +143,38 @@ function SelectPaymentPageContent() {
 
   // Fetch custom payment methods
   useEffect(() => {
-    const fetchPaymentMethods = async () => {
+    const fetchSettings = async () => {
       try {
         setLoadingPaymentMethods(true);
-        const response = await fetch('/api/settings/payment-methods');
-        const data = await response.json();
+        
+        const [paymentRes, shippingRes] = await Promise.all([
+          fetch('/api/settings/payment-methods'),
+          fetch('/api/settings'),
+        ]);
 
-        if (response.ok && data.success) {
-          setCustomPaymentMethods(data.data || []);
+        const [paymentData, shippingData] = await Promise.all([
+          paymentRes.json(),
+          shippingRes.json(),
+        ]);
+
+        if (paymentRes.ok && paymentData.success) {
+          setCustomPaymentMethods(paymentData.data || []);
+        }
+
+        if (shippingRes.ok && shippingData.success) {
+          setGlobalShippingSettings({
+            freeShippingThreshold: parseFloat(shippingData.data.freeShippingThreshold || '0'),
+            defaultShippingCost: parseFloat(shippingData.data.defaultShippingCost || '0'),
+          });
         }
       } catch (error) {
-        console.error('Error fetching payment methods:', error);
+        console.error('Error fetching settings:', error);
       } finally {
         setLoadingPaymentMethods(false);
       }
     };
 
-    fetchPaymentMethods();
+    fetchSettings();
   }, []);
 
   // Fetch product details for buy-now flow
@@ -238,57 +262,50 @@ function SelectPaymentPageContent() {
   // Payment breakdown calculations
   const subtotalPesanan = subtotal;
   
-  // Calculate shipping based on product settings
-  let subtotalPengiriman = 0;
+  // Calculate shipping using new hybrid logic
+  let biayaOngkir = 0;
   let biayaLayanan = 0;
+  let shippingReason = '';
   
   if (isBuyNowFlow && productDetails) {
-    // Buy now flow: use product's shipping settings
-    const freeShippingThreshold = productDetails.freeShippingThreshold ? parseFloat(productDetails.freeShippingThreshold) : null;
-    const defaultShippingCost = productDetails.defaultShippingCost ? parseFloat(productDetails.defaultShippingCost) : null;
+    // Buy now flow: single product
+    const cartItemsForShipping = [{
+      productId: productIdParam || '',
+      quantity: quantityParam,
+      subtotal: subtotal,
+      shippingSettings: {
+        freeShippingThreshold: productDetails.freeShippingThreshold ? parseFloat(productDetails.freeShippingThreshold) : null,
+        defaultShippingCost: productDetails.defaultShippingCost ? parseFloat(productDetails.defaultShippingCost) : null,
+        serviceFee: productDetails.serviceFee ? parseFloat(productDetails.serviceFee) : null,
+      },
+    }];
     
-    // Subtotal pengiriman = nilai dari freeShippingThreshold (langsung ambil nilainya)
-    subtotalPengiriman = freeShippingThreshold || 0;
-    
-    // Biaya layanan = nilai dari defaultShippingCost (langsung ambil nilainya)
-    biayaLayanan = defaultShippingCost || 0;
+    const shippingResult = calculateShipping(cartItemsForShipping, globalShippingSettings);
+    biayaOngkir = shippingResult.shippingCost;
+    biayaLayanan = shippingResult.serviceFee;
+    shippingReason = shippingResult.reason;
   } else {
-    // Cart flow: calculate average from all cart items
-    if (items.length > 0) {
-      let totalFreeShippingThreshold = 0;
-      let totalDefaultShippingCost = 0;
-      let countWithSettings = 0;
-      
-      items.forEach(item => {
-        const product = item.product;
-        const freeShippingThreshold = product.freeShippingThreshold ? parseFloat(product.freeShippingThreshold) : null;
-        const defaultShippingCost = product.defaultShippingCost ? parseFloat(product.defaultShippingCost) : null;
-        
-        if (freeShippingThreshold !== null) {
-          totalFreeShippingThreshold += freeShippingThreshold;
-          countWithSettings++;
-        }
-        if (defaultShippingCost !== null) {
-          totalDefaultShippingCost += defaultShippingCost;
-        }
-      });
-      
-      // Calculate average
-      const avgFreeShippingThreshold = countWithSettings > 0 ? totalFreeShippingThreshold / items.length : null;
-      const avgDefaultShippingCost = items.length > 0 ? totalDefaultShippingCost / items.length : 0;
-      
-      // Subtotal pengiriman = nilai rata-rata dari freeShippingThreshold (langsung ambil nilainya)
-      subtotalPengiriman = avgFreeShippingThreshold || 0;
-      
-      // Biaya layanan = nilai rata-rata dari defaultShippingCost (langsung ambil nilainya)
-      biayaLayanan = avgDefaultShippingCost;
-    }
+    // Cart flow: multiple products
+    const cartItemsForShipping = items.map(item => ({
+      productId: item.product.id,
+      quantity: item.quantity,
+      subtotal: parseFloat(item.product.salePrice || item.product.price) * item.quantity,
+      shippingSettings: {
+        freeShippingThreshold: item.product.freeShippingThreshold ? parseFloat(item.product.freeShippingThreshold) : null,
+        defaultShippingCost: item.product.defaultShippingCost ? parseFloat(item.product.defaultShippingCost) : null,
+        serviceFee: item.product.serviceFee ? parseFloat(item.product.serviceFee) : null,
+      },
+    }));
+    
+    const shippingResult = calculateShipping(cartItemsForShipping, globalShippingSettings);
+    biayaOngkir = shippingResult.shippingCost;
+    biayaLayanan = shippingResult.serviceFee;
+    shippingReason = shippingResult.reason;
   }
   
   const totalDiskonPengiriman = 0; // No shipping discount for now
   const voucherDiskon = 0; // No voucher discount for now
-  const totalPembayaran =
-    subtotalPesanan + subtotalPengiriman + biayaLayanan + paymentFee - totalDiskonPengiriman - voucherDiskon;
+  const totalPembayaran = subtotalPesanan + biayaOngkir + biayaLayanan + paymentFee - totalDiskonPengiriman - voucherDiskon;
   const hasAnyDiscount = discountTotal > 0;
 
   return (

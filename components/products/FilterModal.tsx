@@ -11,13 +11,13 @@ import { FilterSidebar } from './FilterSidebar';
 interface FilterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  categories: Array<{ id: string; name: string }>;
-  selectedCategories: string[];
+  categories?: Array<{ id: string; name: string }>;
+  selectedCategories?: string[];
   priceRange: { min: number; max: number };
   maxPrice: number;
   minRating: number | null;
   inStockOnly: boolean;
-  onCategoriesChange: (categories: string[]) => void;
+  onCategoriesChange?: (categories: string[]) => void;
   onPriceRangeChange: (range: { min: number; max: number }) => void;
   onMinRatingChange: (rating: number | null) => void;
   onInStockOnlyChange: (value: boolean) => void;
@@ -126,6 +126,7 @@ function MobileFilterContent({
   onInStockOnlyChange,
 }: Omit<FilterModalProps, 'isOpen' | 'onClose' | 'onApplyFilters' | 'onResetFilters' | 'activeFiltersCount'>) {
   const handleCategoryToggle = (categoryId: string) => {
+    if (!onCategoriesChange || !selectedCategories) return;
     if (selectedCategories.includes(categoryId)) {
       onCategoriesChange(selectedCategories.filter((id) => id !== categoryId));
     } else {
@@ -141,26 +142,28 @@ function MobileFilterContent({
 
   return (
     <div className="space-y-6">
-      {/* Categories */}
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-3">Categories</h3>
-        <div className="space-y-2">
-          {categories.map((category) => (
-            <label
-              key={category.id}
-              className="flex items-center gap-3 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={selectedCategories.includes(category.id)}
-                onChange={() => handleCategoryToggle(category.id)}
-                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">{category.name}</span>
-            </label>
-          ))}
+      {/* Categories - Only show if categories provided */}
+      {categories && categories.length > 0 && onCategoriesChange && selectedCategories && (
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-3">Categories</h3>
+          <div className="space-y-2">
+            {categories.map((category) => (
+              <label
+                key={category.id}
+                className="flex items-center gap-3 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedCategories.includes(category.id)}
+                  onChange={() => handleCategoryToggle(category.id)}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{category.name}</span>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Price Range */}
       <div>

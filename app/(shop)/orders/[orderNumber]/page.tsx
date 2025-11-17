@@ -585,23 +585,19 @@ export default function OrderDetailPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Subtotal pengiriman</span>
+                <span className="text-sm text-gray-600">Ongkos Kirim</span>
                 <span className="text-sm font-medium text-gray-900">
                   {biayaPengiriman === 0 ? (
-                    <span className="line-through text-gray-400">Gratis Ongkir</span>
+                    <span className="text-green-600 font-semibold">Gratis</span>
                   ) : (
                     formatPrice(biayaPengiriman)
                   )}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Biaya layanan</span>
+                <span className="text-sm text-gray-600">Biaya Layanan</span>
                 <span className="text-sm font-medium text-gray-900">
-                  {biayaLayanan === 0 ? (
-                    <span className="line-through text-gray-400">Gratis Ongkir</span>
-                  ) : (
-                    formatPrice(biayaLayanan)
-                  )}
+                  {formatPrice(biayaLayanan)}
                 </span>
               </div>
               {biayaPembayaran !== 0 && paymentMethodName && (

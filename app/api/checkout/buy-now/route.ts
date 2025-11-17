@@ -9,6 +9,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { buyNowCheckoutSchema } from '@/lib/validations/checkout';
 import { createPaymentIntent } from '@/lib/payments';
+import { calculateShipping } from '@/lib/shipping';
 import { z } from 'zod';
 
 /**
@@ -143,15 +144,32 @@ export async function POST(request: NextRequest) {
     const unitPrice = basePrice + variantPriceModifier;
     const subtotal = unitPrice * validatedData.quantity;
 
-    // Calculate shipping and fees based on product settings
-    const freeShippingThreshold = product.freeShippingThreshold ? parseFloat(String(product.freeShippingThreshold)) : null;
-    const defaultShippingCost = product.defaultShippingCost ? parseFloat(String(product.defaultShippingCost)) : null;
-    
-    // Subtotal pengiriman = nilai dari freeShippingThreshold (langsung ambil nilainya)
-    const subtotalPengiriman = freeShippingThreshold || 0;
-    
-    // Biaya layanan = nilai dari defaultShippingCost (langsung ambil nilainya)
-    const biayaLayanan = defaultShippingCost || 0;
+    // Get global shipping settings
+    const [freeShippingThresholdSetting, defaultShippingCostSetting] = await Promise.all([
+      prisma.setting.findUnique({ where: { key: 'freeShippingThreshold' } }),
+      prisma.setting.findUnique({ where: { key: 'defaultShippingCost' } }),
+    ]);
+
+    const globalShippingSettings = {
+      freeShippingThreshold: parseFloat(freeShippingThresholdSetting?.value || '0'),
+      defaultShippingCost: parseFloat(defaultShippingCostSetting?.value || '0'),
+    };
+
+    // Calculate shipping using new hybrid logic (single product)
+    const cartItemsForShipping = [{
+      productId: product.id,
+      quantity: validatedData.quantity,
+      subtotal: subtotal,
+      shippingSettings: {
+        freeShippingThreshold: product.freeShippingThreshold ? parseFloat(String(product.freeShippingThreshold)) : null,
+        defaultShippingCost: product.defaultShippingCost ? parseFloat(String(product.defaultShippingCost)) : null,
+        serviceFee: product.serviceFee ? parseFloat(String(product.serviceFee)) : null,
+      },
+    }];
+
+    const shippingResult = calculateShipping(cartItemsForShipping, globalShippingSettings);
+    const biayaOngkir = shippingResult.shippingCost;
+    const biayaLayanan = shippingResult.serviceFee;
     
     // Get payment method fee
     let paymentFee = 0;
@@ -188,10 +206,11 @@ export async function POST(request: NextRequest) {
     
     const totalDiskonPengiriman = 0; // No shipping discount for now
     const voucherDiskon = 0; // No voucher discount for now
-    const shippingCost = subtotalPengiriman;
+    const shippingCost = biayaOngkir;
+    const serviceFee = biayaLayanan;
     const discount = totalDiskonPengiriman + voucherDiskon;
     const tax = 0; // No tax for now (matching frontend)
-    const total = Math.round((subtotal + shippingCost + biayaLayanan + paymentFee - discount) * 100) / 100; // Round to 2 decimals
+    const total = Math.round((subtotal + shippingCost + serviceFee + paymentFee - discount) * 100) / 100; // Round to 2 decimals
 
     // Prepare items for Midtrans (must include shipping and service fee as separate items)
     // Include brand in product name for professional display in payment
@@ -214,16 +233,6 @@ export async function POST(request: NextRequest) {
         id: 'SHIPPING',
         name: 'Shipping Cost',
         price: Math.round(shippingCost), // Round to integer for Midtrans
-        quantity: 1,
-      });
-    }
-    
-    // Add service fee as a separate item if > 0
-    if (biayaLayanan > 0) {
-      itemsForPayment.push({
-        id: 'SERVICE_FEE',
-        name: 'Service Fee',
-        price: Math.round(biayaLayanan), // Round to integer for Midtrans (Rupiah)
         quantity: 1,
       });
     }
@@ -318,7 +327,7 @@ export async function POST(request: NextRequest) {
           subtotal,
           tax,
           shippingCost,
-          serviceFee: biayaLayanan,
+          serviceFee: serviceFee,
           paymentFee: paymentFee,
           discount,
           total: roundedTotal, // Use rounded total for consistency
