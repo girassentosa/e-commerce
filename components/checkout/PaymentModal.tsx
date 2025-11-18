@@ -86,6 +86,7 @@ interface PaymentModalProps {
   orderNumber: string;
   onClose: () => void;
   onPaymentSuccess?: () => void;
+  initialOrderData?: Order | null; // Optional: order data yang sudah di-fetch sebelumnya
 }
 
 export function PaymentModal({
@@ -93,17 +94,17 @@ export function PaymentModal({
   orderNumber,
   onClose,
   onPaymentSuccess,
+  initialOrderData,
 }: PaymentModalProps) {
   // State Management
-  const [order, setOrder] = useState<Order | null>(null);
+  const [order, setOrder] = useState<Order | null>(initialOrderData || null);
   const [isFetching, setIsFetching] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [isExpired, setIsExpired] = useState(false);
-  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
-  const [animationProgress, setAnimationProgress] = useState(0);
   const [paymentTimeoutMinutes, setPaymentTimeoutMinutes] = useState<number>(1440); // Default 1440 minutes (24 hours)
+  const [hasHandledSuccess, setHasHandledSuccess] = useState(false); // Guard flag untuk mencegah multiple notifications
   const { showSuccess, showError } = useNotification();
   
   // Refs untuk cleanup
@@ -113,6 +114,15 @@ export function PaymentModal({
 
   // Helper function untuk handle payment success
   const handlePaymentSuccess = async (orderData: Order) => {
+    // GUARD: Prevent multiple calls - hanya handle sekali
+    if (hasHandledSuccess) {
+      console.log('⚠️ Payment success already handled, skipping duplicate call');
+      return;
+    }
+
+    // Set flag immediately to prevent multiple calls
+    setHasHandledSuccess(true);
+
     console.log('✅ Payment SUCCESS detected!', {
       orderNumber: orderData.orderNumber,
       paymentStatus: orderData.paymentStatus,
@@ -164,44 +174,29 @@ export function PaymentModal({
     setIsExpired(false);
     setTimeRemaining(null);
     
-    showSuccess('Pembayaran berhasil', 'Pembayaran berhasil!'); 
-    
-    // Step 1: Tampilkan ceklis di pop pembayaran (paymentSuccess = true)
-    // Step 2: Setelah 1 detik, tampilkan pop ceklis di tengah
+    // Step 1: Tampilkan ceklis di dalam pop pembayaran (paymentSuccess = true)
+    // Step 2: Setelah delay, tutup PaymentModal
+    // Step 3: Setelah PaymentModal tertutup, tampilkan notification "Pembayaran berhasil" di tengah
+    // Step 4: Setelah notification, redirect ke halaman order detail
     setTimeout(() => {
       if (isMountedRef.current) {
-        setShowSuccessAnimation(true);
-        setAnimationProgress(0);
+        // Tutup PaymentModal dulu
+        onClose();
         
-        // Animate progress dari 0 ke 100 (1 detik)
-        const animationDuration = 1000;
-        const startTime = Date.now();
-        
-        const animateProgress = () => {
-          if (!isMountedRef.current) return;
+        // Setelah PaymentModal tertutup, tampilkan notification "Pembayaran berhasil"
+        setTimeout(() => {
+          // Hanya tampilkan notification sekali - konsisten dengan halaman lain
+          showSuccess('Pembayaran berhasil', 'Pembayaran berhasil!');
           
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(100, (elapsed / animationDuration) * 100);
-          setAnimationProgress(progress);
-          
-          if (progress < 100) {
-            requestAnimationFrame(animateProgress);
-          } else {
-            // Animation complete, redirect setelah 500ms
-            setTimeout(() => {
-              if (isMountedRef.current) {
-                setShowSuccessAnimation(false);
-                if (onPaymentSuccess) {
-                  onPaymentSuccess();
-                }
-              }
-            }, 500);
-          }
-        };
-        
-        requestAnimationFrame(animateProgress);
+          // Redirect setelah notification muncul
+          setTimeout(() => {
+            if (onPaymentSuccess) {
+              onPaymentSuccess();
+            }
+          }, 1500); // Delay 1.5 detik untuk notification muncul dulu
+        }, 300); // Delay 300ms untuk memastikan PaymentModal sudah tertutup
       }
-    }, 1000); // Delay 1 detik untuk menampilkan ceklis di pop dulu
+    }, 2000); // Delay 2 detik untuk menampilkan ceklis di pop dulu
   };
 
   // Reset state when modal closes
@@ -214,8 +209,7 @@ export function PaymentModal({
       setPaymentSuccess(false);
       setTimeRemaining(null);
       setIsExpired(false);
-      setShowSuccessAnimation(false);
-      setAnimationProgress(0);
+      setHasHandledSuccess(false); // Reset guard flag ketika modal ditutup
       
       // Clear intervals
       if (pollingIntervalRef.current) {
@@ -228,13 +222,22 @@ export function PaymentModal({
       }
     } else {
       isMountedRef.current = true;
+      // Ketika modal dibuka, set order dari initialOrderData jika ada
+      if (initialOrderData && !order) {
+        setOrder(initialOrderData);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialOrderData, order]);
 
   // Fetch order details - Initial Load
   useEffect(() => {
     if (!isOpen || !orderNumber) return;
     if (order) return; // Jangan fetch jika sudah ada order
+    if (initialOrderData) {
+      // Jika ada initialOrderData, gunakan itu
+      setOrder(initialOrderData);
+      return;
+    }
 
     let isMounted = true;
 
@@ -255,8 +258,8 @@ export function PaymentModal({
 
           setOrder(orderData);
           
-          // Jika sudah PAID, langsung handle success
-          if (orderData.paymentStatus === 'PAID') {
+          // Jika sudah PAID, langsung handle success (guard sudah ada di handlePaymentSuccess)
+          if (orderData.paymentStatus === 'PAID' && !hasHandledSuccess) {
             handlePaymentSuccess(orderData);
             return;
           }
@@ -282,7 +285,7 @@ export function PaymentModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, orderNumber]);
+  }, [isOpen, orderNumber, initialOrderData, order]);
 
   // Fetch payment timeout minutes from settings
   useEffect(() => {
@@ -377,7 +380,10 @@ export function PaymentModal({
         
         if (checkResponse.ok && checkData.success && checkData.data.paymentStatus === 'PAID') {
           console.log('Payment is PAID, aborting auto-cancel');
-          handlePaymentSuccess(checkData.data);
+          // Guard sudah ada di handlePaymentSuccess, tapi tambahkan check untuk extra safety
+          if (!hasHandledSuccess) {
+            handlePaymentSuccess(checkData.data);
+          }
           return;
         }
 
@@ -449,8 +455,8 @@ export function PaymentModal({
             isPaid: newPaymentStatus === 'PAID',
           });
           
-          // CRITICAL: Jika PAID, langsung handle success
-          if (newPaymentStatus === 'PAID') {
+          // CRITICAL: Jika PAID, langsung handle success (guard sudah ada di handlePaymentSuccess)
+          if (newPaymentStatus === 'PAID' && !hasHandledSuccess) {
             handlePaymentSuccess(data.data);
             return;
           }
@@ -476,7 +482,7 @@ export function PaymentModal({
       }
       setIsPolling(false);
     };
-  }, [isOpen, orderNumber, order, paymentSuccess]);
+  }, [isOpen, orderNumber, order, paymentSuccess, hasHandledSuccess]);
 
   // Helper functions
   const handleCopy = (text: string) => {
@@ -540,73 +546,16 @@ export function PaymentModal({
 
   return (
     <>
-      {/* Success Animation Overlay - Pop ceklis di tengah layar */}
-      {showSuccessAnimation && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center gap-6 animate-in zoom-in duration-300 max-w-sm w-full mx-4">
-            {/* Animated Check Circle */}
-            <div className="relative w-32 h-32">
-              <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  stroke="#e5e7eb"
-                  strokeWidth="4"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray={String(2 * Math.PI * 45)}
-                  strokeDashoffset={String(2 * Math.PI * 45 * (1 - animationProgress / 100))}
-                  className="transition-all duration-100 ease-out"
-                />
-              </svg>
-              
-              {/* Check Icon - muncul saat progress 100% */}
-              {animationProgress >= 100 && (
-                <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in duration-300">
-                  <Check className="w-16 h-16 text-green-600" strokeWidth="4" />
-                </div>
-              )}
-              
-              {/* Loading spinner saat progress < 100% */}
-              {animationProgress < 100 && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
-                </div>
-              )}
-            </div>
-            
-            {/* Text */}
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                {animationProgress >= 100 ? 'Pembayaran Berhasil!' : 'Memproses Pembayaran...'}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {animationProgress >= 100 ? 'Mengalihkan ke halaman detail pesanan...' : 'Mohon tunggu sebentar'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Payment Modal - Slide up from bottom */}
-      <div className={`fixed inset-0 z-50 flex flex-col ${showSuccessAnimation ? 'pointer-events-none' : ''}`}>
+      {/* Payment Modal - Center modal (seperti SuccessNotification) */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
         {/* Backdrop */}
         <div
-          className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${showSuccessAnimation ? 'opacity-0' : 'opacity-100'}`}
+          className="absolute inset-0 bg-black/40 transition-opacity duration-300 opacity-100 animate-in fade-in duration-200"
           onClick={onClose}
         />
         
-        {/* Modal Content - Slide up from bottom */}
-        <div className={`relative mt-auto bg-white rounded-t-2xl sm:rounded-t-3xl shadow-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300 ${showSuccessAnimation ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        {/* Modal Content - Center modal dengan zoom-in animation */}
+        <div className="relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-h-[90vh] sm:max-h-[85vh] w-full max-w-2xl mx-4 overflow-hidden flex flex-col animate-in zoom-in duration-300">
           {/* Header */}
           <div className="relative flex items-center justify-center px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-gray-200 bg-white">
             <div className="flex-1 text-center">
@@ -627,24 +576,16 @@ export function PaymentModal({
             </button>
           </div>
 
-          {/* Loading Overlay - DIHAPUS: Tidak perlu menutupi QR/VA, polling berjalan di background */}
-          {/* User harus bisa lihat QR/VA kapan saja, polling hanya background process */}
-
-          {/* Content */}
+          {/* Content - Data sudah di-fetch sebelumnya, langsung tampilkan */}
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-            {isFetching && !order ? (
-              <div className="text-center py-12">
-                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
-                <p className="text-sm text-gray-600">Memuat detail pesanan...</p>
-              </div>
-            ) : !order ? (
+            {!order ? (
               <div className="text-center py-12">
                 <p className="text-red-500">Gagal memuat detail pesanan</p>
               </div>
             ) : (
               <>
-                {/* Payment Success - Tampilkan ceklis di pop pembayaran */}
-                {paymentSuccess && !showSuccessAnimation && (
+                {/* Payment Success - Tampilkan ceklis di dalam pop pembayaran */}
+                {paymentSuccess && (
                   <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                       <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center animate-in zoom-in duration-300">

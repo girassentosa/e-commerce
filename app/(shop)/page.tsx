@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import HomePageClient from './HomePageClient';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { getStoreSettingsServer } from '@/lib/settings';
 
 export const revalidate = 60;
 
@@ -59,7 +60,7 @@ function mapProduct(product: ProductRecord) {
 }
 
 export default async function HomePage() {
-  const [productsRaw, categories] = await Promise.all([
+  const [productsRaw, categories, settings] = await Promise.all([
     prisma.product.findMany({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
@@ -96,9 +97,11 @@ export default async function HomePage() {
         name: 'asc',
       },
     }),
+    getStoreSettingsServer(),
   ]);
 
   const products = productsRaw.map(mapProduct);
+  const currency = settings.currency || 'IDR';
 
   return (
     <Suspense
@@ -114,6 +117,7 @@ export default async function HomePage() {
       <HomePageClient
         initialProducts={products}
         initialCategories={categories}
+        initialCurrency={currency}
       />
     </Suspense>
   );

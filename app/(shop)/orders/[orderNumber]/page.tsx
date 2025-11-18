@@ -44,7 +44,8 @@ export default function OrderDetailPage() {
     if (status === 'authenticated' && orderNumber) {
       fetchOrderDetail(orderNumber);
     }
-  }, [status, orderNumber, fetchOrderDetail]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, orderNumber]);
 
   // Fetch payment method name
   useEffect(() => {
@@ -84,10 +85,10 @@ export default function OrderDetailPage() {
       }
     };
 
-    if (currentOrder) {
+    if (currentOrder?.paymentMethod) {
       fetchPaymentMethodName();
     }
-  }, [currentOrder]);
+  }, [currentOrder?.paymentMethod, currentOrder?.paymentChannel]);
 
   // Polling untuk auto-refresh jika payment status masih PENDING
   useEffect(() => {
@@ -145,7 +146,8 @@ export default function OrderDetailPage() {
         pollingIntervalRef.current = null;
       }
     };
-  }, [currentOrder, orderNumber, status, fetchOrderDetail]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderNumber, status, currentOrder?.paymentStatus, currentOrder?.paymentMethod]);
 
   // Fetch reviews for products in this order
   useEffect(() => {

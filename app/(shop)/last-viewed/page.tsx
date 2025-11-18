@@ -53,7 +53,7 @@ function LastViewedPageContent() {
             <div className="flex items-center justify-between h-14 sm:h-16">
               <button
                 onClick={handleBack}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2 rounded-lg flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
                 aria-label="Kembali"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-700" />
@@ -112,7 +112,7 @@ function LastViewedPageContent() {
           </p>
           <Link
             href="/last-viewed"
-            className="text-indigo-600 hover:text-indigo-700 font-medium"
+            className="text-indigo-600 font-medium"
           >
             Hapus pencarian
           </Link>

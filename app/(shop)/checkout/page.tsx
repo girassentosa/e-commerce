@@ -63,6 +63,7 @@ function CheckoutPageContent() {
   const { formatPrice } = useCurrency();
   const [selectedAddress, setSelectedAddress] = useState<ShippingAddress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [customPaymentMethods, setCustomPaymentMethods] = useState<PaymentMethod[]>([]);
   const searchParams = useSearchParams();
   const flow = searchParams.get('flow');
@@ -78,6 +79,7 @@ function CheckoutPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentOrderNumber, setPaymentOrderNumber] = useState<string | null>(null);
+  const [paymentOrderData, setPaymentOrderData] = useState<any>(null);
   const [globalShippingSettings, setGlobalShippingSettings] = useState<{
     freeShippingThreshold: number;
     defaultShippingCost: number;
@@ -124,6 +126,7 @@ function CheckoutPageContent() {
       if (status === 'authenticated') {
         try {
           setIsLoading(true);
+          
           const response = await fetch('/api/addresses');
           const data = await response.json();
           
@@ -165,6 +168,17 @@ function CheckoutPageContent() {
 
     fetchAddress();
   }, [status, addressId, setAddressId]);
+
+  // Reset navigating state after data loaded (similar to products/orders page)
+  useEffect(() => {
+    if (isNavigating && !isLoading && selectedAddress) {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        setIsNavigating(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedAddress, isLoading, isNavigating]);
 
   useEffect(() => {
     let isActive = true;
@@ -223,6 +237,7 @@ function CheckoutPageContent() {
   };
 
   const handleSelectAddress = () => {
+    setIsNavigating(true);
     router.push('/checkout/address');
   };
 
@@ -402,6 +417,7 @@ function CheckoutPageContent() {
   const paymentDescription =
     selectedPaymentInfo?.description ?? 'Silakan pilih metode pembayaran sebelum melanjutkan.';
   const handleSelectPayment = () => {
+    setIsNavigating(true);
     router.push('/checkout/payment');
   };
 
@@ -483,16 +499,42 @@ function CheckoutPageContent() {
       // Check payment method to determine next step
       if (data.data?.orderNumber) {
         const orderPaymentMethod = data.data?.paymentMethod;
+        const orderNum = data.data.orderNumber;
         
-        // For COD, redirect to success page immediately
-        if (orderPaymentMethod === 'COD') {
-          showSuccess('Berhasil', 'Pesanan berhasil dibuat!');
-        router.push(`/checkout/success?order=${data.data.orderNumber}`);
-      } else {
-          // For QRIS/VA, show payment modal
-          // Payment modal will be shown via state
-          setShowPaymentModal(true);
-          setPaymentOrderNumber(data.data.orderNumber);
+        // Payment methods that require PaymentModal (with payment details)
+        const requiresPaymentModal = orderPaymentMethod === 'QRIS' || orderPaymentMethod === 'VIRTUAL_ACCOUNT';
+        
+        if (requiresPaymentModal) {
+          // For QRIS/VA, show notification "Memproses pembayaran" dulu
+          showSuccess('Memproses pembayaran', 'Mohon tunggu sebentar...');
+          
+          // Fetch order data sebelum membuka modal (agar data siap saat modal muncul)
+          setPaymentOrderNumber(orderNum);
+          
+          // Fetch order data di background
+          fetch(`/api/orders/${orderNum}`)
+            .then(res => res.json())
+            .then(orderData => {
+              if (orderData.success) {
+                // Simpan order data untuk di-pass ke PaymentModal
+                setPaymentOrderData(orderData.data);
+                // Setelah data siap dan notification selesai (1.5 detik), buka modal
+                setTimeout(() => {
+                  setShowPaymentModal(true);
+                }, 1500);
+              } else {
+                showError('Gagal', 'Gagal memuat detail pesanan');
+              }
+            })
+            .catch(error => {
+              console.error('Error fetching order:', error);
+              showError('Gagal', 'Gagal memuat detail pesanan');
+            });
+        } else {
+          // For COD and other direct transfer methods (CREDIT_CARD, etc.)
+          // Show success notification immediately and redirect to order detail
+          showSuccess('Pembayaran berhasil', 'Pembayaran berhasil!');
+          router.push(`/orders/${orderNum}`);
         }
       } else {
         showSuccess('Berhasil', 'Pesanan berhasil dibuat!');
@@ -588,16 +630,17 @@ function CheckoutPageContent() {
 
       <main className={`flex-1 overflow-y-auto ${(isBuyNowFlow || (!isBuyNowFlow && selectedCartItems.length > 0)) ? 'pb-28' : 'pb-10'}`}>
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-6 space-y-4">
-          {isLoading ? (
-            <section className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm p-5 sm:p-6 flex gap-2 items-start">
-              <div className="p-1 text-blue-600 flex-shrink-0">
-                <MapPin className="w-4 h-4" />
+          {/* Loading State - Hide data lama dan tampilkan loading saat navigating */}
+          {isNavigating ? (
+            <div className="min-h-[400px] flex items-center justify-center bg-white rounded-lg border border-gray-200">
+              <div className="text-center">
+                <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-gray-600 text-sm">Memuat data...</p>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm text-gray-400">Memuat alamat...</div>
-              </div>
-            </section>
-          ) : selectedAddress ? (
+            </div>
+          ) : (
+            <>
+          {selectedAddress ? (
             <section className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm p-5 sm:p-6 flex gap-2 items-start">
               <div className="p-1 text-blue-600 flex-shrink-0">
                 <MapPin className="w-4 h-4" />
@@ -1055,9 +1098,11 @@ function CheckoutPageContent() {
                         {formatPrice(totalPembayaran)}
                       </span>
                     </div>
-          </div>
-          </div>
+                  </div>
+                </div>
               </section>
+            </>
+          )}
             </>
           )}
         </div>
@@ -1099,14 +1144,17 @@ function CheckoutPageContent() {
         <PaymentModal
           isOpen={showPaymentModal}
           orderNumber={paymentOrderNumber}
+          initialOrderData={paymentOrderData}
           onClose={() => {
             setShowPaymentModal(false);
             setPaymentOrderNumber(null);
+            setPaymentOrderData(null);
             router.push(`/orders/${paymentOrderNumber}`);
           }}
           onPaymentSuccess={() => {
             setShowPaymentModal(false);
             setPaymentOrderNumber(null);
+            setPaymentOrderData(null);
             router.push(`/orders/${paymentOrderNumber}`);
           }}
         />

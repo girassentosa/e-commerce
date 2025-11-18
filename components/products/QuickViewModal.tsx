@@ -216,9 +216,6 @@ export function QuickViewModal({
                     ))}
                   </div>
                   <span className="text-sm font-semibold text-gray-900">{ratingNum.toFixed(1)}</span>
-                  {product.reviewCount && product.reviewCount > 0 && (
-                    <span className="text-sm text-gray-500">({product.reviewCount} reviews)</span>
-                  )}
                 </div>
               )}
 

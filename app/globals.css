@@ -425,25 +425,11 @@ html {
 }
 
 /* ===== BUTTON ANIMATIONS ===== */
+/* Removed hover/active animations for better performance and UX */
 button:not(.admin-no-animation):not(.admin-sidebar button):not(.admin-header button):not(.admin-settings-tabs-container button),
 .btn:not(.admin-no-animation),
 [role="button"]:not(.admin-no-animation) {
-  transition: all var(--transition-base);
   cursor: pointer;
-}
-
-button:not(.admin-no-animation):not(.admin-sidebar button):not(.admin-header button):not(.admin-settings-tabs-container button):not(:disabled):hover,
-.btn:not(.admin-no-animation):not(:disabled):hover,
-[role="button"]:not(.admin-no-animation):not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-button:not(.admin-no-animation):not(.admin-sidebar button):not(.admin-header button):not(.admin-settings-tabs-container button):not(:disabled):active,
-.btn:not(.admin-no-animation):not(:disabled):active,
-[role="button"]:not(.admin-no-animation):not(:disabled):active {
-  transform: translateY(0);
-  box-shadow: var(--shadow-sm);
 }
 
 button:disabled,
@@ -454,25 +440,11 @@ button:disabled,
 }
 
 /* ===== CARD HOVER ANIMATIONS ===== */
-.card-hover,
-[class*="group"]:has(.card) {
-  transition: all var(--transition-base);
-}
+/* Removed hover animations for better performance and UX */
 
-.card-hover:hover,
-[class*="group"]:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-/* Product Card Specific */
+/* Product Card Specific - No hover animations */
 .product-card {
-  transition: all var(--transition-base);
-}
-
-.product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
+  /* No transitions or hover effects */
 }
 
 /* ===== HEART/WISHLIST ANIMATION ===== */

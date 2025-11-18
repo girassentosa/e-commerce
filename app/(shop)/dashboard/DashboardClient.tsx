@@ -443,7 +443,7 @@ export function DashboardClient({ initialStats, initialCartCount }: DashboardCli
                       </p>
                     </Link>
 
-                    <Link href="/reviews/my" className="flex flex-col items-center flex-shrink-0 min-w-[70px] sm:min-w-[80px]">
+                    <Link href="/orders?status=DELIVERED" className="flex flex-col items-center flex-shrink-0 min-w-[70px] sm:min-w-[80px]">
                       <div className="relative mb-1 overflow-visible pr-4">
                         <Star className="w-6 h-6 text-gray-600" />
                         {dashboardData.stats.beriPenilaian > 0 && (

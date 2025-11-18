@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { getStoreSettingsServer } from '@/lib/settings';
 import ProductsPageClient from './ProductsPageClient';
 
 export const dynamic = 'force-dynamic';
@@ -126,7 +127,7 @@ export default async function ProductsPage({
 
   const skip = (page - 1) * limit;
 
-  const [productsRaw, total, categories] = await Promise.all([
+  const [productsRaw, total, categories, settings] = await Promise.all([
     prisma.product.findMany({
       where,
       orderBy,
@@ -165,6 +166,7 @@ export default async function ProductsPage({
         name: 'asc',
       },
     }),
+    getStoreSettingsServer(),
   ]);
 
   const products = productsRaw.map(mapProduct);
@@ -172,6 +174,7 @@ export default async function ProductsPage({
 
   // Create unique key based on categoryId and page to force re-render with new data
   const componentKey = `products-${categoryId || 'all'}-page-${page}`;
+  const currency = settings.currency || 'IDR';
 
   return (
     <Suspense
@@ -196,6 +199,7 @@ export default async function ProductsPage({
           },
         }}
         categories={categories}
+        initialCurrency={currency}
       />
     </Suspense>
   );

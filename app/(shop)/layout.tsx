@@ -99,24 +99,24 @@ function ShopLayoutContent({
               {/* Home */}
               <Link
                 href="/"
-                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative group transition-all min-h-[44px] touch-manipulation"
+                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative min-h-[44px] touch-manipulation"
               >
                 {isActive('/') && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></div>
                 )}
                 <div
-                  className={`p-2 sm:p-2.5 rounded-xl transition-all duration-300 ${
-                    isActive('/') ? 'bg-blue-100 scale-110' : 'group-active:bg-gray-100 group-active:scale-95'
+                  className={`p-2 sm:p-2.5 rounded-xl ${
+                    isActive('/') ? 'bg-blue-100' : ''
                   }`}
                 >
                   <Home
-                    className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                    className={`w-5 h-5 sm:w-6 sm:h-6 ${
                       isActive('/') ? 'text-blue-600' : 'text-gray-600'
                     }`}
                   />
                 </div>
                 <span
-                  className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 transition-colors ${
+                  className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 ${
                     isActive('/') ? 'text-blue-600' : 'text-gray-600'
                   }`}
                 >
@@ -127,24 +127,24 @@ function ShopLayoutContent({
               {/* Categories */}
               <Link
                 href="/products"
-                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative group transition-all min-h-[44px] touch-manipulation"
+                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative min-h-[44px] touch-manipulation"
               >
                 {isActive('/products') && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></div>
                 )}
                 <div
-                  className={`p-2 sm:p-2.5 rounded-xl transition-all duration-300 ${
-                    isActive('/products') ? 'bg-blue-100 scale-110' : 'group-active:bg-gray-100 group-active:scale-95'
+                  className={`p-2 sm:p-2.5 rounded-xl ${
+                    isActive('/products') ? 'bg-blue-100' : ''
                   }`}
                 >
                   <Grid3x3
-                    className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                    className={`w-5 h-5 sm:w-6 sm:h-6 ${
                       isActive('/products') ? 'text-blue-600' : 'text-gray-600'
                     }`}
                   />
                 </div>
                 <span
-                  className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 transition-colors ${
+                  className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 ${
                     isActive('/products') ? 'text-blue-600' : 'text-gray-600'
                   }`}
                 >
@@ -155,24 +155,24 @@ function ShopLayoutContent({
               {/* Notifications */}
               <Link
                 href="/notifications"
-                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative group transition-all min-h-[44px] touch-manipulation"
+                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative min-h-[44px] touch-manipulation"
               >
                 {isActive('/notifications') && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></div>
                 )}
                 <div
-                  className={`p-2 sm:p-2.5 rounded-xl relative transition-all duration-300 ${
-                    isActive('/notifications') ? 'bg-blue-100 scale-110' : 'group-active:bg-gray-100 group-active:scale-95'
+                  className={`p-2 sm:p-2.5 rounded-xl relative ${
+                    isActive('/notifications') ? 'bg-blue-100' : ''
                   }`}
                 >
                   <Bell
-                    className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                    className={`w-5 h-5 sm:w-6 sm:h-6 ${
                       isActive('/notifications') ? 'text-blue-600' : 'text-gray-600'
                     }`}
                   />
                 </div>
                 <span
-                  className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 transition-colors ${
+                  className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 ${
                     isActive('/notifications') ? 'text-blue-600' : 'text-gray-600'
                   }`}
                 >
@@ -183,24 +183,24 @@ function ShopLayoutContent({
               {/* Profile */}
               <Link
                 href="/dashboard"
-                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative group transition-all min-h-[44px] touch-manipulation"
+                className="flex flex-col items-center justify-center py-2 sm:py-3 px-2 relative min-h-[44px] touch-manipulation"
               >
                 {isActive('/profile') && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></div>
                 )}
                 <div
-                  className={`p-2 sm:p-2.5 rounded-xl transition-all duration-300 ${
-                    isActive('/profile') ? 'bg-blue-100 scale-110' : 'group-active:bg-gray-100 group-active:scale-95'
+                  className={`p-2 sm:p-2.5 rounded-xl ${
+                    isActive('/profile') ? 'bg-blue-100' : ''
                   }`}
                 >
                   <User
-                    className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors ${
+                    className={`w-5 h-5 sm:w-6 sm:h-6 ${
                       isActive('/profile') ? 'text-blue-600' : 'text-gray-600'
                     }`}
                   />
                 </div>
                 <span
-                  className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 transition-colors ${
+                  className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 sm:mt-1 ${
                     isActive('/profile') ? 'text-blue-600' : 'text-gray-600'
                   }`}
                 >

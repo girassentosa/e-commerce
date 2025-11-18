@@ -51,11 +51,13 @@ interface Category {
 interface ProductsPageClientProps {
   productsData: ProductsData;
   categories: Category[];
+  initialCurrency?: string;
 }
 
 export default function ProductsPageClient({
   productsData,
   categories,
+  initialCurrency,
 }: ProductsPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -82,10 +84,18 @@ export default function ProductsPageClient({
     setSelectedCategory(currentFilters.categoryId || null);
   }, [currentFilters.categoryId]);
 
-  // Reset navigating state when filters change (data has loaded)
+  // Reset navigating state when productsData changes (data has actually loaded)
+  // This ensures loading state disappears as soon as new data is available
+  // Check both products array and pagination to detect actual data changes
   useEffect(() => {
-    setIsNavigating(false);
-  }, [currentFilters.categoryId, currentFilters.page]);
+    if (isNavigating) {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        setIsNavigating(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [productsData.products, productsData.pagination.page, isNavigating]);
 
   const categoryList = useMemo(() => {
     if (categories.length > 0) {
@@ -273,60 +283,62 @@ export default function ProductsPageClient({
 
           {/* Products Section - Struktur identik dengan halaman utama */}
           <div className="relative">
-            {/* Loading Overlay */}
-            {(isNavigating || isPending) && (
-              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+            {/* Loading State - Hide data lama dan tampilkan loading saat navigating */}
+            {isNavigating ? (
+              <div className="min-h-[400px] flex items-center justify-center bg-white rounded-lg border border-gray-200">
                 <div className="text-center">
                   <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                   <p className="text-gray-600 text-sm">Memuat produk...</p>
                 </div>
               </div>
-            )}
-
-            {/* Search Results Info */}
-            {urlSearchQuery && filteredProducts.length > 0 && (
-              <div className="mb-4 text-sm text-gray-600">
-                Menampilkan {filteredProducts.length} dari {productsData.products.length} produk
-              </div>
-            )}
-
-            {/* No search results */}
-            {urlSearchQuery && filteredProducts.length === 0 && productsData.products.length > 0 ? (
-              <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Tidak ada hasil</h2>
-                <p className="text-gray-600 mb-6">
-                  Tidak ada produk yang cocok dengan "{urlSearchQuery}"
-                </p>
-              </div>
-            ) : filteredProducts.length > 0 ? (
+            ) : (
               <>
-                {/* Products Grid */}
-                <div className="mb-6 sm:mb-8 w-screen -ml-[calc((100vw-100%)/2)] sm:w-auto sm:ml-0">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0 sm:gap-2 md:gap-3">
-                    {filteredProducts.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                      />
-                    ))}
+                {/* Search Results Info */}
+                {urlSearchQuery && filteredProducts.length > 0 && (
+                  <div className="mb-4 text-sm text-gray-600">
+                    Menampilkan {filteredProducts.length} dari {productsData.products.length} produk
                   </div>
-                </div>
+                )}
 
-                {/* Pagination - only show when not searching */}
-                {!urlSearchQuery && productsData.pagination.totalPages > 1 && (
-                  <div className="mt-8">
-                    <Pagination
-                      currentPage={productsData.pagination.page}
-                      totalPages={productsData.pagination.totalPages}
-                      onPageChange={handlePageChange}
-                    />
+                {/* No search results */}
+                {urlSearchQuery && filteredProducts.length === 0 && productsData.products.length > 0 ? (
+                  <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Tidak ada hasil</h2>
+                    <p className="text-gray-600 mb-6">
+                      Tidak ada produk yang cocok dengan "{urlSearchQuery}"
+                    </p>
+                  </div>
+                ) : filteredProducts.length > 0 ? (
+                  <>
+                    {/* Products Grid */}
+                    <div className="mb-6 sm:mb-8 w-screen -ml-[calc((100vw-100%)/2)] sm:w-auto sm:ml-0">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0 sm:gap-2 md:gap-3">
+                        {filteredProducts.map((product) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Pagination - only show when not searching */}
+                    {!urlSearchQuery && productsData.pagination.totalPages > 1 && (
+                      <div className="mt-8">
+                        <Pagination
+                          currentPage={productsData.pagination.page}
+                          totalPages={productsData.pagination.totalPages}
+                          onPageChange={handlePageChange}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                    <p className="text-gray-600">No products available</p>
                   </div>
                 )}
               </>
-            ) : (
-              <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-                <p className="text-gray-600">No products available</p>
-              </div>
             )}
           </div>
         </div>

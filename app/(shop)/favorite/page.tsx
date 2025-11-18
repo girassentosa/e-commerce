@@ -162,7 +162,7 @@ function FavoritePageContent() {
                 </form>
                 <button
                   onClick={handleCancelSearch}
-                  className="text-sm sm:text-base text-gray-700 hover:text-gray-900 font-medium px-2 py-1"
+                  className="text-sm sm:text-base text-gray-700 font-medium px-2 py-1"
                 >
                   Batalkan
                 </button>
@@ -171,7 +171,7 @@ function FavoritePageContent() {
               <div className="flex items-center justify-between h-14 sm:h-16">
                 <button
                   onClick={handleBack}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="p-2 rounded-lg flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
                   aria-label="Kembali"
                 >
                   <ArrowLeft className="w-5 h-5 text-gray-700" />
@@ -181,7 +181,7 @@ function FavoritePageContent() {
                 </h1>
                 <button
                   onClick={handleSearchClick}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="p-2 rounded-lg flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
                   aria-label="Search"
                 >
                   <Search className="w-5 h-5 text-gray-700" />
@@ -231,7 +231,7 @@ function FavoritePageContent() {
           </p>
           <Link
             href="/favorite"
-            className="text-indigo-600 hover:text-indigo-700 font-medium"
+            className="text-indigo-600 font-medium"
           >
             Hapus pencarian
           </Link>
@@ -278,7 +278,7 @@ function FavoritePageContent() {
                   </span>
                 </div>
               </div>
-              <div className={`px-4 py-2 bg-gray-50 rounded-lg border transition-colors ${
+              <div className={`px-4 py-2 bg-gray-50 rounded-lg border ${
                 selectedItems.length > 0
                   ? 'border-red-600'
                   : 'border-gray-200'
@@ -286,9 +286,9 @@ function FavoritePageContent() {
                 <button
                   onClick={handleRemoveSelected}
                   disabled={selectedItems.length === 0 || actionLoading === 'bulk'}
-                  className={`text-sm font-medium transition-colors ${
+                  className={`text-sm font-medium ${
                     selectedItems.length > 0
-                      ? 'text-red-600 hover:text-red-700 cursor-pointer'
+                      ? 'text-red-600 cursor-pointer'
                       : 'text-gray-400 cursor-not-allowed'
                   }`}
                 >

@@ -210,11 +210,11 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* ==================== CONTENT SECTION ==================== */}
-        <div className="p-4 space-y-2 sm:p-4 min-w-0 overflow-hidden">
+        <div className="p-3 sm:p-4 min-w-0 overflow-hidden">
           
-          {/* Rating & Review Count - DI ATAS NAMA */}
+          {/* Rating - DI ATAS NAMA */}
           {ratingNum > 0 && (
-            <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-1 min-w-0 overflow-hidden mb-1.5">
               <div className="flex items-center gap-0.5 flex-shrink-0">
                 {[...Array(5)].map((_, i) => (
                   <Star
@@ -230,17 +230,12 @@ export function ProductCard({ product }: ProductCardProps) {
               <span className="text-[10px] sm:text-xs font-semibold text-gray-700 flex-shrink-0 whitespace-nowrap">
                 ({ratingNum.toFixed(1)})
               </span>
-              {product.reviewCount && product.reviewCount > 0 && (
-                <span className="hidden sm:inline text-xs text-gray-500">
-                  {product.reviewCount} reviews
-                </span>
-              )}
             </div>
           )}
 
           {/* Product Name - Max 2 Lines */}
           <h3 
-            className="font-semibold text-gray-900 line-clamp-2 leading-tight min-h-[2rem] sm:min-h-[2.5rem]"
+            className="font-semibold text-gray-900 line-clamp-2 leading-tight min-h-[2rem] sm:min-h-[2.5rem] mb-1.5"
             style={{ 
               fontSize: '0.75rem',
             }}
@@ -248,13 +243,13 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.name}
           </h3>
 
-          {/* Price Display */}
-          <div className="flex items-baseline gap-2 flex-wrap min-w-0">
-            <span className="text-base sm:text-lg font-bold text-blue-600 truncate min-w-0">
+          {/* Price Display - 1 baris di mobile, harga asli yang di-truncate */}
+          <div className="flex items-baseline gap-1.5 sm:gap-2 flex-nowrap min-w-0 overflow-hidden mb-1.5">
+            <span className="text-base sm:text-lg font-bold text-blue-600 flex-shrink-0 whitespace-nowrap">
               {formatPrice(displayPrice)}
             </span>
             {hasDiscount && (
-              <span className="text-xs sm:text-sm text-gray-400 line-through flex-shrink-0">
+              <span className="text-xs sm:text-sm text-gray-400 line-through truncate min-w-0">
                 {formatPrice(product.price)}
               </span>
             )}

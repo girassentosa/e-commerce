@@ -8,9 +8,10 @@ import { getStoreSettings, clearSettingsCache } from '@/lib/settings';
 import { formatCurrency } from '@/lib/utils';
 import { getCurrencyLocale } from '@/lib/order-helpers';
 
-export function useCurrency() {
-  const [currency, setCurrency] = useState<string>('USD');
-  const [loading, setLoading] = useState(true);
+export function useCurrency(initialCurrency?: string) {
+  // Use initialCurrency if provided, otherwise default to IDR (most common for Indonesian stores)
+  const [currency, setCurrency] = useState<string>(initialCurrency || 'IDR');
+  const [loading, setLoading] = useState(!initialCurrency); // If initialCurrency provided, not loading
 
   const fetchCurrency = async () => {
     try {
@@ -18,21 +19,30 @@ export function useCurrency() {
       clearSettingsCache();
       
       const settings = await getStoreSettings();
-      const currencyCode = settings.currency || 'USD';
+      const currencyCode = settings.currency || 'IDR';
       
       console.log('[useCurrency] Fetched currency:', currencyCode, 'from settings:', settings);
       
       setCurrency(currencyCode);
     } catch (error) {
       console.error('Error fetching currency:', error);
-      setCurrency('USD'); // Fallback to USD
+      setCurrency(initialCurrency || 'IDR'); // Fallback to initialCurrency or IDR
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCurrency();
+    // If initialCurrency is provided, use it immediately and fetch in background
+    if (initialCurrency) {
+      setCurrency(initialCurrency);
+      setLoading(false);
+      // Still fetch in background to ensure we have latest value
+      fetchCurrency();
+    } else {
+      // If no initialCurrency, fetch immediately
+      fetchCurrency();
+    }
     
     // Listen for storage event to refresh when settings change
     const handleStorageChange = () => {
@@ -48,7 +58,7 @@ export function useCurrency() {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('settingsUpdated', handleStorageChange);
     };
-  }, []);
+  }, [initialCurrency]);
 
   const formatPrice = (amount: number | string) => {
     const currencyLocale = getCurrencyLocale(currency);

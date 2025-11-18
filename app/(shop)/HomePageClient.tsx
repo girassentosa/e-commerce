@@ -56,16 +56,18 @@ interface Category {
 interface HomePageClientProps {
   initialProducts: Product[];
   initialCategories: Category[];
+  initialCurrency?: string;
 }
 
 export default function HomePageClient({
   initialProducts,
   initialCategories,
+  initialCurrency,
 }: HomePageClientProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { formatPrice } = useCurrency();
+  const { formatPrice } = useCurrency(initialCurrency);
   
   const products = initialProducts;
   const categories = initialCategories;
