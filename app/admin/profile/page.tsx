@@ -30,7 +30,7 @@ export default async function AdminProfilePage() {
     redirect('/login?callbackUrl=/admin/profile');
   }
 
-  return (
+    return (
     <AdminProfileClient
       initialProfile={{
         email: user.email,

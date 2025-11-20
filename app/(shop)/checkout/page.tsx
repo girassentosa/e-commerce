@@ -498,7 +498,7 @@ function CheckoutPageContent() {
 
       // Check payment method to determine next step
       if (data.data?.orderNumber) {
-        const orderPaymentMethod = data.data?.paymentMethod;
+        const orderPaymentMethod = data.data?.order?.paymentMethod;
         const orderNum = data.data.orderNumber;
         
         // Payment methods that require PaymentModal (with payment details)
@@ -508,28 +508,22 @@ function CheckoutPageContent() {
           // For QRIS/VA, show notification "Memproses pembayaran" dulu
           showSuccess('Memproses pembayaran', 'Mohon tunggu sebentar...');
           
-          // Fetch order data sebelum membuka modal (agar data siap saat modal muncul)
-          setPaymentOrderNumber(orderNum);
+          // Langsung pakai data order dari response checkout (sudah lengkap dengan paymentTransactions)
+          // Tidak perlu fetch ulang karena data sudah tersedia di response
+          const orderData = data.data.order;
           
-          // Fetch order data di background
-          fetch(`/api/orders/${orderNum}`)
-            .then(res => res.json())
-            .then(orderData => {
-              if (orderData.success) {
-                // Simpan order data untuk di-pass ke PaymentModal
-                setPaymentOrderData(orderData.data);
-                // Setelah data siap dan notification selesai (1.5 detik), buka modal
-                setTimeout(() => {
-                  setShowPaymentModal(true);
-                }, 1500);
-              } else {
-                showError('Gagal', 'Gagal memuat detail pesanan');
-              }
-            })
-            .catch(error => {
-              console.error('Error fetching order:', error);
-              showError('Gagal', 'Gagal memuat detail pesanan');
-            });
+          if (orderData) {
+            // Set order number dan order data untuk PaymentModal
+            setPaymentOrderNumber(orderNum);
+            setPaymentOrderData(orderData);
+            
+            // Buka modal setelah notification muncul (1.5 detik)
+            setTimeout(() => {
+              setShowPaymentModal(true);
+            }, 1500);
+          } else {
+            showError('Gagal', 'Data pesanan tidak lengkap');
+          }
         } else {
           // For COD and other direct transfer methods (CREDIT_CARD, etc.)
           // Show success notification immediately and redirect to order detail
@@ -641,13 +635,22 @@ function CheckoutPageContent() {
           ) : (
             <>
           {selectedAddress ? (
-            <section className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm p-5 sm:p-6 flex gap-2 items-start">
+            <section className={`-mx-4 sm:-mx-6 bg-white rounded-none sm:rounded-3xl shadow-sm p-5 sm:p-6 flex gap-2 items-start ${
+              selectedAddress.isDefault
+                ? 'border-2 border-blue-500'
+                : 'border border-gray-200'
+            }`}>
               <div className="p-1 text-blue-600 flex-shrink-0">
                 <MapPin className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <h2 className="!text-sm font-semibold text-gray-900">{selectedAddress.fullName}</h2>
+                  {selectedAddress.isDefault && (
+                    <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                      DEFAULT
+                    </span>
+                  )}
                   <span className="text-[11px] font-medium text-gray-500">{formatPhone(selectedAddress.phone)}</span>
                 </div>
                 <p className="mt-2 text-sm text-gray-600 leading-relaxed">

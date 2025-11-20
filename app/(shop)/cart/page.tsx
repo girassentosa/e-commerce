@@ -5,14 +5,14 @@
  * Display user's cart with items and checkout summary
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useCart } from '@/contexts/CartContext';
 import { Loader } from '@/components/ui/Loader';
 import { Badge } from '@/components/ui/Badge';
-import { ArrowLeft, Minus, Plus, Trash2, ShoppingBag, Check } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 
 // Helper function to format color and size labels (same as checkout)
@@ -89,10 +89,10 @@ const getVariantLabels = (
 export default function CartPage() {
   const router = useRouter();
   const { status } = useSession();
-  const { items, itemCount, subtotal, loading, updateQuantity, removeItem, clearCart, selectedItems, setSelectedItems } = useCart();
+  const { items, itemCount, subtotal, loading, updateQuantity, removeItem, clearCart, selectedItems, setSelectedItems, fetchCart } = useCart();
   const { formatPrice } = useCurrency();
-  const [updatingItem, setUpdatingItem] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Redirect to login if not authenticated
   if (status === 'unauthenticated') {
@@ -108,21 +108,39 @@ export default function CartPage() {
     }
   };
 
-  // Handle quantity change
+  // Handle quantity change (mulus tanpa loading overlay dan notifikasi, mengikuti struktur product detail page)
   const handleQuantityChange = async (itemId: string, currentQty: number, change: number) => {
     const newQty = currentQty + change;
-    if (newQty < 1) return;
+    const item = items.find(item => item.id === itemId);
+    if (!item || newQty < 1 || newQty > item.product.stockQuantity) return;
     
-    setUpdatingItem(itemId);
-    await updateQuantity(itemId, newQty);
-    setUpdatingItem(null);
+    // Update langsung tanpa loading overlay dan notifikasi (silent update)
+    try {
+      const response = await fetch(`/api/cart/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: newQty }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Silent update tanpa notifikasi - langsung refresh cart
+        await fetchCart();
+      } else {
+        // Hanya refresh jika error, tidak menampilkan notifikasi
+        fetchCart();
+      }
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      // Refresh cart jika ada error
+      fetchCart();
+    }
   };
 
   // Handle remove item
   const handleRemoveItem = async (itemId: string) => {
-    setUpdatingItem(itemId);
     await removeItem(itemId);
-    setUpdatingItem(null);
     // Remove from selected items if it was selected
     setSelectedItems(prev => {
       const newSet = new Set(prev);
@@ -153,6 +171,37 @@ export default function CartPage() {
     // This is different from buy-now flow which uses ?flow=buy-now
     router.push('/checkout');
   };
+
+  // Handle edit mode toggle
+  const handleEditToggle = () => {
+    // Button "Ubah" bisa ditekan tanpa perlu card dipilih dulu
+    setIsEditMode(true);
+  };
+
+  // Handle delete selected items
+  const handleDeleteSelected = async () => {
+    if (selectedItems.size === 0) {
+      setIsEditMode(false);
+      return;
+    }
+
+    // Delete all selected items
+    const itemIdsToDelete = Array.from(selectedItems);
+    for (const itemId of itemIdsToDelete) {
+      await removeItem(itemId);
+    }
+
+    // Reset edit mode and selected items
+    setIsEditMode(false);
+    setSelectedItems(new Set());
+  };
+
+  // Reset edit mode when no items are selected
+  useEffect(() => {
+    if (selectedItems.size === 0 && isEditMode) {
+      setIsEditMode(false);
+    }
+  }, [selectedItems.size, isEditMode]);
 
   // Calculate total discount and subtotal only from selected items
   const selectedItemsArray = items.filter(item => selectedItems.has(item.id));
@@ -247,7 +296,32 @@ export default function CartPage() {
               <h1 className="!text-base sm:!text-lg !font-semibold text-gray-900 flex-1 text-center">
                 Keranjang
               </h1>
-              <div className="min-h-[44px] min-w-[44px]" />
+              <button
+                type="button"
+                onClick={() => {
+                  if (isEditMode) {
+                    // Button "Hapus" - hanya bisa ditekan jika ada item terpilih
+                    if (selectedItems.size > 0) {
+                      handleDeleteSelected();
+                    }
+                  } else {
+                    // Button "Ubah" - hanya bisa ditekan jika ada item terpilih (sama seperti Checkout)
+                    if (selectedItems.size > 0) {
+                      handleEditToggle();
+                    }
+                  }
+                }}
+                disabled={selectedItems.size === 0}
+                className={`h-10 min-w-[100px] rounded-lg px-4 text-sm font-semibold transition-colors flex items-center justify-center flex-shrink-0 ${
+                  selectedItems.size > 0
+                    ? isEditMode
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isEditMode ? 'Hapus' : 'Ubah'}
+              </button>
             </div>
           </div>
         </div>
@@ -290,10 +364,17 @@ export default function CartPage() {
                 return max;
               }, 0);
 
+              // Check if any item in this section is selected
+              const hasSelectedItem = brandItems.some(item => selectedItems.has(item.id));
+
               return (
                 <section
                   key={brandKey}
-                  className="-mx-4 sm:-mx-6 bg-white border border-gray-200 rounded-none sm:rounded-3xl shadow-sm px-4 py-4 sm:px-5 sm:py-5"
+                  className={`-mx-4 sm:-mx-6 rounded-none sm:rounded-3xl shadow-sm px-4 py-4 sm:px-5 sm:py-5 transition-all ${
+                    hasSelectedItem
+                      ? 'bg-blue-50 border-2 border-blue-600'
+                      : 'bg-white border border-gray-200'
+                  }`}
                 >
                   <div className="flex flex-col gap-3 sm:gap-4">
                     <div className="flex items-center justify-between gap-3">
@@ -314,7 +395,6 @@ export default function CartPage() {
                         const effectivePrice = price;
                         // Use selectedImageUrl if available, otherwise fallback to first product image
                         const imageUrl = item.selectedImageUrl || item.product.images[0]?.imageUrl;
-                        const isUpdating = updatingItem === item.id;
                         const isLowStock = item.product.stockQuantity <= 5;
                         const isOutOfStock = item.product.stockQuantity === 0;
 
@@ -324,25 +404,47 @@ export default function CartPage() {
                           <div
                             key={item.id}
                             onClick={() => handleSelectItem(item.id)}
-                            className={`relative cursor-pointer rounded-lg transition-all ${
-                              isSelected
-                                ? 'border-2 border-blue-600 bg-blue-50'
-                                : 'border border-transparent hover:bg-gray-50'
-                            }`}
+                            className="relative cursor-pointer rounded-lg transition-all border border-transparent hover:bg-white/50"
                           >
-                            {/* Loading overlay */}
-                            {isUpdating && (
-                              <div className="absolute inset-0 bg-white/50 rounded-lg flex items-center justify-center z-10">
-                                <Loader />
-                              </div>
-                            )}
-
-                            {/* Check icon when selected */}
-                            {isSelected && (
-                              <div className="absolute top-3 right-3 z-20 flex-shrink-0">
-                                <Check className="w-5 h-5 text-blue-600" />
-                              </div>
-                            )}
+                            {/* Quantity Controls - moved to top right (redesain dari awal dengan struktur baru) */}
+                            <div 
+                              className="absolute top-2 right-2 z-20 flex-shrink-0 flex items-center gap-1.5"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuantityChange(item.id, item.quantity, -1);
+                                }}
+                                disabled={item.quantity <= 1}
+                                className={`w-6 h-6 rounded-md border-2 flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                                  item.quantity <= 1
+                                    ? 'border-gray-200 text-gray-300 bg-gray-50'
+                                    : 'border-gray-400 text-gray-700 bg-white hover:border-blue-500 hover:text-blue-600'
+                                }`}
+                              >
+                                <Minus className="w-3 h-3" strokeWidth={3} />
+                              </button>
+                              <span className="min-w-[20px] text-center text-xs font-bold text-gray-900">
+                                {item.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuantityChange(item.id, item.quantity, 1);
+                                }}
+                                disabled={item.quantity >= item.product.stockQuantity}
+                                className={`w-6 h-6 rounded-md border-2 flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                                  item.quantity >= item.product.stockQuantity
+                                    ? 'border-gray-200 text-gray-300 bg-gray-50'
+                                    : 'border-gray-400 text-gray-700 bg-white hover:border-blue-500 hover:text-blue-600'
+                                }`}
+                              >
+                                <Plus className="w-3 h-3" strokeWidth={3} />
+                              </button>
+                            </div>
 
                             <div className="flex items-start gap-3 min-w-0 p-2">
                               {/* Product Image */}
@@ -395,17 +497,6 @@ export default function CartPage() {
                                       ) : null;
                                     })()}
                                   </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveItem(item.id);
-                                    }}
-                                    disabled={isUpdating}
-                                    className="text-gray-400 hover:text-red-500 p-1 flex-shrink-0 transition-colors"
-                                    title="Hapus item"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
                                 </div>
 
                                 {/* Stock Status */}
@@ -420,48 +511,23 @@ export default function CartPage() {
                                   </Badge>
                                 )}
 
-                                {/* Quantity Controls and Price */}
-                                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 w-[calc(100%+1rem+1rem)] -ml-4 -mr-4 pl-4 pr-4 sm:w-[calc(100%+1.25rem+1.25rem)] sm:-ml-5 sm:-mr-5 sm:pl-5 sm:pr-5">
-                                  <div className="flex items-center gap-2">
-                                    {/* Quantity Controls */}
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleQuantityChange(item.id, item.quantity, -1);
-                                        }}
-                                        disabled={isUpdating || item.quantity <= 1}
-                                        className="w-8 h-8 rounded-md border hover:bg-gray-100 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        <Minus className="w-4 h-4" />
-                                      </button>
-                                      <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleQuantityChange(item.id, item.quantity, 1);
-                                        }}
-                                        disabled={isUpdating || item.quantity >= item.product.stockQuantity}
-                                        className="w-8 h-8 rounded-md border hover:bg-gray-100 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        <Plus className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                    {/* Price */}
-                                    <div className="flex items-end gap-2 whitespace-nowrap">
-                                      <span className="text-base font-bold text-blue-600">
-                                        {formatPrice(effectivePrice)}
+                                {/* Price */}
+                                <div className="mt-2 flex items-center justify-between gap-2">
+                                  <div className="flex items-end gap-2 whitespace-nowrap">
+                                    <span className="text-base font-bold text-blue-600">
+                                      {formatPrice(effectivePrice * item.quantity)}
+                                    </span>
+                                    {hasDiscount && (
+                                      <span className="text-xs text-gray-400 line-through">
+                                        {formatPrice(basePrice * item.quantity)}
                                       </span>
-                                      {hasDiscount && (
-                                        <span className="text-xs text-gray-400 line-through">
-                                          {formatPrice(basePrice)}
-                                        </span>
-                                      )}
-                                    </div>
+                                    )}
                                   </div>
-                                  <span className="text-xs font-semibold text-gray-500 whitespace-nowrap justify-self-end -mr-2 sm:mr-0">
-                                    x{item.quantity}
-                                  </span>
+                                  <div className="flex flex-col items-end gap-0.5 whitespace-nowrap">
+                                    <span className="text-xs font-semibold text-gray-500">
+                                      {formatPrice(effectivePrice)} x {item.quantity}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>

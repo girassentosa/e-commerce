@@ -9,13 +9,13 @@ export const dynamic = 'force-dynamic';
 async function getInitialCategories() {
   const categories = await prisma.category.findMany({
     include: {
-      parent: {
+  parent: {
         select: {
           id: true,
           name: true,
         },
       },
-      _count: {
+  _count: {
         select: {
           products: true,
           children: true,

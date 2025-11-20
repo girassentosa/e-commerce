@@ -66,10 +66,12 @@ export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) 
         <div
           key={addr.id}
           onClick={() => onSelect(addr.id)}
-          className={`border rounded-lg p-4 cursor-pointer transition ${
+          className={`rounded-lg p-4 cursor-pointer transition ${
             selectedId === addr.id
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-200 hover:border-gray-300'
+              ? 'border-2 border-blue-500 bg-blue-50'
+              : addr.isDefault
+              ? 'border-2 border-blue-500 bg-white'
+              : 'border border-gray-200 hover:border-gray-300 bg-white'
           }`}
         >
           <div className="flex items-start justify-between">
@@ -77,8 +79,8 @@ export function AddressSelector({ selectedId, onSelect }: AddressSelectorProps) 
               <div className="flex items-center gap-2">
                 <h4 className="font-semibold">{addr.fullName}</h4>
                 {addr.isDefault && (
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                    Default
+                  <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                    DEFAULT
                   </span>
                 )}
               </div>

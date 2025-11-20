@@ -132,50 +132,76 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
   }, [loading, isEditMode, formData, originalData, onSaveButtonRef]);
 
   /**
-   * Reverse geocoding: Convert lat/lng to address
-   * Using OpenStreetMap Nominatim API (free, no API key required)
+   * Reverse geocoding: Convert lat/lng to address using OpenStreetMap Nominatim API
    */
   const reverseGeocode = async (lat: number, lng: number): Promise<GeocodeResult> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
     try {
-      // OpenStreetMap Nominatim API
       const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
       
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'ECommerceApp/1.0', // Required by Nominatim
+          'User-Agent': 'ECommerceApp/1.0',
         },
-        signal: AbortSignal.timeout(8000), // 8 second timeout
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error(`Nominatim API error: ${response.status} ${response.statusText}`);
+        throw new Error('Gagal mengambil data alamat. Silakan coba lagi.');
       }
 
       const data = await response.json();
       
-      // Validate response has address data
       if (!data || !data.address) {
-        throw new Error('Alamat tidak ditemukan untuk lokasi Anda');
+        throw new Error('Alamat tidak ditemukan untuk lokasi Anda.');
       }
       
       return data;
     } catch (error: any) {
-      // Re-throw with meaningful message
-      if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
         throw new Error('Timeout saat mengambil alamat. Silakan coba lagi.');
       }
-      if (error.message) {
-        throw error; // Re-throw with existing message
+      
+      if (error instanceof Error && error.message) {
+        throw error;
       }
-      throw new Error('Gagal mendapatkan alamat dari koordinat');
+      
+      throw new Error('Gagal mendapatkan alamat dari koordinat.');
     }
   };
 
   /**
-   * Get current location and auto-fill address
+   * Parse address data from geocoding result
+   */
+  const parseAddressFromGeocode = (addr: GeocodeResult['address']) => {
+    const road = addr.road || '';
+    const houseNumber = addr.house_number || '';
+    const addressLine1 = houseNumber ? `${houseNumber} ${road}`.trim() : road;
+    const city = addr.city || addr.town || addr.village || '';
+    const state = addr.state || addr.region || '';
+    const postalCode = addr.postcode || '';
+    const countryCode = addr.country_code?.toUpperCase() || '';
+    const country = addr.country || getCountryName(countryCode);
+
+    return {
+      addressLine1,
+      city,
+      state,
+      postalCode,
+      country,
+    };
+  };
+
+  /**
+   * Get current location and auto-fill address form
    */
   const handleUseCurrentLocation = async () => {
-    // Check if geolocation is supported
     if (!navigator.geolocation) {
       showError('Geolokasi tidak didukung', 'Browser Anda tidak mendukung geolokasi.');
       return;
@@ -188,7 +214,12 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(
           resolve,
-          reject,
+          (err: GeolocationPositionError) => {
+            reject({
+              code: err.code,
+              message: err.message,
+            });
+          },
           {
             enableHighAccuracy: true,
             timeout: 10000,
@@ -197,62 +228,50 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
         );
       });
 
+      // Extract coordinates
       const { latitude, longitude } = position.coords;
 
-      // Reverse geocode to get address (will throw error if fails)
+      // Reverse geocode to get address
       const geocodeResult = await reverseGeocode(latitude, longitude);
       const addr = geocodeResult.address;
 
-      // Build address line 1
-      const road = addr.road || '';
-      const houseNumber = addr.house_number || '';
-      const addressLine1 = houseNumber ? `${houseNumber} ${road}`.trim() : road;
+      // Parse address data
+      const addressData = parseAddressFromGeocode(addr);
 
-      // Get city (can be city, town, or village)
-      const city = addr.city || addr.town || addr.village || '';
-
-      // Get state/region
-      const state = addr.state || addr.region || '';
-
-      // Get postal code
-      const postalCode = addr.postcode || '';
-
-      // Get country name
-      const countryCode = addr.country_code?.toUpperCase() || '';
-      const country = addr.country || getCountryName(countryCode);
+      // Validate address data
+      if (!addressData.addressLine1 && !addressData.city && !addressData.state) {
+        showError('Gagal mendapatkan alamat', 'Alamat tidak ditemukan untuk lokasi Anda. Silakan masukkan alamat secara manual.');
+        return;
+      }
 
       // Auto-fill form
       setFormData((prev) => ({
         ...prev,
-        addressLine1: addressLine1 || prev.addressLine1,
-        city: city || prev.city,
-        state: state || prev.state,
-        postalCode: postalCode || prev.postalCode,
-        country: country || prev.country,
+        addressLine1: addressData.addressLine1 || prev.addressLine1,
+        city: addressData.city || prev.city,
+        state: addressData.state || prev.state,
+        postalCode: addressData.postalCode || prev.postalCode,
+        country: addressData.country || prev.country,
       }));
 
-      showSuccess('Alamat terisi otomatis', 'Silakan periksa dan lengkapi formulir.');
+      // Show success notification
+      showSuccess('Alamat terisi otomatis', 'Alamat Anda telah terisi. Silakan periksa dan lengkapi jika diperlukan.');
+
     } catch (error: any) {
-      // Only log error if it has meaningful content
-      if (error && (error.message || error.code || (typeof error === 'string'))) {
-        console.error('Error getting location:', error);
-      }
-      
       let errorMessage = 'Gagal mendapatkan lokasi Anda. Silakan masukkan alamat secara manual.';
       
-      // Handle GeolocationPositionError codes
-      if (error?.code === 1 || error?.PERMISSION_DENIED === 1) {
-        errorMessage = 'Akses lokasi ditolak. Silakan aktifkan izin lokasi atau masukkan alamat secara manual.';
-      } else if (error?.code === 2 || error?.POSITION_UNAVAILABLE === 2) {
-        errorMessage = 'Lokasi tidak tersedia. Silakan masukkan alamat secara manual.';
-      } else if (error?.code === 3 || error?.TIMEOUT === 3) {
-        errorMessage = 'Permintaan lokasi timeout. Silakan coba lagi atau masukkan alamat secara manual.';
+      if (error?.code === 1) {
+        errorMessage = 'Akses lokasi ditolak. Silakan aktifkan izin lokasi di browser Anda.';
+      } else if (error?.code === 2) {
+        errorMessage = 'Lokasi tidak tersedia. Silakan pastikan GPS atau lokasi aktif.';
+      } else if (error?.code === 3) {
+        errorMessage = 'Permintaan lokasi timeout. Silakan coba lagi.';
       } else if (error?.message && typeof error.message === 'string') {
-        // Use error message if available
-        errorMessage = `${error.message}. Silakan masukkan alamat secara manual.`;
+        errorMessage = error.message;
       }
 
       showError('Gagal mendapatkan lokasi', errorMessage);
+
     } finally {
       setLoadingLocation(false);
     }
@@ -346,7 +365,7 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
           {loadingLocation ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Getting Location...
+              Memproses...
             </>
           ) : (
             <>
@@ -356,7 +375,7 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
           )}
         </Button>
         <p className="text-xs text-gray-500 mt-2 text-center">
-          Allow location access to automatically fill your address
+          Izinkan akses lokasi untuk mengisi alamat secara otomatis
         </p>
       </div>
 
@@ -417,15 +436,31 @@ export function AddressForm({ addressId, initialData, onSuccess, onCancel, onSav
         required
       />
 
-      <div className="flex items-center">
-        <input
-          type="checkbox"
-          id="isDefault"
-          checked={formData.isDefault}
-          onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-          className="w-4 h-4 text-blue-600 rounded"
-        />
-        <label htmlFor="isDefault" className="ml-2 text-sm text-gray-700">
+      <div className="flex items-center gap-3">
+        <div className="relative flex-shrink-0">
+          <input
+            type="checkbox"
+            id="isDefault"
+            checked={formData.isDefault}
+            onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
+            className="appearance-none w-5 h-5 border-2 border-gray-300 rounded bg-white focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 transition-colors relative z-10 cursor-pointer"
+            style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+          />
+          {formData.isDefault && (
+            <svg
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none z-20 text-blue-600"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+            >
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          )}
+        </div>
+        <label htmlFor="isDefault" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
           Set sebagai alamat default
         </label>
       </div>
